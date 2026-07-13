@@ -156,6 +156,11 @@ function readCardFile(file, archived = false) {
     end_date: get('end_date') || null, // card #40: range end ("to"), same tolerant contract
     due_date: get('due_date') || null, // deadline marker; also the compat range end when end_date is absent (card #40)
     epic: get('epic').toLowerCase() === 'true', // card #59: epic/wayfinder flag — tolerant read (any-case 'true'), missing line = false, never validated
+    // card #151: epic membership — the id of the epic this card belongs to.
+    // Tolerant read (non-numeric -> null, no membership), never validated,
+    // form-unmanaged (an existing line survives edits via the unmanaged-key
+    // machinery). The map draws it as an epic->child membership edge.
+    parent: (() => { const v = get('parent'); return /^\d+$/.test(v) ? parseInt(v, 10) : null; })(),
     updated: get('updated') || null, // card #35: machine-maintained, form-unmanaged
     title,
     body: description,
@@ -449,8 +454,8 @@ function cardDetail(dir, id) {
 // the board (`0011.foo.card.md`), not a filesystem path that would leak the
 // board's on-disk location to every client of this JSON.
 function toJSON(card) {
-  const { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, updated, title, body, archived, file } = card;
-  return { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, updated, title, body, archived, file: path.basename(file) };
+  const { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file } = card;
+  return { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
 }
 
 function archiveCard(dir, id) {

@@ -774,9 +774,13 @@ function renderMapView() {
   // mutate-in-place, same as loadMapStatusFilter above), so it survives every
   // renderMapView() call — manual, poll, drag, toggle, search.
   const sections = loadMapSectionsCollapsed();
-  const isolatedSet = new Set(graph.isolated);
-  const participantIds = graph.nodes.map((n) => n.id).filter((id) => !isolatedSet.has(id))
-    .concat(graph.ghosts.map((g) => g.id));
+  // card #151: the graph lays out every node touched by ANY edge — dep or
+  // epic membership — while graph.isolated stays dep-keyed. Pre-#151 the two
+  // sets were complements (participants = !isolated); an epic whose only
+  // edges are membership now sits in BOTH: laid out in the graph AND listed
+  // in the no-dependencies row, as the card asks. The two derivations (and
+  // their different kind-keying) are buildDependencyGraph's own, unit-pinned.
+  const participantIds = graph.participants;
   if (participantIds.length) container.appendChild(buildMapGraphSection(graph, participantIds, sections.graph));
   if (graph.isolated.length) container.appendChild(buildIsolatedRow(graph, allCards, sections.isolated));
   container.scrollLeft = keepLeft;
@@ -981,7 +985,13 @@ function buildMapSvg(graph, layer) {
       const midY = (y1 + y2) / 2;
       d = `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
     }
-    edgesSvg += `<path class="map-edge${backEdge ? ' back-edge' : ''}${dimmed ? ' ghost-edge' : ''}" d="${d}" marker-end="url(#map-arrow)"></path>`;
+    // card #151: membership edges (epic -> child) draw in the epic's own
+    // channel — orange, dashed, its own arrowhead — so sequencing and
+    // membership never read as the same relation. A cycle through a
+    // membership edge still bows (backEdge is layout-derived), keeping the
+    // epic dash over the back-edge amber: the KIND stays visible.
+    const epicEdge = e.kind === 'epic';
+    edgesSvg += `<path class="map-edge${epicEdge ? ' epic-edge' : ''}${backEdge ? ' back-edge' : ''}${dimmed ? ' ghost-edge' : ''}" d="${d}" marker-end="url(#${epicEdge ? 'map-arrow-epic' : 'map-arrow'})"></path>`;
   });
 
   const width = maxX + MAP_PAD;
@@ -1100,7 +1110,11 @@ function buildMapSvg(graph, layer) {
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML =
     `<defs><marker id="map-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
-      `<path d="M0,0 L10,5 L0,10 z"></path></marker></defs>` +
+      `<path d="M0,0 L10,5 L0,10 z"></path></marker>` +
+    // card #151: the membership arrowhead — same shape, epic orange (a marker
+    // never inherits the path's stroke, so it needs its own def).
+    `<marker id="map-arrow-epic" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
+      `<path class="map-arrow-epic-head" d="M0,0 L10,5 L0,10 z"></path></marker></defs>` +
     edgesSvg + nodesSvg;
   return svg;
 }

@@ -58,6 +58,17 @@ function isCardWaiting(c, byId) {
 // - Isolated cards (no waiting_for edge in either direction) are reported
 //   separately so the caller can render them in a detached cluster instead
 //   of mixing them into the layered graph.
+//
+// card #151 — epic membership edges: a child card's `parent: <epic-id>`
+// becomes an epic->child edge with `kind: 'epic'` (waiting_for edges carry
+// `kind: 'dep'`). Membership is not sequencing: it feeds the layered layout
+// (the epic lands above its children) and gets the same ghost-stub courtesy,
+// but it never makes anyone `waiting` and — deliberately — does NOT count for
+// the isolated row. "No dependencies" means no SEQUENCING deps, so an epic
+// whose only edges are membership appears in the graph AND the detached row,
+// exactly as asked ("is ok to appear in the no dependencies list but belongs
+// to the dependency graph as well"). A self-parent is nonsense and adds no
+// edge; a dangling parent id ghosts as missing, same as a dangling dep.
 function buildDependencyGraph(cards, visibleIds) {
   const byId = new Map(cards.map((c) => [c.id, c]));
   // A ghost placeholder from a dangling reference has no card behind it, so
@@ -71,17 +82,29 @@ function buildDependencyGraph(cards, visibleIds) {
   const seenEdges = new Set();
   const edges = [];
   const ghostIds = new Set();
+  // One shared endpoint-visibility rule for both edge kinds: drop when neither
+  // endpoint is on screen, ghost a hidden-but-real endpoint, ghost a missing id.
+  const addEdge = (from, to, kind) => {
+    const key = `${from}->${to}:${kind}`;
+    if (seenEdges.has(key)) return; // de-dupe a repeated entry
+    const fromVisible = isVisible(from);
+    const toVisible = isVisible(to);
+    if (!fromVisible && !toVisible) return;
+    seenEdges.add(key);
+    if (!fromVisible) ghostIds.add(from);
+    if (!toVisible) ghostIds.add(to);
+    edges.push({ from, to, kind, fromGhost: !fromVisible, toGhost: !toVisible });
+  };
   for (const c of cards) {
-    for (const depId of c.waiting_for || []) {
-      const key = `${depId}->${c.id}`;
-      if (seenEdges.has(key)) continue; // de-dupe a repeated waiting_for entry
-      const depVisible = isVisible(depId);
-      const waiterVisible = isVisible(c.id);
-      if (!depVisible && !waiterVisible) continue; // neither endpoint on screen — drop
-      seenEdges.add(key);
-      if (!depVisible) ghostIds.add(depId);
-      if (!waiterVisible) ghostIds.add(c.id);
-      edges.push({ from: depId, to: c.id, fromGhost: !depVisible, toGhost: !waiterVisible });
+    for (const depId of c.waiting_for || []) addEdge(depId, c.id, 'dep');
+    // card #151: membership edge, epic -> member (the epic reads as the tree's
+    // root). `parent` is a single id; self-parent adds nothing. When the SAME
+    // pair already has a dep edge (the card both belongs to and waits on its
+    // epic), sequencing wins the path — the two kinds draw on an identical
+    // bezier, and orange-over-grey would hide a real dependency; the
+    // membership is still readable from the epic dot + this card's parent.
+    if (c.parent != null && c.parent !== c.id && !seenEdges.has(`${c.parent}->${c.id}:dep`)) {
+      addEdge(c.parent, c.id, 'epic');
     }
   }
 
@@ -90,11 +113,22 @@ function buildDependencyGraph(cards, visibleIds) {
     .map((id) => (byId.has(id) ? cardToNode(byId.get(id), isCardWaiting(byId.get(id), byId))
       : { id, title: null, status: null, archived: false, epic: false, priority: '', waiting: false, blocked: false, blockedReason: '', missing: true }));
 
-  const touchedIds = new Set();
-  for (const e of edges) { touchedIds.add(e.from); touchedIds.add(e.to); }
-  const isolated = nodes.filter((n) => !touchedIds.has(n.id)).map((n) => n.id);
+  // card #151: the isolated row is keyed off SEQUENCING edges only, while the
+  // layered graph lays out every node touched by ANY edge (`participants`) —
+  // a node whose only edges are epic membership joins the graph and the row
+  // both. Both derivations live here, in the pure module, so their different
+  // kind-keying stays unit-pinned rather than re-derived in the view.
+  const touchedByDep = new Set();
+  const touchedByAny = new Set();
+  for (const e of edges) {
+    touchedByAny.add(e.from); touchedByAny.add(e.to);
+    if (e.kind === 'dep') { touchedByDep.add(e.from); touchedByDep.add(e.to); }
+  }
+  const isolated = nodes.filter((n) => !touchedByDep.has(n.id)).map((n) => n.id);
+  const participants = nodes.filter((n) => touchedByAny.has(n.id)).map((n) => n.id)
+    .concat(ghosts.map((g) => g.id));
 
-  return { nodes, edges, ghosts, isolated };
+  return { nodes, edges, ghosts, isolated, participants };
 }
 
 // Assign a top-down layer index (0 = topmost / least-waited-on) to every id

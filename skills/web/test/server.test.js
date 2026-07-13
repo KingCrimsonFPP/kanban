@@ -820,11 +820,11 @@ test('GET /api/cards/1/detail returns raw frontmatter, absolute path, and body',
 test('GET /api/cards/:id/detail surfaces a genuinely unrecognized frontmatter key verbatim', async () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, '3.card.md'),
-    `---\nid: 3\nstatus: backlog\npriority: Normal\nwaiting_for: []\ntags: []\nparent: 5\n---\n\n# Three\n\nbody3\n`);
+    `---\nid: 3\nstatus: backlog\npriority: Normal\nwaiting_for: []\ntags: []\nsprint: 5\n---\n\n# Three\n\nbody3\n`);
   await withServer(dir, async (base) => {
     const r = await req(base, 'GET', '/api/cards/3/detail');
     assert.strictEqual(r.status, 200);
-    assert.match(r.json.frontmatter, /^parent: 5$/m); // unallowlisted key, not one card-store special-cases
+    assert.match(r.json.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store special-cases (parent stopped qualifying - card #151 parses it)
   });
 });
 

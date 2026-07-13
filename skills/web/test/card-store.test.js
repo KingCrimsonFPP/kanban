@@ -138,9 +138,9 @@ test('cardDetail returns the raw frontmatter block, absolute path, title, and bo
 test('cardDetail surfaces a genuinely unrecognized frontmatter key verbatim', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'ext.card.md'),
-    `---\nid: 5\nstatus: backlog\npriority: Normal\nwaiting_for: []\ntags: []\nparent: 5\n---\n\n# Extension field card\n\nbody\n`);
+    `---\nid: 5\nstatus: backlog\npriority: Normal\nwaiting_for: []\ntags: []\nsprint: 5\n---\n\n# Extension field card\n\nbody\n`);
   const d = cs.cardDetail(dir, 5);
-  assert.match(d.frontmatter, /^parent: 5$/m); // unallowlisted key, not one card-store gives special handling
+  assert.match(d.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store gives special handling (parent stopped qualifying - card #151 parses it)
 });
 
 test('cardDetail carries updated: null when absent, and the value once set (card #35)', () => {
@@ -408,7 +408,7 @@ test('toJSON exposes the public card shape without internal underscores', () => 
   const dir = tmpBoard();
   const j = cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md')));
   assert.deepStrictEqual(Object.keys(j).sort(), [
-    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'priority', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked (the sticker) joined (epic #137)
+    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151)
   ]);
   assert.strictEqual(j._order, undefined);
 });
@@ -786,14 +786,14 @@ test('createCard still writes tags/waiting_for when they hold data (card #51)', 
 test('updateCard clearing tags/waiting_for to [] removes their lines; unmanaged keys survive (card #51)', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
-    `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: [2]\ntags: [a, b]\nparent: 5\n---\n\n# One\n\nbody\n`);
+    `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: [2]\ntags: [a, b]\nsprint: 5\n---\n\n# One\n\nbody\n`);
   const card = cs.updateCard(dir, 1, { tags: [], waiting_for: [] });
   assert.deepStrictEqual(card.tags, []);
   assert.deepStrictEqual(card.waiting_for, []);
   const raw = fs.readFileSync(path.join(dir, '0001.one.card.md'), 'utf8');
   assert.doesNotMatch(raw, /^tags:/m, 'cleared tags line removed');
   assert.doesNotMatch(raw, /^waiting_for:/m, 'cleared waiting_for line removed');
-  assert.match(raw, /^parent: 5$/m, 'form-unmanaged key untouched, verbatim');
+  assert.match(raw, /^sprint: 5$/m, 'form-unmanaged key untouched, verbatim');
   assert.match(raw, /# One/, 'body untouched');
 });
 
@@ -1246,4 +1246,28 @@ test('hard cutover: a legacy blocked_by line carries no edges but survives verba
   assert.strictEqual(cs.updateCard(dir, 1, { status: 'doing' }).status, 'doing', 'legacy edges never gate');
   assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^blocked_by: \[2\]$/m,
     'the unmanaged line is preserved verbatim for card #141 to migrate');
+});
+
+// --- card #151: `parent` — epic membership id -------------------------------
+
+test('readCardFile parses parent as a number, null when absent or non-numeric; toJSON carries it (card #151)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
+  fs.writeFileSync(path.join(dir, '0001.child.card.md'), '---\nid: 1\nstatus: todo\nparent: 42\n---\n\n# Child\n');
+  fs.writeFileSync(path.join(dir, '0002.plain.card.md'), '---\nid: 2\nstatus: todo\n---\n\n# Plain\n');
+  fs.writeFileSync(path.join(dir, '0003.junk.card.md'), '---\nid: 3\nstatus: todo\nparent: soon\n---\n\n# Junk parent\n');
+  const cards = cs.listActive(dir);
+  const byId = new Map(cards.map((c) => [c.id, c]));
+  assert.strictEqual(byId.get(1).parent, 42);
+  assert.strictEqual(byId.get(2).parent, null);
+  assert.strictEqual(byId.get(3).parent, null, 'tolerant read: non-numeric parent is no membership, never fatal');
+  assert.strictEqual(cs.toJSON(byId.get(1)).parent, 42);
+  assert.strictEqual(cs.toJSON(byId.get(2)).parent, null);
+});
+
+test('updateCard preserves a parent line verbatim — form-unmanaged frontmatter, #51 lean rule untouched (card #151)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
+  fs.writeFileSync(path.join(dir, '0001.child.card.md'), '---\nid: 1\nstatus: todo\nparent: 42\n---\n\n# Child\n');
+  cs.updateCard(dir, 1, { priority: 'High' });
+  const raw = fs.readFileSync(path.join(dir, '0001.child.card.md'), 'utf8');
+  assert.match(raw, /^parent: 42$/m);
 });
