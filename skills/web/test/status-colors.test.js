@@ -140,6 +140,7 @@ test('app.css paints ONE shared epic-dot glyph (card #91) — #59\'s four per-vi
   assert.ok(css.includes(`.map-epic-dot { fill: ${EPIC_COLOR};`), 'the map node has its own SVG twin, same color');
   // card #151: the membership edge + its arrowhead wear the same orange
   assert.ok(css.includes(`.map-edge.epic-edge { stroke: ${EPIC_COLOR};`), 'membership edge carries EPIC_COLOR');
+  assert.ok(css.includes(`.map-edge.epic-chain { stroke: ${EPIC_COLOR}; }`), 'v3: the intra-epic chain edge carries EPIC_COLOR solid');
   assert.ok(css.includes(`.map-arrow-epic-head { fill: ${EPIC_COLOR}; }`), 'its arrowhead too');
   // #59's orange BORDER rules are gone from all four surfaces — nothing left
   // to layer or to gate priority/blocked/due around.

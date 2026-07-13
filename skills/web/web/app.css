@@ -390,6 +390,11 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
    back-edge amber cedes to epic orange when a membership edge is itself the
    cycle-break (declaration order); the bowed routing still marks the cycle. */
 .map-edge.epic-edge { stroke: #f0883e; stroke-dasharray: 7 4; }
+/* v3: the chain itself carries the epic color — solid (it's a real,
+   gate-enforced waiting_for edge), orange to show whose work flows here.
+   Placed after .back-edge so a chain edge on a forced cycle-break keeps its
+   orange over the amber, same declaration-order convention as .epic-edge. */
+.map-edge.epic-chain { stroke: #f0883e; }
 .map-arrow-epic-head { fill: #f0883e; }
 .map-empty { color: #8b949e; font-size: 0.85em; padding: 8px 2px; }
 /* card #97: the graph and the "No dependencies" list are each a collapsible

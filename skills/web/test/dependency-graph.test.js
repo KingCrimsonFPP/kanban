@@ -277,14 +277,44 @@ const epicBoard = [
   { id: 12, title: 'child b', status: 'todo', parent: 10, waiting_for: [11] },
 ];
 
-test('a child\'s parent field becomes a child->epic membership edge with kind "epic" — the epic is the sink (card #151, flipped by the 2026-07-13 regrill); waiting_for edges carry kind "dep"', () => {
+test('v3 (card #151): only TERMINAL members hop to the epic — the chain flows card to card, one dashed edge into the sink', () => {
+  // 11 -> 12 is the chain; 12 is the terminal (no member waits on it), so
+  // only 12 hops to the epic. 11's work reaches the epic THROUGH the chain.
   const g = buildDependencyGraph(epicBoard, null);
   const epicEdges = g.edges.filter((e) => e.kind === 'epic');
-  assert.deepStrictEqual(
-    epicEdges.map((e) => `${e.from}->${e.to}`).sort(),
-    ['11->10', '12->10']);
+  assert.deepStrictEqual(epicEdges.map((e) => `${e.from}->${e.to}`), ['12->10']);
   const depEdges = g.edges.filter((e) => e.kind === 'dep');
   assert.deepStrictEqual(depEdges.map((e) => `${e.from}->${e.to}`), ['11->12']);
+});
+
+test('v3 (card #151): an intra-epic dep edge is flagged epicChain (both endpoints share the parent); mixed edges are not', () => {
+  const g = buildDependencyGraph([
+    { id: 10, title: 'epic', status: 'doing', epic: true, waiting_for: [] },
+    { id: 11, title: 'member a', status: 'todo', parent: 10, waiting_for: [] },
+    { id: 12, title: 'member b', status: 'todo', parent: 10, waiting_for: [11, 30] },
+    { id: 30, title: 'outsider', status: 'todo', waiting_for: [11] },
+  ], null);
+  const flags = Object.fromEntries(g.edges.filter((e) => e.kind === 'dep').map((e) => [`${e.from}->${e.to}`, !!e.epicChain]));
+  assert.deepStrictEqual(flags, {
+    '11->12': true,   // member -> member, same epic: the chain wears the color
+    '30->12': false,  // outsider -> member: plain grey
+    '11->30': false,  // member -> outsider: plain grey
+  });
+});
+
+test('v3 (card #151): a chainless member is its own terminal — it keeps a direct membership hop, nothing orphans silently', () => {
+  const g = buildDependencyGraph([
+    { id: 10, title: 'epic', status: 'doing', epic: true, waiting_for: [] },
+    { id: 11, title: 'stray note', status: 'todo', parent: 10, waiting_for: [] },
+  ], null);
+  assert.deepStrictEqual(g.edges.map((e) => `${e.from}->${e.to}:${e.kind}`), ['11->10:epic']);
+});
+
+test('v3 (card #151): terminality is computed on the FULL board — a search-hidden downstream member still absorbs the upstream hop', () => {
+  // 12 (hidden) waits on 11: 11 is NOT terminal even though its downstream is filtered out.
+  const g = buildDependencyGraph(epicBoard, new Set([10, 11]));
+  const epicEdges = g.edges.filter((e) => e.kind === 'epic');
+  assert.deepStrictEqual(epicEdges.map((e) => `${e.from}->${e.to}:${e.fromGhost}`), ['12->10:true']);
 });
 
 test('an epic with only membership edges joins the graph AND stays in the no-dependencies row — isolated is keyed off dep edges only (card #151)', () => {
@@ -313,9 +343,9 @@ test('a dangling parent id renders a missing ghost stub, same courtesy as waitin
   assert.deepStrictEqual(g.edges.map((e) => `${e.from}->${e.to}:${e.kind}:${e.toGhost}`), ['5->99:epic:true']);
 });
 
-test('a search-hidden epic ghosts into its visible child\'s graph; an edge with both endpoints hidden drops (card #151)', () => {
-  const g = buildDependencyGraph(epicBoard, new Set([11]));
-  assert.deepStrictEqual(g.edges.filter((e) => e.kind === 'epic').map((e) => `${e.from}->${e.to}:${e.toGhost}`), ['11->10:true']);
+test('a search-hidden epic ghosts into its visible terminal\'s graph (card #151)', () => {
+  const g = buildDependencyGraph(epicBoard, new Set([12])); // 12 is the terminal; epic 10 hidden
+  assert.deepStrictEqual(g.edges.filter((e) => e.kind === 'epic').map((e) => `${e.from}->${e.to}:${e.toGhost}`), ['12->10:true']);
   assert.ok(g.ghosts.some((gh) => gh.id === 10 && !gh.missing));
 });
 

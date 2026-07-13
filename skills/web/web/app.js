@@ -991,7 +991,12 @@ function buildMapSvg(graph, layer) {
     // membership edge still bows (backEdge is layout-derived), keeping the
     // epic dash over the back-edge amber: the KIND stays visible.
     const epicEdge = e.kind === 'epic';
-    edgesSvg += `<path class="map-edge${epicEdge ? ' epic-edge' : ''}${backEdge ? ' back-edge' : ''}${dimmed ? ' ghost-edge' : ''}" d="${d}" marker-end="url(#${epicEdge ? 'map-arrow-epic' : 'map-arrow'})"></path>`;
+    // v3: an intra-epic dep edge (epicChain) draws SOLID orange — a real,
+    // gate-enforced dependency tinted to show whose work it carries; the
+    // dashed orange stays reserved for the terminal's membership hop. Both
+    // take the orange arrowhead (a grey head on an orange line reads broken).
+    const chainEdge = !!e.epicChain;
+    edgesSvg += `<path class="map-edge${epicEdge ? ' epic-edge' : ''}${chainEdge ? ' epic-chain' : ''}${backEdge ? ' back-edge' : ''}${dimmed ? ' ghost-edge' : ''}" d="${d}" marker-end="url(#${(epicEdge || chainEdge) ? 'map-arrow-epic' : 'map-arrow'})"></path>`;
   });
 
   const width = maxX + MAP_PAD;
