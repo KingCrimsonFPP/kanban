@@ -60,15 +60,18 @@ function isCardWaiting(c, byId) {
 //   of mixing them into the layered graph.
 //
 // card #151 — epic membership edges: a child card's `parent: <epic-id>`
-// becomes an epic->child edge with `kind: 'epic'` (waiting_for edges carry
-// `kind: 'dep'`). Membership is not sequencing: it feeds the layered layout
-// (the epic lands above its children) and gets the same ghost-stub courtesy,
-// but it never makes anyone `waiting` and — deliberately — does NOT count for
-// the isolated row. "No dependencies" means no SEQUENCING deps, so an epic
-// whose only edges are membership appears in the graph AND the detached row,
-// exactly as asked ("is ok to appear in the no dependencies list but belongs
-// to the dependency graph as well"). A self-parent is nonsense and adds no
-// edge; a dangling parent id ghosts as missing, same as a dangling dep.
+// becomes a child->epic edge with `kind: 'epic'` (waiting_for edges carry
+// `kind: 'dep'`). The epic is the SINK, not the root — an epic is done only
+// when its children are done, so under the map's "down = completes later"
+// convention it lays out BELOW its children (franc's 2026-07-13 regrill
+// flipped the original epic-on-top build: epic-as-container read as a false
+// prerequisite). Membership is not sequencing: it feeds the layered layout
+// and gets the same ghost-stub courtesy, but it never makes anyone `waiting`
+// and — deliberately — does NOT count for the isolated row. "No
+// dependencies" means no SEQUENCING deps, so an epic whose only edges are
+// membership appears in the graph AND the detached row. A self-parent is
+// nonsense and adds no edge; a dangling parent id ghosts as missing, same
+// as a dangling dep.
 function buildDependencyGraph(cards, visibleIds) {
   const byId = new Map(cards.map((c) => [c.id, c]));
   // A ghost placeholder from a dangling reference has no card behind it, so
@@ -95,16 +98,24 @@ function buildDependencyGraph(cards, visibleIds) {
     if (!toVisible) ghostIds.add(to);
     edges.push({ from, to, kind, fromGhost: !fromVisible, toGhost: !toVisible });
   };
+  // Two passes: every dep edge lands before any membership edge, so the
+  // sequencing-wins-the-pair check below sees the whole dep set — the epic's
+  // own waiting_for lives on a DIFFERENT card than the child's parent field.
   for (const c of cards) {
     for (const depId of c.waiting_for || []) addEdge(depId, c.id, 'dep');
-    // card #151: membership edge, epic -> member (the epic reads as the tree's
-    // root). `parent` is a single id; self-parent adds nothing. When the SAME
-    // pair already has a dep edge (the card both belongs to and waits on its
-    // epic), sequencing wins the path — the two kinds draw on an identical
-    // bezier, and orange-over-grey would hide a real dependency; the
-    // membership is still readable from the epic dot + this card's parent.
-    if (c.parent != null && c.parent !== c.id && !seenEdges.has(`${c.parent}->${c.id}:dep`)) {
-      addEdge(c.parent, c.id, 'epic');
+  }
+  for (const c of cards) {
+    // card #151: membership edge, member -> epic (the epic is the sink; it
+    // closes last). `parent` is a single id; self-parent adds nothing. When
+    // the pair already has a dep edge IN EITHER DIRECTION (the card waits on
+    // its epic, or the epic waits on the card), sequencing wins the pair:
+    // same-direction overlap would draw orange over grey and hide a real
+    // dependency, and opposite-direction overlap would fabricate a 2-cycle
+    // (a back-edge bow for a relation that isn't circular). The membership
+    // stays readable from the epic dot + this card's parent field.
+    if (c.parent != null && c.parent !== c.id
+        && !seenEdges.has(`${c.parent}->${c.id}:dep`) && !seenEdges.has(`${c.id}->${c.parent}:dep`)) {
+      addEdge(c.id, c.parent, 'epic');
     }
   }
 

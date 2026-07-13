@@ -205,11 +205,13 @@ purple, archived muted grey), edges from **dependency to the waiting card**
 (each `waiting_for` entry points from the dep to the card that lists it) — the
 same direction as the web app's map view. A `waiting_for` id with no matching
 card renders as a "not found" node (dangling — display-only, it never makes
-the card waiting). **Membership edges (card #151):** a card's `parent:
-<epic-id>` draws a dashed Mermaid link (`n<epicId> -.-> n<id>`, epic ->
-member) — membership, not sequencing, mirroring the web map's orange dashed
-edge; when the same pair also has a `waiting_for` edge, print only the solid
-dependency edge (sequencing wins the pair, same rule as the web map). A
+the card waiting). **Membership edges (card #151; flipped by the 2026-07-13
+regrill):** a card's `parent: <epic-id>` draws a dashed Mermaid link
+(`n<id> -.-> n<epicId>`, member -> epic — the epic is the sink; it closes
+last) — membership, not sequencing, mirroring the web map's orange dashed
+edge; when the pair also has a `waiting_for` edge in either direction, print
+only the solid dependency edge (sequencing wins the pair, same rule as the
+web map). A
 dangling parent id renders the same "not found" node as a dangling dep, and a
 self-parent is ignored. Cards with no `waiting_for` edges in either
 direction go in a short "isolated" list under the diagram instead of cluttering

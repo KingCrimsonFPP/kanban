@@ -277,12 +277,12 @@ const epicBoard = [
   { id: 12, title: 'child b', status: 'todo', parent: 10, waiting_for: [11] },
 ];
 
-test('a child\'s parent field becomes an epic->child membership edge with kind "epic"; waiting_for edges carry kind "dep" (card #151)', () => {
+test('a child\'s parent field becomes a child->epic membership edge with kind "epic" — the epic is the sink (card #151, flipped by the 2026-07-13 regrill); waiting_for edges carry kind "dep"', () => {
   const g = buildDependencyGraph(epicBoard, null);
   const epicEdges = g.edges.filter((e) => e.kind === 'epic');
   assert.deepStrictEqual(
     epicEdges.map((e) => `${e.from}->${e.to}`).sort(),
-    ['10->11', '10->12']);
+    ['11->10', '12->10']);
   const depEdges = g.edges.filter((e) => e.kind === 'dep');
   assert.deepStrictEqual(depEdges.map((e) => `${e.from}->${e.to}`), ['11->12']);
 });
@@ -290,7 +290,7 @@ test('a child\'s parent field becomes an epic->child membership edge with kind "
 test('an epic with only membership edges joins the graph AND stays in the no-dependencies row — isolated is keyed off dep edges only (card #151)', () => {
   const g = buildDependencyGraph(epicBoard, null);
   // the epic participates in edges, so the layered graph will lay it out...
-  assert.ok(g.edges.some((e) => e.from === 10));
+  assert.ok(g.edges.some((e) => e.to === 10));
   // ...but "No dependencies" means no SEQUENCING deps, so it still lists there
   assert.deepStrictEqual(g.isolated, [10]);
   // the children ride dep edges (11->12), so neither is isolated
@@ -310,20 +310,20 @@ test('parent does not make anyone waiting — membership is not sequencing (card
 test('a dangling parent id renders a missing ghost stub, same courtesy as waiting_for (card #151)', () => {
   const g = buildDependencyGraph([{ id: 5, title: 'orphan', status: 'todo', parent: 99, waiting_for: [] }], null);
   assert.deepStrictEqual(g.ghosts.map((gh) => [gh.id, gh.missing]), [[99, true]]);
-  assert.deepStrictEqual(g.edges.map((e) => `${e.from}->${e.to}:${e.kind}:${e.fromGhost}`), ['99->5:epic:true']);
+  assert.deepStrictEqual(g.edges.map((e) => `${e.from}->${e.to}:${e.kind}:${e.toGhost}`), ['5->99:epic:true']);
 });
 
 test('a search-hidden epic ghosts into its visible child\'s graph; an edge with both endpoints hidden drops (card #151)', () => {
   const g = buildDependencyGraph(epicBoard, new Set([11]));
-  assert.deepStrictEqual(g.edges.filter((e) => e.kind === 'epic').map((e) => `${e.from}->${e.to}:${e.fromGhost}`), ['10->11:true']);
+  assert.deepStrictEqual(g.edges.filter((e) => e.kind === 'epic').map((e) => `${e.from}->${e.to}:${e.toGhost}`), ['11->10:true']);
   assert.ok(g.ghosts.some((gh) => gh.id === 10 && !gh.missing));
 });
 
-test('layerNodes puts the epic above its children when membership edges join the layering (card #151)', () => {
+test('layerNodes puts the epic BELOW its children — the epic closes last, so it sinks (card #151, flipped)', () => {
   const g = buildDependencyGraph(epicBoard, null);
   const ids = new Set(); g.edges.forEach((e) => { ids.add(e.from); ids.add(e.to); });
   const layer = layerNodes([...ids], g.edges);
-  assert.ok(layer.get(10) < layer.get(11) && layer.get(10) < layer.get(12));
+  assert.ok(layer.get(10) > layer.get(11) && layer.get(10) > layer.get(12));
 });
 
 test('a self-parent adds no edge (nonsense membership); parent null/absent adds nothing (card #151)', () => {
@@ -335,12 +335,22 @@ test('a self-parent adds no edge (nonsense membership); parent null/absent adds 
   assert.deepStrictEqual(g.isolated, [1, 2]);
 });
 
-test('a card that both belongs to and waits on its epic gets ONE edge — sequencing wins the identical pair (card #151 review fix)', () => {
-  const g = buildDependencyGraph([
+test('sequencing wins the UNORDERED pair: a dep edge between child and epic in either direction suppresses the membership edge (card #151 review fix + flip)', () => {
+  // child waits on its epic — opposite-direction overlap would fabricate a 2-cycle
+  const a = buildDependencyGraph([
     { id: 10, title: 'epic', status: 'doing', epic: true, waiting_for: [] },
     { id: 11, title: 'child+dep', status: 'todo', parent: 10, waiting_for: [10] },
   ], null);
-  assert.deepStrictEqual(g.edges.map((e) => `${e.from}->${e.to}:${e.kind}`), ['10->11:dep']);
+  assert.deepStrictEqual(a.edges.map((e) => `${e.from}->${e.to}:${e.kind}`), ['10->11:dep']);
+  // epic waits on its child (the natural wayfinder shape) — same-direction
+  // overlap would draw orange over grey. Cross-card: the dep lives on the
+  // EPIC's waiting_for, the membership on the CHILD's parent — the two-pass
+  // edge build is what lets this suppression see it.
+  const b = buildDependencyGraph([
+    { id: 10, title: 'epic', status: 'doing', epic: true, waiting_for: [11] },
+    { id: 11, title: 'child', status: 'todo', parent: 10, waiting_for: [] },
+  ], null);
+  assert.deepStrictEqual(b.edges.map((e) => `${e.from}->${e.to}:${e.kind}`), ['11->10:dep']);
 });
 
 test('participants: any-edge-touched nodes + ghosts, in the pure module — epic in both participants and isolated (card #151 review fix)', () => {

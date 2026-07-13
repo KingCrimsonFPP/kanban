@@ -335,16 +335,22 @@ bound to `127.0.0.1` only.
   layered SVG graph: nodes are cards (id + title), edges are `waiting_for` (arrow
   from the depended-on card to the card waiting on it, same direction as the
   `kanban-cli` skill's Mermaid dependency printout). **Membership edges (card
-  #151):** a child card's `parent: <epic-id>` frontmatter draws a second edge
-  kind — epic → child, EPIC_COLOR orange with a long dash and its own orange
-  arrowhead — so membership and sequencing never read as the same relation.
-  Membership feeds the layered layout (the epic lands above its children) and
-  gets the same ghost-stub courtesy as `waiting_for` (hidden endpoint → dimmed
-  stub; dangling id → "not found" stub; self-parent ignored), but it is NOT a
+  #151; direction flipped by the 2026-07-13 regrill):** a child card's
+  `parent: <epic-id>` frontmatter draws a second edge kind — child → epic,
+  EPIC_COLOR orange with a long dash and its own orange arrowhead — so
+  membership and sequencing never read as the same relation. The epic is the
+  SINK, not the root: it closes only when its children close, so under the
+  map's down-is-later convention it lays out BELOW its children (the original
+  epic-on-top build read as a false prerequisite). Membership gets the same
+  ghost-stub courtesy as `waiting_for` (hidden endpoint → dimmed stub;
+  dangling id → "not found" stub; self-parent ignored), but it is NOT a
   dependency: it never makes a card waiting, the `doing` gate ignores it, and
   the isolated row below stays keyed off `waiting_for` edges only — so an epic
   whose only edges are membership appears in the graph AND the no-dependencies
-  row, both. Card #91: the node's border is one neutral weight for every node — status
+  row, both. A dep edge between the pair in either direction suppresses the
+  membership edge (sequencing wins the pair: same-direction overlap would
+  hide a real dependency under the orange; opposite-direction would fabricate
+  a 2-cycle bow). Card #91: the node's border is one neutral weight for every node — status
   no longer strokes it (that fought epic and archive for the same channel, card #59's
   original contract). Instead, a small dot in the node's corner carries the status
   color (same palette as the column headers and that Mermaid printout), with its own
