@@ -207,9 +207,83 @@ function layerNodes(nodeIds, edges) {
   return layer;
 }
 
+// card #74 — "Dependency tree" (connected component) and "Dependency path"
+// (directed cone) for the tree:<id> / path:<id> search terms. Both reuse
+// buildDependencyGraph(cards, null).edges as their ONLY source of truth for
+// adjacency — the exact edge set (waiting_for + #151 membership, with its
+// sequencing-wins-the-pair/nonTerminal suppression already applied) that the
+// map draws, per card #74's design point 2. Neither function re-derives
+// waiting_for/parent iteration.
+//
+// - treeIds: undirected flood-fill (the connected component) — "everything
+//   this card's dependency web touches, in either direction."
+// - pathIds: directed cone — everything transitively upstream (ancestors,
+//   walking `to->from` backward) UNION everything transitively downstream
+//   (descendants, walking `from->to` forward) UNION the card itself. A
+//   sibling that shares an ancestor/descendant with the id but isn't itself
+//   reachable FROM/TO the id is excluded — this is what makes path: a
+//   narrower cone than tree:'s whole component.
+//
+// Both: unknown/non-numeric id -> empty Set (no error, per design point 6);
+// an isolated card (no edges at all) resolves to a one-element Set (itself);
+// visited-set BFS makes both cycle-safe (never hangs, mirrors layerNodes'
+// own cycle tolerance).
+function buildAdjacency(cards) {
+  const { edges } = buildDependencyGraph(cards, null);
+  const forward = new Map(); // from -> Set(to)
+  const backward = new Map(); // to -> Set(from)
+  for (const { from, to } of edges) {
+    if (!forward.has(from)) forward.set(from, new Set());
+    forward.get(from).add(to);
+    if (!backward.has(to)) backward.set(to, new Set());
+    backward.get(to).add(from);
+  }
+  return { forward, backward };
+}
+
+function walkFrom(start, adjacency, visited) {
+  const queue = [start];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const next of adjacency.get(cur) || []) {
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
+  }
+}
+
+function treeIds(cards, rawId) {
+  const id = Number(rawId);
+  if (!cards.some((c) => c.id === id)) return new Set();
+  const { forward, backward } = buildAdjacency(cards);
+  const visited = new Set([id]);
+  // Undirected: a single BFS over the union of both directions' neighbors
+  // at each step reaches the whole component regardless of edge direction.
+  const queue = [id];
+  while (queue.length) {
+    const cur = queue.shift();
+    const neighbors = new Set([...(forward.get(cur) || []), ...(backward.get(cur) || [])]);
+    for (const next of neighbors) {
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
+  }
+  return visited;
+}
+
+function pathIds(cards, rawId) {
+  const id = Number(rawId);
+  if (!cards.some((c) => c.id === id)) return new Set();
+  const { forward, backward } = buildAdjacency(cards);
+  const visited = new Set([id]);
+  walkFrom(id, forward, visited); // descendants (downstream)
+  walkFrom(id, backward, visited); // ancestors (upstream)
+  return visited;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { buildDependencyGraph, layerNodes };
+  module.exports = { buildDependencyGraph, layerNodes, treeIds, pathIds };
 } else {
   window.buildDependencyGraph = buildDependencyGraph;
   window.layerNodes = layerNodes;
+  window.treeIds = treeIds;
+  window.pathIds = pathIds;
 }

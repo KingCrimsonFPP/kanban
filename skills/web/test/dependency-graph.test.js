@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { buildDependencyGraph, layerNodes } = require('../web/dependency-graph');
+const { buildDependencyGraph, layerNodes, treeIds, pathIds } = require('../web/dependency-graph');
 
 // --- buildDependencyGraph ---------------------------------------------------
 
@@ -391,4 +391,92 @@ test('participants: any-edge-touched nodes + ghosts, in the pure module — epic
   ], null);
   assert.deepStrictEqual(g.participants, [10, 11]);
   assert.deepStrictEqual(g.isolated, [10, 11, 12]); // no dep edges anywhere — all three
+});
+
+// --- card #74: treeIds (connected component) / pathIds (directed cone) -------
+
+test('treeIds: an isolated card (no edges) is a component of one — itself', () => {
+  assert.deepStrictEqual(treeIds(CARDS, 4), new Set([4]));
+});
+
+test('pathIds: an isolated card (no edges) is a cone of one — itself', () => {
+  assert.deepStrictEqual(pathIds(CARDS, 4), new Set([4]));
+});
+
+test('treeIds/pathIds: an unknown id matches nothing — empty set, no error', () => {
+  assert.deepStrictEqual(treeIds(CARDS, 999), new Set());
+  assert.deepStrictEqual(pathIds(CARDS, 999), new Set());
+});
+
+test('treeIds/pathIds: non-numeric garbage id also resolves to an empty set, no throw', () => {
+  assert.deepStrictEqual(treeIds(CARDS, 'abc'), new Set());
+  assert.deepStrictEqual(pathIds(CARDS, 'abc'), new Set());
+});
+
+test('treeIds/pathIds accept a numeric-string id (as tree:<id>/path:<id> pass through from search.js), same result as a number', () => {
+  assert.deepStrictEqual(treeIds(CARDS, '3'), treeIds(CARDS, 3));
+  assert.deepStrictEqual(pathIds(CARDS, '3'), pathIds(CARDS, 3));
+});
+
+test('treeIds: the whole chain 1->2->3 is one component from any member', () => {
+  assert.deepStrictEqual(treeIds(CARDS, 1), new Set([1, 2, 3]));
+  assert.deepStrictEqual(treeIds(CARDS, 2), new Set([1, 2, 3]));
+  assert.deepStrictEqual(treeIds(CARDS, 3), new Set([1, 2, 3]));
+});
+
+test('treeIds spans an archived member — archive is a location, not exclusion, same as buildDependencyGraph', () => {
+  assert.deepStrictEqual(treeIds(CARDS, 6), new Set([5, 6]));
+});
+
+test('cone vs component divergence: pathIds excludes a sibling branch that tree includes (a fork with no directed relation to the id)', () => {
+  const fork = [
+    { id: 1, title: 'root', status: 'done', waiting_for: [] },
+    { id: 2, title: 'branch B', status: 'todo', waiting_for: [1] },
+    { id: 3, title: 'branch C', status: 'todo', waiting_for: [1] },
+  ];
+  // treeIds(2): the whole component, including sibling branch C.
+  assert.deepStrictEqual(treeIds(fork, 2), new Set([1, 2, 3]));
+  // pathIds(2): only 2's own ancestors (1) — sibling 3 is neither upstream
+  // nor downstream of 2, so the cone excludes it.
+  assert.deepStrictEqual(pathIds(fork, 2), new Set([1, 2]));
+});
+
+test('pathIds: membership edge direction — the epic sink is downstream of a member (walking forward from the member reaches its epic)', () => {
+  // epicBoard: 11 -> 12 (dep), 12 -> 10 (epic, terminal-only hop)
+  assert.deepStrictEqual(pathIds(epicBoard, 11), new Set([11, 12, 10]));
+});
+
+test('pathIds on an epic pulls in all member chains upstream (walking backward from the epic reaches every member transitively)', () => {
+  assert.deepStrictEqual(pathIds(epicBoard, 10), new Set([10, 12, 11]));
+});
+
+test('treeIds on an epic is the same whole component as any member (undirected)', () => {
+  assert.deepStrictEqual(treeIds(epicBoard, 10), new Set([10, 11, 12]));
+});
+
+test('pathIds/treeIds respect card #151 edge suppression — a suppressed membership edge (sequencing wins the pair) never appears in traversal', () => {
+  const board = [
+    { id: 10, title: 'epic', status: 'doing', epic: true, waiting_for: [] },
+    { id: 11, title: 'child+dep', status: 'todo', parent: 10, waiting_for: [10] },
+    { id: 20, title: 'unrelated', status: 'todo', waiting_for: [] },
+  ];
+  // Only the dep edge 10->11 survives (the membership edge is suppressed);
+  // 20 shares no edge with either, so it's excluded from both traversals.
+  assert.deepStrictEqual(treeIds(board, 10), new Set([10, 11]));
+  assert.deepStrictEqual(pathIds(board, 11), new Set([11, 10]));
+});
+
+test('treeIds/pathIds tolerate a cycle without hanging (2-cycle via waiting_for)', () => {
+  const cyclic = [
+    { id: 1, title: 'A', status: 'todo', waiting_for: [2] },
+    { id: 2, title: 'B', status: 'todo', waiting_for: [1] },
+  ];
+  assert.deepStrictEqual(treeIds(cyclic, 1), new Set([1, 2]));
+  assert.deepStrictEqual(pathIds(cyclic, 1), new Set([1, 2]));
+});
+
+test('treeIds/pathIds tolerate a self-referencing waiting_for without hanging', () => {
+  const selfRef = [{ id: 7, title: 'Self-blocked', status: 'todo', waiting_for: [7] }];
+  assert.deepStrictEqual(treeIds(selfRef, 7), new Set([7]));
+  assert.deepStrictEqual(pathIds(selfRef, 7), new Set([7]));
 });

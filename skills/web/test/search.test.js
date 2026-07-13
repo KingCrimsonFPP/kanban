@@ -153,3 +153,66 @@ test('cardMatchesQuery with zero terms is vacuously true (Array.every on [])', (
 test('typing "status:" with no value yet does not flash a false all-match — same as an empty query', () => {
   assert.deepStrictEqual(idsFor('status:'), CARDS.map((c) => c.id));
 });
+
+// --- card #74: tree:<id> / path:<id> --------------------------------------
+
+test('tree: and path: parse as their own scoped term, id kept case-verbatim like id:', () => {
+  assert.deepStrictEqual(parseSearchQuery('tree:74'), [{ field: 'tree', value: '74' }]);
+  assert.deepStrictEqual(parseSearchQuery('path:74'), [{ field: 'path', value: '74' }]);
+});
+
+test('tree:/path: strip an optional leading # — tree:74 and tree:#74 parse identically', () => {
+  assert.deepStrictEqual(parseSearchQuery('tree:#74'), [{ field: 'tree', value: '74' }]);
+  assert.deepStrictEqual(parseSearchQuery('path:#74'), [{ field: 'path', value: '74' }]);
+});
+
+test('a valueless tree:/path: prefix (mid-typing) is dropped, same as the other scoped prefixes', () => {
+  assert.deepStrictEqual(parseSearchQuery('tree:'), []);
+  assert.deepStrictEqual(parseSearchQuery('path:'), []);
+  assert.deepStrictEqual(parseSearchQuery('tree:#'), []);
+});
+
+const GRAPH_CARDS = [
+  { id: 1, title: 'root', status: 'done', waiting_for: [] },
+  { id: 2, title: 'branch B', status: 'todo', waiting_for: [1] },
+  { id: 3, title: 'branch C', status: 'todo', waiting_for: [1] },
+  { id: 9, title: 'loner', status: 'todo', waiting_for: [] },
+];
+
+test('filterCards resolves tree:<id> to the connected component, over the FULL cards array passed in', () => {
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'tree:2').sort(), [1, 2, 3]);
+});
+
+test('filterCards resolves path:<id> to the directed cone, excluding a sibling branch tree: would include', () => {
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'path:2').sort(), [1, 2]);
+});
+
+test('filterCards: tree:/path: on an unknown id matches nothing (empty result, no error)', () => {
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'tree:999'), []);
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'path:999'), []);
+});
+
+test('filterCards: tree:/path: on an isolated card (no edges) resolves to just itself', () => {
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'tree:9'), [9]);
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'path:9'), [9]);
+});
+
+test('filterCards: tree:/path: compose with the rest of the query by plain intersection (AND)', () => {
+  // tree:2 -> {1,2,3}; status:todo narrows to {2,3}
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'tree:2 status:todo').sort(), [2, 3]);
+  // path:2 -> {1,2}; status:todo narrows to {2}
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'path:2 status:todo'), [2]);
+});
+
+test('filterCards: tree:#<id> (leading #) resolves the same as tree:<id>', () => {
+  assert.deepStrictEqual(idsFor2(GRAPH_CARDS, 'tree:#2').sort(), idsFor2(GRAPH_CARDS, 'tree:2').sort());
+});
+
+test('cardMatchesQuery called directly with an UNRESOLVED tree:/path: term matches nothing (no graph to resolve against) — always go through filterCards for tree:/path:', () => {
+  assert.strictEqual(cardMatchesQuery(GRAPH_CARDS[0], [{ field: 'tree', value: '1' }]), false);
+  assert.strictEqual(cardMatchesQuery(GRAPH_CARDS[0], [{ field: 'path', value: '1' }]), false);
+});
+
+function idsFor2(cards, query) {
+  return filterCards(cards, parseSearchQuery(query)).map((c) => c.id);
+}

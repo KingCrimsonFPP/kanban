@@ -634,6 +634,14 @@ function renderBoardColumns() {
   const searchActive = searchTerms.length > 0;
   const clearBtn = $('#search-clear-btn');
   if (clearBtn) clearBtn.classList.toggle('hidden', !searchActive);
+  // card #74: tree:/path: terms need the FULL active+archived graph to
+  // resolve connectivity — resolving per column (a pre-sliced subset) would
+  // see almost no edges. Mirrors renderMapView/renderCalendar*/renderGantt's
+  // own "resolve searchIds once against the full board" pattern: compute the
+  // matching id set ONCE here, then each column below intersects against it
+  // by id rather than re-calling filterCards on its own slice.
+  const searchIds = searchActive
+    ? new Set(filterCards(state.active.concat(state.archived), searchTerms).map((c) => c.id)) : null;
   // card #31: columns render FROM the configured statuses list (+ archive at
   // the far right). A card whose status isn't listed renders in the FIRST
   // column via columnForStatus — the catch-all — with cardEl's raw-status chip.
@@ -645,7 +653,7 @@ function renderBoardColumns() {
     // card #46: the Assignee sort ranks by registry order, so the comparator
     // gets the config.yaml handles — plumbed exactly like priorities above.
     const allCards = sortCards(source, sortState, state.priorities, state.assignees.map((a) => a.handle));
-    const cards = searchActive ? filterCards(allCards, searchTerms) : allCards;
+    const cards = searchActive ? allCards.filter((c) => searchIds.has(c.id)) : allCards;
     const isCollapsed = !!collapsed[col];
     const label = columnLabel(col);
     // Counts stay truthful whether or not the column is collapsed — column-count
@@ -3261,11 +3269,35 @@ function hideContextMenu() {
 
 function showContextMenu(x, y) {
   const menu = $('#context-menu');
+  // card #74: "Dependency tree"/"Dependency path" only make sense against a
+  // single card — hidden whenever the effective selection is more than one.
+  // The caller (the document contextmenu handler) has already resolved
+  // selectedIds via contextSelection() and reassigned it before calling here,
+  // so selectedIds.size is the "effective selection" at this point. First
+  // conditionally-hidden menu items — the other seven always render; mixed-
+  // selection handling for them lives inside each click handler instead.
+  const singleSelected = selectedIds.size <= 1;
+  $('#ctx-tree').classList.toggle('hidden', !singleSelected);
+  $('#ctx-path').classList.toggle('hidden', !singleSelected);
   menu.classList.remove('hidden');
   // Clamp to the viewport so the menu never opens half off-screen.
   const rect = menu.getBoundingClientRect();
   menu.style.left = `${Math.min(x, window.innerWidth - rect.width - 8)}px`;
   menu.style.top = `${Math.min(y, window.innerHeight - rect.height - 8)}px`;
+}
+
+// card #74: writes "tree:<id>"/"path:<id>" into the search box (REPLACING its
+// content — not appended), closes the menu, and runs the normal search flow
+// via renderBoard() — same direct-call convention as clearSearch(), no
+// synthetic 'input' event, and no view switch. Single-card only; showContextMenu
+// already hides these items for a multi-card selection, but this guards the
+// no-selection edge case too (e.g. a stale/empty selectedIds).
+function focusOn(kind) {
+  hideContextMenu();
+  const id = [...selectedIds][0];
+  if (id == null) return;
+  $('#search-input').value = `${kind}:${id}`;
+  renderBoard();
 }
 
 async function bulkArchive() {
@@ -3591,6 +3623,9 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#ctx-tags').addEventListener('click', openBulkTags);
   // Schedule… popup (card #42)
   $('#ctx-schedule').addEventListener('click', openBulkSchedule);
+  // Dependency tree / path search sugar (card #74)
+  $('#ctx-tree').addEventListener('click', () => focusOn('tree'));
+  $('#ctx-path').addEventListener('click', () => focusOn('path'));
   $('#bulk-schedule-apply').addEventListener('click', applyBulkSchedule);
   $('#bulk-schedule-close').addEventListener('click', () => $('#bulk-schedule').classList.add('hidden'));
   $('#bulk-schedule-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('bulkSchedule'));

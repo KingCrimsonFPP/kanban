@@ -252,8 +252,17 @@ bound to `127.0.0.1` only.
   the node's neutral border and its status/epic dots, card #91, are unaffected).
   Right-click: an unselected card becomes the selection in
   the same gesture; an already-selected one keeps the whole batch as the target. The
-  menu — **Assign…**, **Set priority…**, **Edit tags…**, **Schedule…**, Archive, Restore, Delete —
-  acts on the selection regardless of which view opened it. Any plain click outside
+  menu — **Assign…**, **Set priority…**, **Edit tags…**, **Schedule…**, **Dependency
+  tree**, **Dependency path**, Archive, Restore, Delete —
+  acts on the selection regardless of which view opened it. **Dependency tree**/
+  **Dependency path** (card #74) are sugar over the `tree:<id>`/`path:<id>` search
+  terms (see the Dependency map section below for the grammar): clicking one
+  replaces the search box's content with `tree:<id>`/`path:<id>` for the single
+  selected card and runs the normal search — no view switch. They're the first
+  menu items ever conditionally hidden: unlike the other seven, which always
+  render (mixed-selection handling lives inside each click handler instead),
+  these two are hidden outright whenever the effective selection is more than
+  one card. Any plain click outside
   the context menu / bulk popups clears the selection (empty calendar day cells and
   map/gantt whitespace included); the view-toggle buttons are exempt, so the
   selection **survives switching views**, as well as the auto-refresh poll.
@@ -454,6 +463,25 @@ bound to `127.0.0.1` only.
   (`map.sections.collapsed`, merged defensively like every other view preference)
   and survives the 5s poll; collapsing skips the expensive `layerNodes`/`buildMapSvg`
   work entirely rather than just hiding it via CSS.
+  **Dependency tree / Dependency path (card #74)** — a second way to populate the
+  map's `visibleIds`, alongside typed search and the status pills: two new search
+  terms, `tree:<id>` and `path:<id>` (`#` optional — `tree:#74` and `tree:74` parse
+  identically), resolved over the SAME edge set the map draws (`waiting_for` +
+  #151's `parent:` membership, with its sequencing-wins-the-pair/terminal-only
+  suppression already applied — see `dependency-graph.js`'s `treeIds`/`pathIds`
+  for the grammar, not restated here). `tree:` is the connected component (every
+  card the id's dependency web touches, undirected); `path:` is the narrower
+  directed cone — everything transitively upstream and downstream through the
+  id, excluding sibling branches. Traversal is ALWAYS over live + archived cards;
+  an archived member's visibility on screen still follows the Archive pill, same
+  as any other search hit. Composes with the rest of the query, bare text, and the
+  status pills by the usual intersection rule; an unknown id matches nothing (no
+  error), and a card with no edges resolves to a component/cone of one — itself.
+  Focusing hides everything outside the result and re-lays-out, exactly like a
+  typed search — a cone edge that exits the focused set renders as the map's
+  existing ghost stub, no new rendering path. The right-click bulk menu offers
+  these as sugar — **Dependency tree** / **Dependency path** — see Multi-select
+  above; this is a web-only feature today (cards #152/#153 track cli/viewer parity).
 - **Calendar view** — a top-bar "📅 Calendar" button swaps the board for a month grid
   (weeks start Monday; prev/next/Today controls; outside-month days dimmed, today
 
