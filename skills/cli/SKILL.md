@@ -222,12 +222,46 @@ it — membership edges don't count for that list, so an epic whose only edges
 are membership appears in the diagram AND the list, matching the web map. If the board is filtered, apply the same filter, but keep referenced
 off-filter cards as dimmed nodes rather than dropping edges silently.
 
+**Scoped to one card — "Dependencies tree for #74" / "Dependencies path for
+#74"** (card #74/#152 parity: web's `tree:<id>`/`path:<id>` search terms).
+Same edge set as the whole-board view above (`waiting_for` sequencing +
+card #151 `parent:` membership, sequencing-wins-the-pair already applied,
+epic as sink), read over live **and** archived cards regardless of any
+active board filter — traversal always runs over the full board; only
+whether an archived member actually *renders* stays gated by the Archive
+filter. `#`-tolerant id (`tree:74` and `tree:#74` are the same target), one
+id per request. An id matching no card (unknown or non-numeric) matches
+nothing — say so, don't error. Two variants, same machinery as web's
+`treeIds`/`pathIds`:
+
+- **tree** — the undirected connected component containing the id: flood-fill
+  every node reachable by following edges in **either** direction, starting
+  from the card. This is "everything this card's dependency web touches."
+- **path** — the directed cone through the id: everything transitively
+  **upstream** (walk dependency-to-waiting edges backward — ancestors) union
+  everything transitively **downstream** (walk them forward — descendants)
+  union the card itself. Narrower than tree — a sibling that only shares an
+  ancestor or descendant with the id, with no direct directed relation to it,
+  is excluded.
+
+Print the same Mermaid `graph LR` as the whole-board view, restricted to the
+resolved id set: same node styling, same dashed membership edges, same
+"not found" ghost nodes for dangling `waiting_for`/`parent` ids (dangling ids
+never block the print). A card with no edges at all is a component/cone of
+one — print it alone rather than falling back to the whole board. This is a
+Mermaid rendering, not a new interaction: cli has no search box, so there's no
+"write the term in and don't switch views" sugar to mirror — the user just
+asks for the scoped view directly.
+
 ## Parity with kanban-web
 
 Full CRUD, the `doing` entry gate (waiting + blocked), bulk actions, speedbumps,
 notifications, dependency view, assignee suggestions: **same behavior, same
-rules.** Not yet mirrored: web's `tree:`/`path:` dependency-focus search terms
-and context-menu sugar (card #74) — pending, see cards #152/#153. Deliberately not
+rules.** Web's `tree:`/`path:` dependency-focus search terms (card #74) are
+mirrored as the scoped "Dependencies tree/path for #id" variants above (card
+#152); the context-menu sugar has no cli equivalent to mirror — there's no
+search box to write a term into. Viewer parity is still pending, see card
+#153. Deliberately not
 mirrored (medium mismatch): drag & drop (typed commands instead), collapse state
 and any `localStorage` persistence (a print is ephemeral), per-column persisted
 sort (on-demand re-print instead), the SVG map (Mermaid instead), the 5s poll

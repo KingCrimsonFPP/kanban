@@ -85,7 +85,9 @@ prints the board path on request), popup fullscreen and its Alt+Enter hotkey
 (card #145 — a printed board has no popups or keyboard chords). A feature added to one editor lands in the other (or gets a
 line in this table saying why not). Retired skills are deleted outright (git
 history keeps them recoverable — card #53).
-Not yet mirrored, pending rather than deliberate: web's `tree:<id>`/`path:<id>`
-dependency-focus search terms and their context-menu sugar (card #74) — cli's
-dependency view still stops at the existing Mermaid graph; parity is tracked as
-cards #152 (cli) and #153 (viewer).
+Web's `tree:<id>`/`path:<id>` dependency-focus search terms (card #74) are
+mirrored in cli as scoped "Dependencies tree/path for #id" Mermaid views (card
+#152); the context-menu sugar has no cli equivalent (no search box to write a
+term into). Not yet mirrored, pending rather than deliberate: the viewer
+(card #153) — its dependency view still stops at the existing whole-board
+Mermaid graph.
