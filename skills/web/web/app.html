@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban App</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <!-- card #55: copy button INSIDE the h1 so it rides beside the title when the flex header wraps -->
+  <h1>Kanban<span id="project-name" class="project-name"></span> <button type="button" id="board-copy-btn" class="board-copy-btn" title="Copy the board folder's absolute path" aria-label="Copy the board folder's absolute path">&#x29C9;</button></h1>
+  <div class="search-bar">
+    <input type="search" id="search-input" class="search-input" autocomplete="off"
+      placeholder="Search… (#id, title:, body:, status:, priority:, tags:, file:)"
+      title="Space-separated terms AND together. Prefix a term with title:/body:/status:/priority:/tags:/file: to scope it, or #id / id:42 for an exact card. Press / to focus, Esc to clear.">
+    <button type="button" id="search-clear-btn" class="search-clear hidden" title="Clear search (Esc)" aria-label="Clear search">&#10005;</button>
+  </div>
+  <div class="actions">
+    <button id="new-btn">+ New card</button>
+    <button id="map-toggle-btn" type="button" aria-pressed="false"
+      title="Toggle dependency map view (nodes = cards, edges = waiting_for, honors the search filter)">🕸 Map view</button>
+    <button id="calendar-toggle-btn" type="button" aria-pressed="false"
+      title="Toggle calendar view (month / week / 3-day / day sub-views of start→end ranges plus due-deadline chips, drag chips to reschedule, honors the search filter)">📅 Calendar</button>
+    <button id="gantt-toggle-btn" type="button" aria-pressed="false"
+      title="Toggle gantt view (ranges as bars, due dates as diamonds, on a day timeline — drag a bar to shift, an edge to resize, a diamond to move its due date; honors the search filter)">📊 Gantt</button>
+    <button id="refresh-btn" title="Reload from disk">⟳ Refresh</button>
+    <button id="notif-btn" type="button" class="notif-btn" title="Notifications (agents write to notifications.md)" aria-label="Notifications">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+      <span id="notif-badge" class="notif-badge hidden"></span>
+    </button>
+    <span id="stale-indicator" class="hidden" title="Auto-refresh can't reach the server — showing last loaded data">⚠ stale</span>
+  </div>
+</header>
+<div id="toast" class="toast hidden"></div>
+<main id="board"></main>
+<div id="map-view" class="map-view hidden" aria-label="Dependency map view"></div>
+<div id="calendar-view" class="calendar-view hidden" aria-label="Calendar view"></div>
+<div id="gantt-view" class="gantt-view hidden" aria-label="Gantt view"></div>
+
+<div id="modal" class="modal-backdrop hidden">
+  <!-- autocomplete=off: the browser's form-history dropdown fights the
+       hand-rolled combobox menus and offers stale typed values (card #30) -->
+  <form id="card-form" class="modal" autocomplete="off">
+    <div class="modal-header popup-header">
+      <h2 id="modal-title">New card</h2>
+      <div class="modal-header-actions">
+        <button type="submit" id="modal-save" class="icon-btn" title="Save" aria-label="Save">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+        </button>
+        <button type="button" id="modal-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+        <button type="button" id="modal-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <input type="hidden" id="f-id">
+    <label>Title <input id="f-title" required></label>
+    <!-- card #50: minimal-first create. Everything below Title (the .modal-extra
+         groups — three whole rows plus the description) starts hidden for NEW
+         cards behind this button; openModal() drives it with one form-level
+         class (#card-form.minimal), one-way per open, never persisted. Edit
+         always opens full. Card #85 exempts Assignee: see the row below. -->
+    <button type="button" id="show-more-btn">Show more fields</button>
+    <div class="row modal-extra">
+      <label>Status
+        <!-- options are populated per open from the board's statuses list
+             (card #31) — the static four here are only a pre-first-load
+             fallback; an unlisted on-disk status is appended so editing a
+             card never silently rewrites it -->
+        <select id="f-status">
+          <option value="backlog">backlog</option>
+          <option value="todo">todo</option>
+          <option value="doing">doing</option>
+          <option value="done">done</option>
+        </select>
+      </label>
+      <label>Priority
+        <input id="f-priority">
+      </label>
+      <!-- card #59: epic/wayfinder flag — a MANAGED boolean: checked writes
+           `epic: true`, unchecked removes the line (the #51 lean rule), never
+           validated. Rides this .modal-extra row, so the #50 minimal-first
+           create hides it behind "Show more fields" for free. card #91: the
+           flag now wears a small orange dot everywhere it shows, not a border. -->
+      <label class="epic-check" title="Epic/wayfinder — marks a stretch-of-work card; wears a small orange dot in every view">Epic <input type="checkbox" id="f-epic"></label>
+    </div>
+    <!-- epic #137: waiting_for = dependency edges (sequencing), blocked = the
+         manual impediment sticker with the reason as its value. The blocked
+         input wears a red border only while its value passes the shared
+         predicate (see the stylesheet's .blocked-active rule). -->
+    <div class="row modal-extra">
+      <label>Tags (comma-sep) <input id="f-tags"></label>
+      <label>Waiting for (ids, comma-sep) <input id="f-waiting"></label>
+      <label>Blocked (reason) <input id="f-blocked" placeholder="empty = not blocked"></label>
+    </div>
+    <!-- card #85: Assignee joins Title in the #50 minimal form (the user's
+         "+ -> title -> @afk -> Enter" queue-it flow). Unlike the other three
+         .modal-extra groups this row does NOT hide wholesale — only the three
+         DATE labels below carry modal-extra individually, so Assignee alone
+         stays visible. This row stays put here at parse time (right before
+         Description) — placeAssigneeRow(), the client script's helper,
+         physically moves the row node next to Title only while minimal, and
+         moves it straight back to this exact slot the instant minimal lifts
+         (expand or edit), so the full form's #47 flex layout is genuinely
+         untouched, not just visually faked with `order` (that faked a WCAG
+         2.4.3 focus-order bug — see the stylesheet and client script for the
+         fix). NOTE: never mention the client script's filename literally in
+         this comment — script-load-order tests match the first occurrence of
+         that substring in the served HTML, an early false hit breaks them. -->
+    <div class="row" id="row-assignee-dates">
+      <label>Assignee <input id="f-assignee"></label>
+      <!-- card #40 date triad: start/end form the working range ("from"/"to"),
+           due is the independent deadline; each takes a date or a local datetime.
+           card #41: every date field pairs its free-text input with a 📅 button
+           that opens the shared date-picker popover (manual typing stays legal;
+           the .date-field wrapper keeps input+button on one tidy row) -->
+      <label class="modal-extra">Start date <span class="date-field"><input id="f-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
+      <label class="modal-extra">End date <span class="date-field"><input id="f-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
+      <label class="modal-extra">Due date <span class="date-field"><input id="f-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
+    </div>
+    <!-- card #47: .modal-desc marks the field that absorbs fullscreen's
+         leftover height (flex-grow chain: form → this label → textarea) -->
+    <label class="modal-desc modal-extra">Description (markdown) <textarea id="f-body" rows="8"></textarea></label>
+  </form>
+</div>
+
+<div id="detail-modal" class="modal-backdrop hidden">
+  <div class="modal detail-modal">
+    <div class="detail-header popup-header">
+      <div>
+        <h2 id="detail-title"></h2>
+        <div class="detail-path-row">
+          <span id="detail-path" class="detail-path"></span>
+          <button type="button" id="detail-copy-btn" title="Copy file path">Copy path</button>
+        </div>
+        <div id="detail-modified" class="detail-path"></div>
+      </div>
+      <div class="detail-actions">
+        <button type="button" id="detail-edit-btn" class="icon-btn" title="Edit card fields" aria-label="Edit card fields">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>
+        </button>
+        <button type="button" id="detail-archive-btn" class="icon-btn" title="Archive card (moves file to archived/)" aria-label="Archive card (moves file to archived/)">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>
+        </button>
+        <button type="button" id="detail-delete-btn" class="icon-btn danger" title="Delete card permanently" aria-label="Delete card permanently">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        </button>
+        <button type="button" id="detail-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+        <button type="button" id="detail-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <div id="detail-frontmatter" class="detail-frontmatter"></div>
+    <div id="detail-body" class="detail-body"></div>
+  </div>
+</div>
+
+<div id="context-menu" class="context-menu hidden" role="menu">
+  <button type="button" id="ctx-assign" role="menuitem">Assign…</button>
+  <button type="button" id="ctx-priority" role="menuitem">Set priority…</button>
+  <button type="button" id="ctx-tags" role="menuitem">Edit tags…</button>
+  <button type="button" id="ctx-schedule" role="menuitem">Schedule…</button>
+  <button type="button" id="ctx-archive" role="menuitem">Archive selected</button>
+  <button type="button" id="ctx-restore" role="menuitem">Restore selected</button>
+  <button type="button" id="ctx-delete" role="menuitem" class="danger">Delete selected</button>
+</div>
+
+<!-- card #32: bulk-edit popups. Single-choice serves Assign… and Set
+     priority…; the tags popup is the add/remove workbench. Same
+     .modal-backdrop convention as every popup (pauses the poll). -->
+<div id="bulk-single" class="modal-backdrop hidden">
+  <div class="modal bulk-modal">
+    <div class="modal-header popup-header">
+      <h2 id="bulk-single-title"></h2>
+      <div class="modal-header-actions">
+        <button type="button" id="bulk-single-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+        <button type="button" id="bulk-single-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <p id="bulk-single-hint" class="bulk-hint"></p>
+    <label>Value <input id="bulk-single-input"></label>
+    <div class="bulk-actions">
+      <button type="button" id="bulk-single-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div id="bulk-tags" class="modal-backdrop hidden">
+  <div class="modal bulk-modal">
+    <div class="modal-header popup-header">
+      <h2 id="bulk-tags-title"></h2>
+      <div class="modal-header-actions">
+        <button type="button" id="bulk-tags-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+        <button type="button" id="bulk-tags-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <label>Bulk add tag <input id="bulk-tag-input"></label>
+    <div class="bulk-actions"><button type="button" id="bulk-tag-add">Bulk add tag</button></div>
+    <div id="bulk-tag-list"></div>
+    <div class="bulk-actions">
+      <button type="button" id="bulk-tags-remove" class="danger">Bulk remove tags</button>
+    </div>
+  </div>
+</div>
+
+<!-- card #42: Schedule… popup — bulk set/clear the date triad. Each row is
+     the form's date-field grammar (free-text input + 📅 picker button, wired
+     by the shared .date-pick-btn loop) plus a "clear" checkbox; clear wins
+     over a typed value, empty+unchecked leaves the card's value alone. -->
+<div id="bulk-schedule" class="modal-backdrop hidden">
+  <div class="modal bulk-modal">
+    <div class="modal-header popup-header">
+      <h2 id="bulk-schedule-title"></h2>
+      <div class="modal-header-actions">
+        <button type="button" id="bulk-schedule-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+        </button>
+        <button type="button" id="bulk-schedule-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <div class="row bulk-schedule-row">
+      <label>From <span class="date-field"><input id="bs-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="bs-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
+      <label class="bulk-clear-label"><input type="checkbox" id="bs-start-clear"> clear</label>
+    </div>
+    <div class="row bulk-schedule-row">
+      <label>To <span class="date-field"><input id="bs-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="bs-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
+      <label class="bulk-clear-label"><input type="checkbox" id="bs-end-clear"> clear</label>
+    </div>
+    <div class="row bulk-schedule-row">
+      <label>Due <span class="date-field"><input id="bs-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="bs-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
+      <label class="bulk-clear-label"><input type="checkbox" id="bs-due-clear"> clear</label>
+    </div>
+    <div class="bulk-actions">
+      <button type="button" id="bulk-schedule-apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div id="notif-modal" class="modal-backdrop hidden">
+  <div class="modal notif-modal">
+    <div class="modal-header popup-header">
+      <h2>Notifications</h2>
+      <div class="detail-actions">
+        <button type="button" id="notif-clear-btn" class="icon-btn danger" title="Clear all notifications (moves them to archived/notifications.md)" aria-label="Clear all notifications">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+        </button>
+        <button type="button" id="notif-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <div id="notif-list" class="notif-list"></div>
+  </div>
+</div>
+
+<script src="/refresh-policy.js"></script>
+<script src="/column-state.js"></script>
+<script src="/column-sort.js"></script>
+<script src="/search.js"></script>
+<script src="/waiting-blocked.js"></script>
+<script src="/dependency-graph.js"></script>
+<script src="/calendar-model.js"></script>
+<script src="/gantt-model.js"></script>
+<script src="/date-picker.js"></script>
+<script src="/modal-fullscreen.js"></script>
+<script src="/assignee-badge.js"></script>
+<script src="/priority-badge.js"></script>
+<script src="/combobox.js"></script>
+<script src="/bulk-edit.js"></script>
+<script src="/notifications.js"></script>
+<script src="/form-guard.js"></script>
+<script src="/selection.js"></script>
+<script src="/status-colors.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

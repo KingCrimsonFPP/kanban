@@ -1,0 +1,204 @@
+const { test } = require('node:test');
+const assert = require('node:assert');
+const { toggleSelection, pruneSelection, contextSelection, partitionByMovable, dragPlan, archiveNeedsConfirm, rangeSelection } = require('../web/selection');
+
+test('toggleSelection adds an unselected id and removes a selected one, without mutating input', () => {
+  const s0 = new Set([1]);
+  const s1 = toggleSelection(s0, 2);
+  assert.deepStrictEqual([...s1].sort(), [1, 2]);
+  const s2 = toggleSelection(s1, 1);
+  assert.deepStrictEqual([...s2], [2]);
+  assert.deepStrictEqual([...s0], [1]); // input untouched
+});
+
+test('pruneSelection drops ids no longer on the live board', () => {
+  const pruned = pruneSelection(new Set([1, 2, 3]), [2, 3, 4]);
+  assert.deepStrictEqual([...pruned].sort(), [2, 3]);
+});
+
+test('pruneSelection of an empty set stays empty', () => {
+  assert.deepStrictEqual([...pruneSelection(new Set(), [1, 2])], []);
+});
+
+// --- card #144: shift+click adds a RANGE between the anchor and the target,
+// in the active view's rendered order. Additive (union), never replacing —
+// the card's grammar is "shift to ADD a range".
+
+test('rangeSelection adds every id between anchor and target inclusive, without mutating input', () => {
+  const order = [10, 20, 30, 40, 50];
+  const s0 = new Set([10]);
+  const s1 = rangeSelection(s0, order, 10, 40);
+  assert.deepStrictEqual([...s1].sort((a, b) => a - b), [10, 20, 30, 40]);
+  assert.deepStrictEqual([...s0], [10]); // input untouched
+});
+
+test('rangeSelection works upward too (target before anchor in order)', () => {
+  const s = rangeSelection(new Set(), [10, 20, 30, 40], 40, 20);
+  assert.deepStrictEqual([...s].sort((a, b) => a - b), [20, 30, 40]);
+});
+
+test('rangeSelection is additive: existing selection outside the range survives', () => {
+  const s = rangeSelection(new Set([99]), [10, 20, 30, 99], 10, 20);
+  assert.deepStrictEqual([...s].sort((a, b) => a - b), [10, 20, 99]);
+});
+
+test('rangeSelection with anchor === target selects just that card', () => {
+  const s = rangeSelection(new Set(), [10, 20, 30], 20, 20);
+  assert.deepStrictEqual([...s], [20]);
+});
+
+test('rangeSelection with a missing/stale anchor degrades to adding just the target — never a toggle, shift must not deselect', () => {
+  const grown = rangeSelection(new Set([10]), [10, 20, 30], null, 30);
+  assert.deepStrictEqual([...grown].sort((a, b) => a - b), [10, 30]);
+  const kept = rangeSelection(new Set([10, 30]), [10, 20, 30], 99, 30);
+  assert.deepStrictEqual([...kept].sort((a, b) => a - b), [10, 30]);
+});
+
+test('rangeSelection with a target not in the rendered order returns the input set unchanged (same reference)', () => {
+  const s0 = new Set([10]);
+  assert.strictEqual(rangeSelection(s0, [10, 20], 10, 99), s0);
+});
+
+// --- cards #33/#39: right-click selection semantics, shared by every view.
+
+test('contextSelection replaces the selection with an unselected id, without mutating input', () => {
+  const s0 = new Set([1, 2]);
+  const s1 = contextSelection(s0, 3);
+  assert.deepStrictEqual([...s1], [3]);
+  assert.deepStrictEqual([...s0].sort(), [1, 2]); // input untouched
+});
+
+test('contextSelection keeps the whole batch when the id is already selected — same reference, no re-render needed', () => {
+  const s0 = new Set([1, 2]);
+  assert.strictEqual(contextSelection(s0, 2), s0);
+});
+
+test('contextSelection on an empty selection selects exactly the target', () => {
+  assert.deepStrictEqual([...contextSelection(new Set(), 7)], [7]);
+});
+
+test('partitionByMovable: gate-refused cards (waiting or blocked, epic #137) are skipped only for doing; same-status cards are no-ops', () => {
+  const byId = new Map([
+    [1, { id: 1, status: 'todo' }],
+    [2, { id: 2, status: 'todo' }],
+    [3, { id: 3, status: 'doing' }],
+  ]);
+  const refusesDoingFn = (card) => card.id === 2; // #2 is waiting or blocked
+  const toDoing = partitionByMovable([1, 2, 3], byId, 'doing', refusesDoingFn);
+  assert.deepStrictEqual(toDoing.movable.map((c) => c.id), [1]);
+  assert.deepStrictEqual(toDoing.refused.map((c) => c.id), [2]);
+  assert.deepStrictEqual(toDoing.unchanged.map((c) => c.id), [3]);
+
+  const toDone = partitionByMovable([1, 2], byId, 'done', refusesDoingFn);
+  // the gate only guards entering doing — refused #2 may still move to done
+  assert.deepStrictEqual(toDone.movable.map((c) => c.id).sort(), [1, 2]);
+  assert.deepStrictEqual(toDone.refused, []);
+});
+
+test('partitionByMovable ignores ids with no matching card (deleted mid-selection)', () => {
+  const byId = new Map([[1, { id: 1, status: 'todo' }]]);
+  const r = partitionByMovable([1, 99], byId, 'done', () => false);
+  assert.deepStrictEqual(r.movable.map((c) => c.id), [1]);
+  assert.deepStrictEqual(r.refused, []);
+  assert.deepStrictEqual(r.unchanged, []);
+});
+
+// --- card #34: archive column parity — one plan for any drag batch.
+// Cards carry `archived: true|false`; dest is 'archive' or a live column.
+
+const REFUSES_NONE = () => false;
+
+function byIdOf(cards) { return new Map(cards.map((c) => [c.id, c])); }
+
+test('dragPlan to archive: a non-done live card archives with a confirm, an already-archived one skips', () => {
+  const cards = [
+    { id: 1, status: 'todo', archived: false },
+    { id: 2, status: 'done', archived: true },
+  ];
+  const p = dragPlan([1, 2], byIdOf(cards), 'archive', REFUSES_NONE);
+  assert.deepStrictEqual(p.toArchive.map((c) => c.id), [1]);
+  assert.deepStrictEqual(p.toRestore, []);
+  assert.deepStrictEqual(p.toMove, []);
+  assert.match(p.confirmMessage, /Archive 1 card/);
+});
+
+// --- card #92: a fully-done batch is the natural completion flow, not a
+// destructive act — the confirm is skipped when EVERY card being archived
+// has status 'done'. One non-done card in the batch keeps the confirm.
+
+test('dragPlan to archive skips the confirm when the whole batch being archived is already done', () => {
+  const p = dragPlan([1], byIdOf([{ id: 1, status: 'done', archived: false }]), 'archive', REFUSES_NONE);
+  assert.deepStrictEqual(p.toArchive.map((c) => c.id), [1]);
+  assert.strictEqual(p.confirmMessage, null);
+});
+
+test('dragPlan to archive keeps the confirm when even one card in the batch is not done', () => {
+  const cards = [
+    { id: 1, status: 'done', archived: false },
+    { id: 2, status: 'todo', archived: false },
+  ];
+  const p = dragPlan([1, 2], byIdOf(cards), 'archive', REFUSES_NONE);
+  assert.deepStrictEqual(p.toArchive.map((c) => c.id).sort(), [1, 2]);
+  assert.match(p.confirmMessage, /Archive 2 card/);
+});
+
+test('dragPlan to archive with nothing to do returns a null confirm (no-op drag)', () => {
+  const p = dragPlan([2], byIdOf([{ id: 2, status: 'done', archived: true }]), 'archive', REFUSES_NONE);
+  assert.strictEqual(p.confirmMessage, null);
+});
+
+test('dragPlan to a live column: archived cards restore-with-status, live ones move, confirm names the archived count', () => {
+  const cards = [
+    { id: 1, status: 'todo', archived: false },
+    { id: 2, status: 'done', archived: true },
+  ];
+  const p = dragPlan([1, 2], byIdOf(cards), 'doing', REFUSES_NONE);
+  assert.deepStrictEqual(p.toMove.map((c) => c.id), [1]);
+  assert.deepStrictEqual(p.toRestore.map((c) => c.id), [2]);
+  assert.match(p.confirmMessage, /Move 2 card\(s\) to doing/);
+  assert.match(p.confirmMessage, /1 of them (is|are) archived and will be restored/);
+});
+
+test('dragPlan pure live batch to a live column needs no confirm (unchanged today)', () => {
+  const cards = [{ id: 1, status: 'todo', archived: false }];
+  const p = dragPlan([1], byIdOf(cards), 'done', REFUSES_NONE);
+  assert.deepStrictEqual(p.toMove.map((c) => c.id), [1]);
+  assert.strictEqual(p.confirmMessage, null);
+});
+
+test('dragPlan doing entry gate (waiting + blocked) applies per card entering doing — to archived cards too', () => {
+  const cards = [
+    { id: 1, status: 'todo', archived: false },
+    { id: 2, status: 'done', archived: true },
+  ];
+  const p = dragPlan([1, 2], byIdOf(cards), 'doing', () => true);
+  assert.deepStrictEqual(p.toMove, []);
+  assert.deepStrictEqual(p.toRestore, []);
+  assert.deepStrictEqual(p.refused.map((c) => c.id), [1, 2]);
+  assert.strictEqual(p.confirmMessage, null); // nothing left to confirm
+});
+
+test('dragPlan drops unknown ids and same-status live cards stay unchanged', () => {
+  const cards = [{ id: 1, status: 'done', archived: false }];
+  const p = dragPlan([1, 99], byIdOf(cards), 'done', REFUSES_NONE);
+  assert.deepStrictEqual(p.toMove, []);
+  assert.deepStrictEqual(p.unchanged.map((c) => c.id), [1]);
+  assert.strictEqual(p.confirmMessage, null);
+});
+
+// --- card #92: the shared "does this archive batch need a confirm" rule,
+// reused by the tile Archive button, drag-to-Archive, and bulk Archive
+// selected — one place decides, all three callers agree.
+
+test('archiveNeedsConfirm is false when every card in the batch is done', () => {
+  assert.strictEqual(archiveNeedsConfirm([{ id: 1, status: 'done' }, { id: 2, status: 'done' }]), false);
+});
+
+test('archiveNeedsConfirm is true when any card in the batch is not done', () => {
+  assert.strictEqual(archiveNeedsConfirm([{ id: 1, status: 'done' }, { id: 2, status: 'todo' }]), true);
+  assert.strictEqual(archiveNeedsConfirm([{ id: 1, status: 'backlog' }]), true);
+});
+
+test('archiveNeedsConfirm on a single done card is false (tile Archive button, one card)', () => {
+  assert.strictEqual(archiveNeedsConfirm([{ id: 1, status: 'done' }]), false);
+});

@@ -1,0 +1,21 @@
+{
+  "name": "kanban",
+  "owner": {
+    "name": "Francisco Pablo Perri"
+  },
+  "metadata": {
+    "description": "Marketplace for the kanban plugin - Markdown kanban boards for Claude Code.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "kanban",
+      "description": "Markdown-based kanban boards - three surfaces over one board of *.card.md files: kanban (AI card management), web (human live editor, desktop), cli (human conversational editor, remote-friendly), viewer (generated single-file HTML board for phone/tablet)",
+      "version": "0.9.0",
+      "author": {
+        "name": "Francisco Pablo Perri"
+      },
+      "source": "./"
+    }
+  ]
+}

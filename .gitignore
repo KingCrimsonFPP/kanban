@@ -1,0 +1,7 @@
+.kanban-app.pid
+*.card.md.tmp
+
+
+.agents/*
+.claude/*
+skills-lock.json
