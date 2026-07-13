@@ -226,7 +226,8 @@ off-filter cards as dimmed nodes rather than dropping edges silently.
 
 Full CRUD, the `doing` entry gate (waiting + blocked), bulk actions, speedbumps,
 notifications, dependency view, assignee suggestions: **same behavior, same
-rules.** Deliberately not
+rules.** Not yet mirrored: web's `tree:`/`path:` dependency-focus search terms
+and context-menu sugar (card #74) — pending, see cards #152/#153. Deliberately not
 mirrored (medium mismatch): drag & drop (typed commands instead), collapse state
 and any `localStorage` persistence (a print is ephemeral), per-column persisted
 sort (on-demand re-print instead), the SVG map (Mermaid instead), the 5s poll
