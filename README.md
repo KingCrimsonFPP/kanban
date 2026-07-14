@@ -15,26 +15,17 @@ work; you can drag them around in a browser, chat through them at a terminal,
 or tap through them on a phone. One set of files, no export/import step,
 nothing to host.
 
-## Screenshots
+## What it looks like
 
-![Board view](docs/images/board.png)
-*Board (hero) — the default view: columns with priority, waiting, blocked, and epic cues.*
+![The web editor](docs/images/web-board.png)
 
-![Dependency map](docs/images/map.png)
-*Dependency map — the `waiting_for` graph, with an epic as the sink below its children.*
+A board is just a folder of cards — edit it from a browser, a terminal, or your
+phone. Two visual walkthroughs show each surface in depth:
 
-![Gantt](docs/images/gantt.png)
-*Gantt — working-range bars and due-date diamonds, grouped by status.*
-
-![Calendar](docs/images/calendar.png)
-*Calendar — a Monday-start month grid of range chips and due-date markers.*
-
-![Mobile tap editor](docs/images/viewer.png)
-*Viewer — a self-contained HTML board you can tap through on a phone.*
-
-All shots are captured from the bundled demo board; see
-[docs/SCREENSHOTS.md](docs/SCREENSHOTS.md) for the checklist and how each is
-taken.
+- **[Web editor (desktop)](docs/web.md)** — the live browser app: board,
+  dependency map, gantt, calendar, and full drag-drop CRUD.
+- **[Mobile viewer](docs/viewer.md)** — a tap-through board for your phone that
+  queues its edits back to Claude to apply.
 
 ## Install
 
