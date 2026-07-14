@@ -20,9 +20,24 @@ nothing to host.
 ![Board view](docs/images/board.png)
 *Board (hero) — the default view: columns with priority, waiting, blocked, and epic cues.*
 
-More views (dependency map, gantt, calendar, card detail popup, mobile tap
-editor) are on the way — see [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md) for
-the shot checklist and how each one will be captured.
+![Dependency map](docs/images/map.png)
+*Dependency map — the `waiting_for` graph, with an epic as the sink below its children.*
+
+![Gantt](docs/images/gantt.png)
+*Gantt — working-range bars and due-date diamonds, grouped by status.*
+
+![Calendar](docs/images/calendar.png)
+*Calendar — a Monday-start month grid of range chips and due-date markers.*
+
+![Card detail](docs/images/card-detail.png)
+*Card detail — every field, dates, tags, and last-modified in one popup.*
+
+![Mobile tap editor](docs/images/viewer.png)
+*Viewer — a self-contained HTML board you can tap through on a phone.*
+
+All shots are captured from the bundled demo board; see
+[docs/SCREENSHOTS.md](docs/SCREENSHOTS.md) for the checklist and how each is
+taken.
 
 ## Install
 
@@ -116,7 +131,7 @@ statuses: [backlog, todo, doing, done] # official column list, in board order
 ```
 
 Every list here **suggests, never validates** — free text still saves and
-renders fine everywhere. An unlisted on-disk `status` files under the list's
+renders fine everywhere. An unlisted on-disk `status` renders under the list's
 first column with its raw value shown, never rewritten; promotion is a human
 adding it to the list.
 
