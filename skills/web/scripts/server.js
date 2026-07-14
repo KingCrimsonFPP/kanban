@@ -13,6 +13,39 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=u
 // The doing entry gate (waiting + blocked, epic #137) stays pinned to the
 // literal 'doing' inside card-store.
 
+// card #49: the SPA ships no inline script/style anywhere (every script is a
+// separate <script src>, every rule lives in app.css) — so the strictest CSP
+// costs nothing. Sent only on the served HTML; the app has no images/fonts to
+// widen img-src/font-src for.
+const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; " +
+  "img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; " +
+  "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+
+// card #49: CSRF + DNS-rebinding guard for every state-changing request (any
+// non-GET method — POST/PATCH/DELETE today, and automatically any mutating
+// route added later). The board's real trust boundary is the FILES, not this
+// header check (SECURITY.md) — this is defense in depth against a browser
+// tab on some other origin silently driving a write here. A header that's
+// simply ABSENT is a legitimate local client (curl, direct API calls, an
+// agent's tool calls) and is let through; only a PRESENT header naming
+// somewhere other than this machine's loopback is refused. Covers localhost
+// and 127.0.0.1 on any port — VSCode's Simple Browser and a plain browser tab
+// pointed at either both keep working.
+const ALLOWED_HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/i;
+const ALLOWED_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+
+function originAllowed(req) {
+  const host = req.headers.host;
+  if (host && !ALLOWED_HOST_RE.test(host)) return false;
+  const origin = req.headers.origin;
+  if (origin !== undefined) return ALLOWED_ORIGIN_RE.test(origin);
+  const referer = req.headers.referer;
+  if (referer) {
+    try { return ALLOWED_ORIGIN_RE.test(new URL(referer).origin); } catch (_) { return false; }
+  }
+  return true;
+}
+
 function sendJSON(res, code, obj) {
   const buf = Buffer.from(JSON.stringify(obj));
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'content-length': buf.length, 'cache-control': 'no-store' });
@@ -22,9 +55,12 @@ function sendJSON(res, code, obj) {
 function serveStatic(res, file) {
   if (!fs.existsSync(file)) { res.writeHead(404); res.end('not found'); return; }
   const body = fs.readFileSync(file);
+  const isHtml = path.extname(file) === '.html';
   // no-store: localhost + tiny files — heuristic caching once served a stale
   // app.html against new scripts and silently broke the form (card #30)
-  res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'content-length': body.length, 'cache-control': 'no-store' });
+  const headers = { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'content-length': body.length, 'cache-control': 'no-store' };
+  if (isHtml) headers['content-security-policy'] = CSP; // card #49
+  res.writeHead(200, headers);
   res.end(body);
 }
 
@@ -42,6 +78,11 @@ function createServer(dir) {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
     try {
+      // card #49: reject state-changing requests carrying a disallowed
+      // Origin/Referer/Host before touching any route below.
+      if (req.method !== 'GET' && !originAllowed(req)) {
+        return sendJSON(res, 403, { error: 'Forbidden: disallowed Origin/Referer/Host header' });
+      }
       // static + board
       if (req.method === 'GET' && p === '/api/board') {
         const active = cs.listActive(dir);
@@ -153,4 +194,4 @@ if (require.main === module) {
   start(dir, port);
 }
 
-module.exports = { createServer, start };
+module.exports = { createServer, start, originAllowed };

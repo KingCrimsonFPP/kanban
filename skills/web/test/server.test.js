@@ -3,7 +3,8 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createServer } = require('../scripts/server');
+const http = require('node:http');
+const { createServer, start, originAllowed } = require('../scripts/server');
 
 function tmpBoard() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-srv-'));
@@ -638,6 +639,38 @@ async function req(base, method, p, body) {
   });
   const text = await res.text();
   return { status: res.status, json: text ? JSON.parse(text) : null };
+}
+
+// card #49: fetch()/undici forbid setting some headers (notably Host) the way
+// a real cross-origin attacker or a hostile DNS-rebinding target would send
+// them — node:http gives full control, so the Origin/Referer/Host tests below
+// use this instead of req() wherever a header needs to be a specific,
+// possibly-disallowed value.
+function rawRequest(base, method, p, opts = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(p, base);
+    const bodyStr = opts.body !== undefined ? JSON.stringify(opts.body) : undefined;
+    const headers = { ...(opts.headers || {}) };
+    if (bodyStr !== undefined) {
+      headers['content-type'] = 'application/json';
+      headers['content-length'] = Buffer.byteLength(bodyStr);
+    }
+    const request = http.request(
+      { hostname: u.hostname, port: u.port, path: u.pathname + u.search, method, headers },
+      (res) => {
+        let data = '';
+        res.on('data', (c) => { data += c; });
+        res.on('end', () => {
+          let json = null;
+          try { json = data ? JSON.parse(data) : null; } catch (_) { /* non-JSON body is fine */ }
+          resolve({ status: res.statusCode, headers: res.headers, json, text: data });
+        });
+      },
+    );
+    request.on('error', reject);
+    if (bodyStr !== undefined) request.write(bodyStr);
+    request.end();
+  });
 }
 
 test('POST /api/cards creates; PATCH moves; DELETE removes', async () => {
@@ -2223,4 +2256,215 @@ test('bulkArchive gates its confirm on archiveNeedsConfirm — the bulk menu\'s 
   assert.ok(fn, 'bulkArchive found in app.js');
   assert.match(fn[0], /if \(archiveNeedsConfirm\(toArchive\) && !confirm\(/,
     'the batch confirm is skipped when every card actually being archived (toArchive, not the whole selection) is already done');
+});
+
+// =====================================================================
+// card #49 — security audit (Track A of #146's go-public gate). Four
+// ratified deliverables: pin the loopback bind, add an Origin/Referer +
+// Host allowlist on state-changing routes, ship a CSP header + sweep the
+// SPA's card-content render paths for XSS, and SECURITY.md's threat model.
+// =====================================================================
+
+// --- deliverable 1: pin the loopback bind with a regression test. The bind
+// itself was already correct (server.js:139 hardcodes '127.0.0.1') — this
+// test exercises the REAL start() codepath (not withServer's own manual
+// listen(0, '127.0.0.1', ...) above, which would never catch a regression in
+// start() itself) so a future edit that widens the bind to '0.0.0.0' or drops
+// the host argument (defaulting to all interfaces) fails loudly.
+
+test("start() binds the HTTP server to 127.0.0.1 only — no 0.0.0.0 footgun (card #49 deliverable 1)", async () => {
+  const dir = tmpBoard();
+  const srv = start(dir, 0); // port 0: OS picks a free port — start()'s own listen() call is what's under test
+  try {
+    await new Promise((resolve, reject) => {
+      srv.once('listening', resolve);
+      srv.once('error', reject);
+    });
+    const addr = srv.address();
+    assert.strictEqual(addr.address, '127.0.0.1',
+      'the server must bind the loopback interface only — 0.0.0.0/:: would also accept connections from other devices on the LAN');
+    // sanity: prove this is a live bind check, not an assertion on inert config
+    const res = await fetch(`http://127.0.0.1:${addr.port}/api/board`);
+    assert.strictEqual(res.status, 200);
+  } finally {
+    await new Promise((resolve) => srv.close(resolve));
+    try { fs.unlinkSync(path.join(dir, '.kanban-app.pid')); } catch (_) {}
+  }
+});
+
+// --- deliverable 2: Origin/Referer check + Host allowlist on state-changing
+// routes. Design constraint from the card: a PRESENT header naming a
+// disallowed origin/host is refused; an ABSENT header is a legitimate local
+// client (curl, direct tool calls, VSCode Simple Browser) and passes through.
+
+test('originAllowed: absent Origin, Referer, and Host all pass — curl-style local clients are never refused (card #49)', () => {
+  assert.strictEqual(originAllowed({ headers: {} }), true);
+});
+
+test('originAllowed: allows Origin/Host naming localhost or 127.0.0.1 on any port, or no port at all (card #49)', () => {
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost:7777', host: 'localhost:7777' } }), true);
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://127.0.0.1:7797', host: '127.0.0.1:7797' } }), true);
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost', host: 'localhost' } }), true);
+});
+
+test('originAllowed: refuses a PRESENT Origin naming somewhere else (card #49, kills CSRF)', () => {
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://evil.example' } }), false);
+});
+
+test('originAllowed: refuses a PRESENT Host naming somewhere else (card #49, kills DNS-rebinding)', () => {
+  assert.strictEqual(originAllowed({ headers: { host: 'evil.example' } }), false);
+});
+
+test('originAllowed: falls back to Referer\'s origin when Origin is absent', () => {
+  assert.strictEqual(originAllowed({ headers: { referer: 'http://localhost:7777/some/path' } }), true);
+  assert.strictEqual(originAllowed({ headers: { referer: 'http://evil.example/x' } }), false);
+});
+
+test('originAllowed: an allowed Origin is not overruled by a mismatched Host, and vice versa — both must pass', () => {
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://evil.example', host: 'localhost:7777' } }), false);
+  assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost:7777', host: 'evil.example' } }), false);
+});
+
+test('POST /api/cards with no Origin/Referer/Host override succeeds — direct tool calls stay legitimate (card #49)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await rawRequest(base, 'POST', '/api/cards', { body: { title: 'No headers', status: 'todo' } });
+    assert.strictEqual(r.status, 201);
+  });
+});
+
+test('POST /api/cards with an allowed localhost/127.0.0.1 Origin succeeds (card #49)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const port = new URL(base).port;
+    const r1 = await rawRequest(base, 'POST', '/api/cards',
+      { body: { title: 'Local origin', status: 'todo' }, headers: { origin: `http://localhost:${port}` } });
+    assert.strictEqual(r1.status, 201);
+    const r2 = await rawRequest(base, 'POST', '/api/cards',
+      { body: { title: 'Loopback origin', status: 'todo' }, headers: { origin: `http://127.0.0.1:${port}` } });
+    assert.strictEqual(r2.status, 201);
+  });
+});
+
+test('POST /api/cards with a hostile Origin is refused with 403 and writes nothing to disk (card #49, kills CSRF)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const before = fs.readdirSync(dir).filter((f) => f.endsWith('.card.md')).length;
+    const r = await rawRequest(base, 'POST', '/api/cards',
+      { body: { title: 'Should never land', status: 'todo' }, headers: { origin: 'http://evil.example' } });
+    assert.strictEqual(r.status, 403);
+    const after = fs.readdirSync(dir).filter((f) => f.endsWith('.card.md')).length;
+    assert.strictEqual(after, before, 'the hostile request must not have created a card file');
+  });
+});
+
+test('PATCH /api/cards/:id with a hostile Host header is refused with 403 and leaves the card untouched (card #49, kills DNS-rebinding)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await rawRequest(base, 'PATCH', '/api/cards/1',
+      { body: { status: 'todo' }, headers: { host: 'evil.example' } });
+    assert.strictEqual(r.status, 403);
+    const card = await req(base, 'GET', '/api/cards/1/detail');
+    assert.match(card.json.frontmatter, /^status: done$/m, 'card 1 must still read its original status — the hostile PATCH never applied');
+  });
+});
+
+test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the file survives (card #49)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await rawRequest(base, 'DELETE', '/api/cards/1', { headers: { origin: 'http://evil.example' } });
+    assert.strictEqual(r.status, 403);
+    assert.ok(fs.existsSync(path.join(dir, '1.card.md')), 'card 1 must still exist on disk');
+  });
+});
+
+test('GET requests are never blocked by the Origin/Host guard — only state-changing methods are checked (card #49)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await rawRequest(base, 'GET', '/api/board', { headers: { origin: 'http://evil.example', host: 'evil.example' } });
+    assert.strictEqual(r.status, 200, 'reads stay open — the guard only gates POST/PATCH/DELETE mutations');
+  });
+});
+
+// --- deliverable 3a: CSP header on the served HTML. The SPA ships no inline
+// script/style anywhere (every script is a separate <script src>, every rule
+// lives in app.css), so the policy needs no 'unsafe-inline'/'unsafe-eval'.
+
+test("GET / carries a Content-Security-Policy header with no unsafe-inline/unsafe-eval (card #49 deliverable 3)", async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const res = await fetch(`${base}/`);
+    const csp = res.headers.get('content-security-policy');
+    assert.ok(csp, 'CSP header present on the served HTML');
+    assert.match(csp, /default-src 'self'/);
+    assert.match(csp, /script-src 'self'/);
+    assert.match(csp, /style-src 'self'/);
+    assert.match(csp, /object-src 'none'/);
+    assert.match(csp, /frame-ancestors 'none'/);
+    assert.doesNotMatch(csp, /unsafe-inline/);
+    assert.doesNotMatch(csp, /unsafe-eval/);
+  });
+});
+
+test('static JS/CSS assets do not carry the Content-Security-Policy header — it is scoped to the HTML document (card #49)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const res = await fetch(`${base}/app.js`);
+    assert.strictEqual(res.headers.get('content-security-policy'), null);
+  });
+});
+
+// --- deliverable 3b: XSS sweep of every card-content render path in the SPA.
+// The sweep found the codebase already disciplined (escapeHtml/textContent
+// throughout) — these tests PIN that property so a future edit can't
+// silently reintroduce an unescaped sink.
+
+test('XSS sweep: card.title never lands in innerHTML unescaped — board tile, archived tile, calendar chip, and gantt bar/gutter all wrap it in escapeHtml (card #49 security audit)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.match(js.match(/function cardEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
+    assert.match(js.match(/function archiveCardEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
+    assert.match(js.match(/function calendarChipEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
+    assert.match(js.match(/function ganttBarEl\([\s\S]*?\n\}/)[0], /escapeHtml\(bar\.card\.title\)/);
+    assert.match(js.match(/function renderGanttView\([\s\S]*?\n\}/)[0], /escapeHtml\(bar\.card\.title\)/);
+  });
+});
+
+test('XSS sweep: the dependency map SVG escapes every card-derived string — node id/title lines, tooltip, raw status, and blocked reason (card #49 security audit)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const svg = js.match(/function buildMapSvg\([\s\S]*?\nfunction /)[0];
+    assert.match(svg, /escapeHtml\(idLabel\)/);
+    assert.match(svg, /escapeHtml\(titleLine\)/);
+    assert.match(svg, /escapeHtml\(tooltip\)/);
+    assert.match(svg, /escapeHtml\(n\.status\)/);
+    assert.match(svg, /escapeHtml\(n\.blockedReason/);
+  });
+});
+
+test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synthesis, and never lets an unsafe link scheme through (card #49 security audit)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.match(mdToHtml, /const lines = escapeHtml\(md\)\.split\('\\n'\)/,
+      'the raw body is escaped up front — a `<script>` in a card body can never survive as a live tag, even inside inline code/emphasis');
+    assert.ok(mdToHtml.includes("/^(https?:|mailto:|#|\\/)/i.test(url.trim())"),
+      'markdown links fall back to "#" for any scheme outside the allowlist (e.g. javascript:)');
+  });
+});
+
+test('XSS sweep: the detail popup\'s frontmatter table and "Last modified" line escape every value (card #49 security audit)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const table = js.match(/function renderFrontmatterTable\([\s\S]*?\n\}/)[0];
+    assert.match(table, /escapeHtml\(k\)/);
+    assert.match(table, /escapeHtml\(formatFrontmatterValue\(v\)\)/);
+    const modified = js.match(/function formatDetailModified\([\s\S]*?\n\}/)[0];
+    assert.match(modified, /escapeHtml\(formatLocalDateTime\(data\.updated\)\)/);
+    assert.match(modified, /escapeHtml\(formatLocalDateTime\(data\.mtime\)\)/);
+  });
 });
