@@ -29,10 +29,69 @@ phone. A guide for each editing surface:
 
 ## Install
 
+Two paths, depending on your harness.
+
+### Plugin (Claude Code)
+
 ```
 /plugin marketplace add KingCrimsonFPP/kanban
 /plugin install kanban@kanban
 ```
+
+Installs all four skills at once, plus the `.claude-plugin/` marketplace
+wiring. Claude Code only.
+
+### Individual skills (any harness)
+
+Each skill under `skills/` is a self-contained `SKILL.md` — no cross-skill
+file references — following the Agent Skills format, which cross-harness
+installers such as `npx skills` can install one at a time into other coding
+agents (e.g. GitHub Copilot).
+
+> **Not live-verified.** The commands below are our best-effort reading of
+> how `npx skills` addresses a skill inside a GitHub repo (owner/repo plus
+> the in-repo subpath); we have not run them end-to-end against this repo.
+> Treat the exact subcommand/flags as provisional — confirm the real syntax
+> with `npx skills --help` (or its docs) before relying on this, and expect
+> to adjust the path shown here if it resolves skills differently (by
+> frontmatter `name` rather than folder path, a top-level index, etc.).
+
+| Skill | Frontmatter `name` | Repo path | Install (unverified) |
+| --- | --- | --- | --- |
+| AI card management | `kanban` | `skills/kanban/` | `npx skills add KingCrimsonFPP/kanban/skills/kanban` |
+| Web editor | `kanban-web` | `skills/web/` | `npx skills add KingCrimsonFPP/kanban/skills/web` |
+| CLI editor | `kanban-cli` | `skills/cli/` | `npx skills add KingCrimsonFPP/kanban/skills/cli` |
+| Mobile viewer | `kanban-viewer` | `skills/viewer/` | `npx skills add KingCrimsonFPP/kanban/skills/viewer` |
+
+Note the on-disk folder name (`skills/web`) doesn't match the skill's
+frontmatter `name` (`kanban-web`). That's harmless for Claude Code — it reads
+`name:` out of `SKILL.md`, not the folder — but if `npx skills` turns out to
+key off folder name instead of frontmatter, these folders may need a
+follow-up rename to `skills/kanban-web` etc. This wasn't changed speculatively
+pending that live check.
+
+#### Cross-harness caveats — what doesn't port cleanly
+
+Not every skill degrades gracefully outside Claude Code:
+
+- **`kanban`** — portable. Plain file-contract instructions (card
+  frontmatter, `config.yaml`, `notifications.md`); no Claude-specific tool
+  calls.
+- **`kanban-web`** — portable. A Node-stdlib-only local server + vanilla-JS
+  SPA (`node skills/web/scripts/server.js <board-dir>`); works from any
+  harness that can run a shell command and open a browser.
+- **`kanban-cli`** — **Claude Code-only as written.** It's built entirely on
+  `AskUserQuestion`, a Claude Code built-in tool with no stand-in named here
+  for other harnesses. Porting it means replacing every `AskUserQuestion`
+  call with that harness's own prompt/confirmation mechanism (or plain
+  free-text Q&A) — not done in this repo.
+- **`kanban-viewer`** — **partially portable.** The generator
+  (`build_editor.py`) and the static HTML it produces are plain Python +
+  browser code with no Claude dependency. But the SKILL.md's delivery/apply
+  loop names Claude-specific tools and surfaces (`SendUserFile`, "Cowork",
+  the Claude mobile app) — another harness can reuse the underlying idea (run
+  the script, hand back the HTML, read a pasted payload back into the chat)
+  but not those exact tool calls.
 
 ## Quick start
 
