@@ -37,7 +37,17 @@ conflict guard when the payload comes back.
 A search box under the header filters every view at once (card #143 — same
 query grammar as kanban-web: terms AND together, `#id`/`id:` exact,
 `title:`/`body:`/`status:`/`priority:`/`tags:`/`file:` scoped substrings,
-bare terms hit title+body+tags).
+bare terms hit title+body+tags). Cards #74/#153 add `tree:<id>`/`path:<id>`
+(`#`-tolerant, e.g. `tree:#153`): tree is the card's whole dependency
+component (undirected flood-fill over `waiting_for` + `parent:` epic
+membership — the same edges the Map view draws); path is the narrower
+directed cone through the card (everything transitively upstream +
+downstream). An unknown id matches nothing; an isolated card is a component
+of one; traversal always runs over the full live + archived snapshot
+regardless of the current query or status pills (the Archive pill still
+gates *display* of an archived member, never whether it counts for
+connectivity), and the resolved id set intersects normally with every other
+term and pill, same as any other search term.
 
 Every view carries a status-pill row (card #129): statuses default on,
 **Archive defaults off** — toggling the Archive pill reveals archived cards
@@ -58,7 +68,14 @@ cards in a chip row below), and **Calendar** (Monday-start month grid, range
 chips + due markers, tap month navigation, and month/week/3-day/day sub-views
 — the sub-month views are stacked tap-friendly day rows, card #117). Tapping a
 card in any view opens its detail pop-up in place (card #115) with the full
-action set; edits always queue through the tray.
+action set; edits always queue through the tray. Cards #74/#153: the sheet
+also carries two read-only "Dependency tree"/"Dependency path" buttons (any
+card with a real id, including archived read-only sheets) — tapping one
+writes `tree:<id>`/`path:<id>` into the search box and closes the sheet, no
+view switch; the view underneath re-filters itself immediately (Map redraws
+the pruned graph with ghost stubs where a cone edge exits the focus, Board
+shows only the focused cards in their columns, same machinery every other
+search term uses).
 
 ## The change loop
 

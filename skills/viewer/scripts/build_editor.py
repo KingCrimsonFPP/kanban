@@ -38,6 +38,9 @@ def parse_card(path):
     def lst(v):
         if not v or v == "[]": return []
         return [t.strip().strip('"').strip("'") for t in v.strip("[]").split(",") if t.strip()]
+    def parent_id(v):
+        v = (v or "").strip()
+        return int(v) if re.match(r"^\d+$", v) else None
     return {
         "id": int(fm["id"]) if fm.get("id", "").isdigit() else (int(idm.group(1)) if idm else 0),
         "t": title or re.sub(r"^\d+\.", "", name).replace(".card.md", "").replace("-", " "),
@@ -51,6 +54,10 @@ def parse_card(path):
         "tags": lst(fm.get("tags", "")),
         "w": lst(fm.get("waiting_for", "")),
         "bl": fm.get("blocked", ""),
+        # card #151/#153: strict parent parse (digits only -> int, else null),
+        # same contract as kanban-web's card-store.js parent field — used to
+        # build epic-membership edges for the map + tree:/path: traversal.
+        "pt": parent_id(fm.get("parent")),
         "body": "\n".join(rest).strip()[:4000],
         "fm": {k: v for k, v in fm.items() if k != "id"},
         "fn": name,
@@ -372,13 +379,25 @@ const lstJS=v=>String(v||"").replace(/^\\[|\\]$/g,"").split(",").map(s=>s.trim()
 // prefix with no value yet is dropped (mid-keystroke, matches nothing falsely).
 let qTerms=[];
 const SFIELDS=["title","body","status","priority","tags","file"];
+// card #74/#153: tree:/path: graph-focus terms, kept OUT of SFIELDS (numeric
+// id semantics, not a lowercased substring) — mirrors kanban-web's search.js
+// GRAPH_FIELDS split from KNOWN_FIELDS.
+const GFIELDS=["tree","path"];
 function parseTerm(tok){
 const m1=/^#(\\d+)$/.exec(tok);if(m1)return{f:"id",v:m1[1]};
 const m2=/^([A-Za-z]+):(.*)$/.exec(tok);
 if(m2){const k=m2[1].toLowerCase();
 if(k==="id"){const v=m2[2].trim();return v?{f:"id",v:v}:null}
+if(GFIELDS.indexOf(k)!==-1){const v=m2[2].trim().replace(/^#/,"");return v?{f:k,v:v}:null}
 if(SFIELDS.indexOf(k)!==-1){const v=m2[2].trim().toLowerCase();return v?{f:k,v:v}:null}}
 return{f:null,v:tok.toLowerCase()}}
+// card #74: tree:/path: terms need the full board's graph to resolve
+// (connected component / directed cone), which a single (term, card) pair
+// doesn't have — resolveGraphTerms (defined near buildDepGraph, below) pre-
+// resolves them into an {f:"ids"} term ONCE per query change, mirroring
+// kanban-web's search.js resolveGraphTerms. qMatch's own "tree"/"path" cases
+// are an unresolved-fallback safety net — in practice qTerms is always
+// resolved before qMatch runs.
 function qMatch(c){
 if(!qTerms.length)return true;
 return qTerms.every(t=>{
@@ -391,6 +410,8 @@ case "status":return String(c.s||"").toLowerCase().indexOf(t.v)!==-1;
 case "priority":return String(c.p||"").toLowerCase().indexOf(t.v)!==-1;
 case "tags":return tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1);
 case "file":return String(c.fn||"").toLowerCase().indexOf(t.v)!==-1;
+case "ids":return t.ids.has(Number(c.id));
+case "tree":case "path":return false;
 default:return title.indexOf(t.v)!==-1||body.indexOf(t.v)!==-1||tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1)}})}
 // Waiting vs blocked (epic #137, card #140): waiting is DERIVED — a waiting_for
 // id whose card isn't done (archived deps count as their status field; dangling
@@ -503,6 +524,15 @@ if(br!==null)d.appendChild(el("div","meta bline","blocked: "+(br||"reason unspec
 if(c.tags&&c.tags.length){const tg=el("div","tags");c.tags.forEach(t=>tg.appendChild(el("span","tag",t)));d.appendChild(tg)}
 const det=[];if(c.start)det.push("start "+c.start);if(c.upd)det.push("updated "+c.upd);
 if(det.length)d.appendChild(el("div","meta",det.join(" \\u00b7 ")));
+// Cards #74/#153: "Dependency tree"/"Dependency path" write tree:/path: into
+// the search box and close the sheet (sugar only, no view switch) — read-only
+// queries, so unlike the edit actions below they run on ro (archived) sheets
+// too; only a not-yet-created provisional card has no real id to focus on.
+if(!isProv(c.id)){
+const gr=el("div","acts");gr.style.borderTop="none";gr.style.paddingTop="4px";
+gr.appendChild(btn("Dependency tree","graphfocus",{gk:"tree"}));
+gr.appendChild(btn("Dependency path","graphfocus",{gk:"path"}));
+d.appendChild(gr)}
 if(!ro&&!isProv(c.id)){
 // Card #126: every frontmatter field is editable, raw and tolerant. The
 // staples are always offered; unknown keys a board grows show up dynamically.
@@ -647,25 +677,109 @@ $("mapview").style.display=v==="map"?"":"none";
 $("ganttview").style.display=v==="gantt"?"":"none";
 $("calview").style.display=v==="calendar"?"":"none"}
 // Mirrors kanban-web's dependency-graph.js semantics (edge = dependency ->
-// waiter, same direction as the kanban-cli skill's Mermaid output)
-// but reads the viewer's own DATA snapshot; a waiting_for id not embedded
-// renders as a ghost stub, same as a stale/deleted reference. Nodes carry the
-// #137 split: derived done-aware waiting + the manual blocked sticker.
+// waiter, same direction as the kanban-cli skill's Mermaid output) but reads
+// the viewer's own DATA snapshot; a waiting_for id not embedded renders as a
+// ghost stub, same as a stale/deleted reference. Nodes carry the #137 split:
+// derived done-aware waiting + the manual blocked sticker.
+//
+// Card #151 (ported here for #153 — the viewer never had it): a child
+// card's `pt` (parsed `parent:` frontmatter) becomes a child->epic edge,
+// kind "epic" (waiting_for edges are kind "dep"). Two suppression rules —
+// nonTerminal (a member some OTHER same-epic member already depends on
+// skips its own direct hop) and "sequencing wins the pair" (skip the epic
+// edge if a dep edge already connects the same two ids, either direction) —
+// are computed over the FULL board (fullEdgeSets, keyed off DATA), never the
+// filtered `cards` this function is called with: a search/status filter must
+// not reroute epic membership, mirroring kanban-web's own comment on this
+// exact point. An edge is only ADDED when its owning card (the waiter for a
+// dep edge, the member for an epic edge) is present in `cards` — the same
+// asymmetry the original dep-only version already had; the other endpoint
+// ghosts if absent, whether truly off-board or merely filtered out.
+function parentOfIn(byIdMap,id){
+const c=byIdMap.get(id);
+return (c&&c.pt!=null&&c.pt!==c.id)?c.pt:null}
+function fullEdgeSets(){
+const byIdFull=new Map(DATA.map(c=>[Number(c.id),c]));
+const seenDep=new Set(),nonTerminal=new Set();
+DATA.forEach(c=>{const cid=Number(c.id);(c.w||[]).forEach(raw=>seenDep.add(Number(raw)+">"+cid))});
+DATA.forEach(c=>{const cid=Number(c.id),p=parentOfIn(byIdFull,cid);
+if(p==null)return;
+(c.w||[]).forEach(raw=>{const depId=Number(raw);if(parentOfIn(byIdFull,depId)===p)nonTerminal.add(p+":"+depId)})});
+return {byIdFull:byIdFull,seenDep:seenDep,nonTerminal:nonTerminal}}
 function buildDepGraph(cards){
 const byId=new Map(cards.map(c=>[Number(c.id),c]));
 const nodes=cards.map(c=>({id:Number(c.id),title:c.t,status:c.s,waiting:unresolved(c),blk:blkReason(c),arch:!!c.arch}));
 const nodeIds=new Set(nodes.map(n=>n.id));
 const edges=[],seen=new Set(),ghostIds=new Set();
-cards.forEach(c=>{(c.w||[]).forEach(raw=>{
-const bid=Number(raw);const key=bid+">"+c.id;
+const addEdge=(from,to,kind)=>{
+const key=from+">"+to+":"+kind;
 if(seen.has(key))return;seen.add(key);
-if(!byId.has(bid))ghostIds.add(bid);
-edges.push({from:bid,to:Number(c.id)})})});
+if(!byId.has(from))ghostIds.add(from);
+if(!byId.has(to))ghostIds.add(to);
+edges.push({from:from,to:to,kind:kind})};
+cards.forEach(c=>{(c.w||[]).forEach(raw=>addEdge(Number(raw),Number(c.id),"dep"))});
+const full=fullEdgeSets();
+cards.forEach(c=>{
+const cid=Number(c.id),p=parentOfIn(full.byIdFull,cid);
+if(p==null)return;
+if(full.nonTerminal.has(p+":"+cid))return;
+if(full.seenDep.has(cid+">"+p)||full.seenDep.has(p+">"+cid))return;
+addEdge(cid,p,"epic")});
 const ghosts=[...ghostIds].filter(id=>!nodeIds.has(id)).sort((a,b)=>a-b).map(id=>({id:id,title:null,ghost:true}));
-const touched=new Set();
-edges.forEach(e=>{touched.add(e.from);touched.add(e.to)});
-const isolated=nodes.filter(n=>!touched.has(n.id));
-return {nodes:nodes,edges:edges,ghosts:ghosts,isolated:isolated}}
+const touchedByDep=new Set(),touchedByAny=new Set();
+edges.forEach(e=>{touchedByAny.add(e.from);touchedByAny.add(e.to);if(e.kind==="dep"){touchedByDep.add(e.from);touchedByDep.add(e.to)}});
+// Card #151: the "no dependencies" row is keyed off SEQUENCING (dep) edges
+// only; the layered graph draws every node touched by ANY edge — a node
+// whose only edge is epic membership joins BOTH.
+const isolated=nodes.filter(n=>!touchedByDep.has(n.id));
+const participants=nodes.filter(n=>touchedByAny.has(n.id));
+return {nodes:nodes,edges:edges,ghosts:ghosts,isolated:isolated,participants:participants}}
+// Card #74 — tree:<id>/path:<id> search terms. Both reuse buildDepGraph(DATA)
+// (the full live+archived board, ALWAYS — never a filtered slice, so a query
+// can't shrink its own graph) as the sole adjacency source: treeIds is the
+// undirected connected component (flood-fill both directions); pathIds is
+// the directed cone (ancestors + descendants + self, narrower than tree:,
+// since a sibling branch with no directed relation is excluded). Unknown or
+// non-numeric id -> empty Set; an isolated card -> a one-element Set
+// (itself); BFS with a visited Set is cycle-safe by construction.
+function buildAdjacency(){
+const {edges}=buildDepGraph(DATA);
+const forward=new Map(),backward=new Map();
+edges.forEach(e=>{
+if(!forward.has(e.from))forward.set(e.from,new Set());forward.get(e.from).add(e.to);
+if(!backward.has(e.to))backward.set(e.to,new Set());backward.get(e.to).add(e.from)});
+return {forward:forward,backward:backward}}
+function walkFrom(start,adjacency,visited){
+const queue=[start];
+while(queue.length){const cur=queue.shift();
+(adjacency.get(cur)||new Set()).forEach(next=>{if(!visited.has(next)){visited.add(next);queue.push(next)}})}}
+function treeIds(rawId){
+const id=Number(rawId);
+if(!DATA.some(c=>Number(c.id)===id))return new Set();
+const {forward,backward}=buildAdjacency();
+const visited=new Set([id]);
+const queue=[id];
+while(queue.length){const cur=queue.shift();
+const neighbors=new Set([...(forward.get(cur)||[]),...(backward.get(cur)||[])]);
+neighbors.forEach(next=>{if(!visited.has(next)){visited.add(next);queue.push(next)}})}
+return visited}
+function pathIds(rawId){
+const id=Number(rawId);
+if(!DATA.some(c=>Number(c.id)===id))return new Set();
+const {forward,backward}=buildAdjacency();
+const visited=new Set([id]);
+walkFrom(id,forward,visited);
+walkFrom(id,backward,visited);
+return visited}
+// card #74: pre-resolve tree:/path: terms into an already-resolved {f:"ids"}
+// term BEFORE qMatch's per-card pass — a single (term, card) pair has no
+// graph to resolve against. Mirrors kanban-web's search.js resolveGraphTerms.
+function resolveGraphTerms(terms){
+if(!terms.some(t=>t.f==="tree"||t.f==="path"))return terms;
+return terms.map(t=>{
+if(t.f==="tree")return{f:"ids",v:t.v,ids:treeIds(t.v)};
+if(t.f==="path")return{f:"ids",v:t.v,ids:pathIds(t.v)};
+return t})}
 // Kahn's algorithm, top-down layer per node; force-breaks a cycle by taking the
 // lowest remaining id so this always terminates (same approach as kanban-web's
 // layerNodes in dependency-graph.js).
@@ -760,8 +874,7 @@ legend.appendChild(swatch("waiting","waiting"));
 legend.appendChild(swatch("blocked","blocked"));
 legend.appendChild(swatch("ghost","not on this board"));
 mv.appendChild(legend);
-const isolatedIds=new Set(graph.isolated.map(n=>n.id));
-const participants=graph.nodes.filter(n=>!isolatedIds.has(n.id));
+const participants=graph.participants;
 if(participants.length||graph.ghosts.length){
 mv.appendChild(el("div","map-title","Dependency graph ("+participants.length+")"));
 const wrap=el("div","map-scroll");
@@ -1048,7 +1161,7 @@ $("snew").addEventListener("click",()=>{nfMore=false;creating=true;sel=null;ren=
 $("pill").addEventListener("click",()=>{if(!ops.length)return;sc.scrollTo({top:sc.scrollHeight,behavior:"smooth"})});
 $("bell").addEventListener("click",()=>{const open=!notifView;sel=null;creating=false;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;notifView=open;render()});
 $("q").addEventListener("input",()=>{
-qTerms=String($("q").value||"").trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean);
+qTerms=resolveGraphTerms(String($("q").value||"").trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
 render();renderMap();renderGantt();renderCalendar()});
 sc.addEventListener("touchmove",e=>e.stopPropagation(),{passive:true});
 document.body.addEventListener("change",e=>{
@@ -1104,6 +1217,13 @@ if(act==="caltoday"){const n=new Date();calY=n.getFullYear();calM=n.getMonth();c
 const card=t.closest("[data-card]");
 if(!card)return;
 const id=card.dataset.card;
+if(act==="graphfocus"){
+const term=t.dataset.gk+":"+id;
+$("q").value=term;
+qTerms=resolveGraphTerms(String(term).trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
+closeCard();
+renderMap();renderGantt();renderCalendar();
+return}
 if(act==="move"){queue({op:"move",id:id,to:t.dataset.to});delArm=null;pillEd=null;render();return}
 if(act==="prio"){queue({op:"edit",id:id,priority:t.dataset.p});pillEd=null;render();return}
 if(act==="ren"){ren=true;descEd=false;pillEd=null;render();return}
