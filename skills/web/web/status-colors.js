@@ -83,6 +83,24 @@ function statusColor(status) {
   return STATUS_PALETTE[statusHash(s) % STATUS_PALETTE.length];
 }
 
+// card #49 (verify finding): the CSS class twin of statusColor() — same
+// closed set of outcomes (the four built-ins, archive-mute, or one of the 8
+// hashed palette slots), but named as a class suffix instead of a hex string.
+// statusBadge() and the map SVG's custom-status dot (app.js buildMapSvg) both
+// render this instead of writing the hex straight into an inline style
+// attribute: a strict `style-src 'self'` CSP (no unsafe-inline) blocks the
+// browser from applying HTML-attribute inline styles at all, silently
+// leaving every status dot colorless. Because the value space is this same
+// small fixed enum either way, a CSS class per outcome (app.css's
+// `.status-dot--*` / `.map-status-dot.status-palette-N` rules) carries every
+// case statusColor() can produce with zero inline style anywhere.
+function statusColorClass(status) {
+  const s = normalizeStatus(status);
+  if (s === 'archive' || s === 'archived') return 'archive';
+  if (Object.prototype.hasOwnProperty.call(BUILTIN_STATUS_COLORS, s)) return s;
+  return `palette-${statusHash(s) % STATUS_PALETTE.length}`;
+}
+
 // The 12%-alpha wash the gantt bars use as their fill — derived from the same
 // hex so the border/fill pair can never disagree.
 function statusColorSoft(status) {
@@ -131,15 +149,15 @@ function statusEscape(s) {
 // status string, never off the archived flag. The archived cue moved entirely
 // to the tile's dimmed body/grey border, the "(archived)" tooltip, and
 // ghost/selection treatments — none of them this function's concern.
-// Unlike the SVG twin (a CSS class per built-in status, custom ones inlined),
-// this is unconditional inline color: a <span> has no stroke/fill cascade to
-// resolve, so one computed hex is simplest either way. The tooltip names the
-// RAW status, same contract as the SVG dot's own <title>.
+// Like the SVG twin (a CSS class per built-in status, custom ones now also a
+// class — card #49 verify finding, see statusColorClass above), this writes
+// a class, never an inline style: a strict CSP has no channel left to break.
+// The tooltip names the RAW status, same contract as the SVG dot's own <title>.
 function statusBadge(card) {
   const status = card && card.status;
-  const color = statusColor(status);
+  const cls = statusColorClass(status);
   const label = String(status == null ? '' : status);
-  return `<span class="status-dot" style="background:${color}" title="${statusEscape(label)}"></span>`;
+  return `<span class="status-dot status-dot--${cls}" title="${statusEscape(label)}"></span>`;
 }
 
 // card #102 FINAL DESIGN ("show the status color as shown in the frontmatter
@@ -162,7 +180,7 @@ function archivedBadge() {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorSoft, epicBadge, statusBadge, archivedBadge,
+    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
   };
 } else {
   window.BUILTIN_STATUS_COLORS = BUILTIN_STATUS_COLORS;
@@ -171,6 +189,7 @@ if (typeof module !== 'undefined' && module.exports) {
   window.EPIC_COLOR = EPIC_COLOR;
   window.isBuiltinStatus = isBuiltinStatus;
   window.statusColor = statusColor;
+  window.statusColorClass = statusColorClass;
   window.statusColorSoft = statusColorSoft;
   window.epicBadge = epicBadge;
   window.statusBadge = statusBadge;

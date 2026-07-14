@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorSoft, epicBadge, statusBadge, archivedBadge,
+  BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
 } = require('../web/status-colors');
 
 // --- card #31: deterministic status coloring for dynamic columns -------------
@@ -211,16 +211,22 @@ test('the blocked sticker\'s red pill is styled on both surfaces it shows (tiles
 
 // --- card #97: the shared HTML status dot, joining epicBadge() everywhere --
 
-test('statusBadge colors a built-in status straight off statusColor and names the raw status (card #97)', () => {
+test('statusBadge colors a built-in status via a status-dot--* class, never inline style (card #97, revised card #49 verify finding)', () => {
+  // card #49 verify finding: this used to write `style="background:..."` —
+  // a literal inline-style HTML attribute — which a strict `style-src 'self'`
+  // CSP (no unsafe-inline) blocks the browser from applying at all, rendering
+  // every status dot colorless. It now writes a class (app.css's
+  // `.status-dot--*` rules carry the actual color), so CSP has nothing to break.
   const html = statusBadge({ status: 'doing', archived: false });
-  assert.match(html, /class="status-dot"/);
-  assert.match(html, /style="background:#3fb950"/);
+  assert.match(html, /class="status-dot status-dot--doing"/);
+  assert.doesNotMatch(html, /style=/, 'no inline style attribute anywhere — CSP style-src has no channel to break');
   assert.match(html, /title="doing"/);
 });
 
-test('statusBadge hashes a custom status into the same palette slot statusColor uses (card #97)', () => {
+test('statusBadge hashes a custom status into the same palette slot statusColorClass/statusColor agree on (card #97)', () => {
   const html = statusBadge({ status: 'review', archived: false });
-  assert.match(html, new RegExp(`style="background:${statusColor('review')}"`));
+  assert.match(html, new RegExp(`class="status-dot status-dot--${statusColorClass('review')}"`));
+  assert.ok(statusColorClass('review').startsWith('palette-'), 'a non-built-in status hashes into the palette bucket, not a fixed name');
   assert.match(html, /title="review"/);
 });
 
@@ -232,7 +238,7 @@ test('statusBadge NEVER mutes for an archived card — the true status color alw
   // to carry. The archived cue now lives ONLY in the tile's dimmed body/grey
   // border, the "(archived)" tooltip, and ghost/selection treatments.
   const html = statusBadge({ status: 'doing', archived: true });
-  assert.match(html, new RegExp(`style="background:${BUILTIN_STATUS_COLORS.doing}"`));
+  assert.match(html, /class="status-dot status-dot--doing"/);
   assert.match(html, /title="doing"/);
 });
 
@@ -241,8 +247,8 @@ test('statusBadge still mutes when the RAW on-disk status is the literal "archiv
   // that genuinely is statusColor's mapping for those names (card #57),
   // untouched by the "dots never mute" rule, which is about the `archived`
   // FLAG, not these two literal spellings.
-  assert.match(statusBadge({ status: 'archive', archived: false }), new RegExp(`style="background:${ARCHIVE_COLOR}"`));
-  assert.match(statusBadge({ status: 'archived', archived: true }), new RegExp(`style="background:${ARCHIVE_COLOR}"`));
+  assert.match(statusBadge({ status: 'archive', archived: false }), /class="status-dot status-dot--archive"/);
+  assert.match(statusBadge({ status: 'archived', archived: true }), /class="status-dot status-dot--archive"/);
 });
 
 test('statusBadge escapes hostile on-disk status text in the tooltip attribute (card #97)', () => {
@@ -263,9 +269,9 @@ test('statusBadge escapes hostile on-disk status text in the tooltip attribute (
 
 test('statusBadge: a done card is done-purple whether live OR archived — the exact pair card #102 originally reported, now fixed instead of excused (card #102 reopen)', () => {
   const live = statusBadge({ status: 'done', archived: false });
-  assert.match(live, new RegExp(`style="background:${BUILTIN_STATUS_COLORS.done}"`), 'a live done card keeps done\'s purple');
+  assert.match(live, /class="status-dot status-dot--done"/, 'a live done card keeps done\'s purple');
   const archived = statusBadge({ status: 'done', archived: true });
-  assert.match(archived, new RegExp(`style="background:${BUILTIN_STATUS_COLORS.done}"`), 'an archived done card ALSO keeps done\'s purple — the dot never mutes (card #102 reopen)');
+  assert.match(archived, /class="status-dot status-dot--done"/, 'an archived done card ALSO keeps done\'s purple — the dot never mutes (card #102 reopen)');
 });
 
 test('the map SVG dot carries NO archived-mute CSS override — every built-in status keeps its own fill on an archived node, "done" included (card #102 reopen)', () => {
@@ -290,10 +296,17 @@ test('statusBadge tolerates a missing/null status without throwing (card #97)', 
   assert.doesNotThrow(() => statusBadge({}));
 });
 
-test('app.css paints a shape-only .status-dot rule (color is always inline) sized like the epic dot (card #97)', () => {
+test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* color rule per statusColorClass() outcome — no inline style (card #97, revised card #49 verify finding)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.status-dot\s*\{[^}]*width:\s*8px;[^}]*height:\s*8px;[^}]*border-radius:\s*50%/,
-    'same 8px dot shape as .epic-dot — no per-status CSS color rule needed, statusBadge always writes an inline background');
+    'same 8px dot shape as .epic-dot');
+  for (const [status, hex] of Object.entries(BUILTIN_STATUS_COLORS)) {
+    assert.ok(css.includes(`.status-dot--${status} { background: ${hex};`), `status-dot color class present: ${status}`);
+  }
+  assert.ok(css.includes(`.status-dot--archive { background: ${ARCHIVE_COLOR};`), 'status-dot color class present: archive');
+  STATUS_PALETTE.forEach((hex, i) => {
+    assert.ok(css.includes(`.status-dot--palette-${i} { background: ${hex};`), `status-dot color class present: palette-${i}`);
+  });
 });
 
 test('an epic dot immediately followed by a status dot gets a gap — the two 8px circles must not render fused (verify finding)', () => {
@@ -366,4 +379,31 @@ test('app.css agrees with the JS palette on every status-colored surface (card #
   // card #102 reopen: status dots never mute — no CSS rule left to fire the
   // archived node's status dot grey. The border above is the ONLY archived cue.
   assert.ok(!css.includes('.map-node.archived .map-status-dot'), 'no archived status-dot mute rule (card #102 reopen)');
+});
+
+// --- card #49 verify finding: the CSP's `style-src 'self'` (no unsafe-inline)
+// blocks the browser from applying an HTML `style="..."` attribute at all —
+// statusBadge() and the map SVG's custom-status dot were the one channel that
+// broke (every other statusColor() consumer in app.js sets style via the
+// CSSOM, `el.style.x = ...`, which CSP does not restrict). Fixed by routing
+// every status color through a class instead. Pin the absence directly so a
+// future edit can't quietly reintroduce an inline style attribute here.
+
+test('neither status-colors.js nor app.js emits a literal style="..." HTML attribute anywhere (card #49 verify finding)', () => {
+  const statusColorsSrc = fs.readFileSync(path.join(__dirname, '..', 'web', 'status-colors.js'), 'utf8');
+  const appSrc = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
+  assert.doesNotMatch(statusColorsSrc, /style="/, 'status-colors.js must never build an inline style="" attribute string — CSP style-src has no unsafe-inline');
+  assert.doesNotMatch(appSrc, /style="/, 'app.js must never build an inline style="" attribute string — CSP style-src has no unsafe-inline (CSSOM .style.x assignments are fine, they do not match this pattern)');
+});
+
+test('statusColorClass covers the exact same value space as statusColor — every hashed slot has a matching CSS class both for .status-dot-- and .map-status-dot.status- (card #49 verify finding)', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
+  STATUS_PALETTE.forEach((hex, i) => {
+    assert.ok(css.includes(`.map-status-dot.status-palette-${i} { fill: ${hex};`), `map-status-dot palette rule present: palette-${i}`);
+  });
+  assert.ok(css.includes(`.map-status-dot.status-archive { fill: ${ARCHIVE_COLOR};`), 'map-status-dot archive rule present');
+  // statusColorClass is deterministic and pure, same contract as statusColor.
+  assert.strictEqual(statusColorClass('review'), statusColorClass('review'));
+  assert.strictEqual(statusColorClass('TODO'), 'todo');
+  assert.strictEqual(statusColorClass('archived'), 'archive');
 });

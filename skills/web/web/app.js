@@ -1064,20 +1064,22 @@ function buildMapSvg(graph, layer) {
       : `#${id} ${n.title}${n.archived ? ' (archived)' : ''}`;
     // card #91: status moved off the border onto its own dot — a filled
     // circle colored exactly like the old rect stroke. card #31's non-built-in
-    // status (custom column or unlisted on-disk value) still has no CSS rule
-    // to reach for, so it's inlined the same deterministic hash the rect used
-    // to carry. card #102 REOPEN (STATUS DOTS NEVER MUTE): this used to gate
-    // off archived nodes so the CSS mute rule beneath always won for a parked
+    // status (custom column or unlisted on-disk value) gets one of the 8
+    // hashed `status-palette-N` classes (card #49 verify finding: this used
+    // to write the deterministic hash straight into an inline fill-style
+    // attribute instead, which a strict `style-src 'self'` CSP silently
+    // blocks — statusColorClass() is the one source both this dot and
+    // statusBadge() key off now).
+    // card #102 REOPEN (STATUS DOTS NEVER MUTE): this used to gate off
+    // archived nodes so the CSS mute rule beneath always won for a parked
     // pre-archive status (card #57) — that gate is GONE now, so a custom
     // status hashes its color on an archived node exactly like a live one; the
     // archived cue is carried by the rect border alone (the one exception).
     // The dot's OWN <title> — SVG-native tooltip — names the RAW on-disk
     // status for every node, not just custom ones (the old tooltip suffix
     // only covered the custom case; the dot is a strict superset).
-    const customStatus = !missing && !isBuiltinStatus(n.status);
-    const statusDotStyle = customStatus ? ` style="fill:${statusColor(n.status)}"` : '';
     const statusDot = missing ? '' :
-      `<circle class="map-status-dot status-${mapStatusClass(n.status)}" cx="${MAP_NODE_W - 10}" cy="10" r="4"${statusDotStyle}><title>${escapeHtml(n.status)}</title></circle>`;
+      `<circle class="map-status-dot status-${statusColorClass(n.status)}" cx="${MAP_NODE_W - 10}" cy="10" r="4"><title>${escapeHtml(n.status)}</title></circle>`;
     // card #91: the epic dot REPLACES #59's orange border/stroke everywhere
     // epic showed on the map. Unlike the old single shared channel, this dot
     // doesn't compete with the archived border mute: epic is a durable

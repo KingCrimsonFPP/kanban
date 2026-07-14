@@ -69,14 +69,31 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
    map node's SVG twin is .map-epic-dot near the map view rules below). No
    border to fight over anymore, so priority/blocked/status are untouched. */
 .epic-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f0883e; vertical-align: middle; flex-shrink: 0; }
-/* card #97: the shared status dot — same 8px shape as .epic-dot, but no fixed
-   background here: statusBadge() (status-colors.js) always writes its own
-   inline background (statusColor()/ARCHIVE_COLOR), built-in or custom hash or
-   archive-muted alike, so there's no per-status CSS rule to duplicate. */
+/* card #97: the shared status dot — same 8px shape as .epic-dot. card #49
+   (verify finding): color used to be an inline `style="background:..."`
+   written by statusBadge() (status-colors.js), but a strict `style-src 'self'`
+   CSP blocks the browser from applying HTML-attribute inline styles at all,
+   silently rendering every dot colorless. Color now comes from one of the
+   `.status-dot--*` classes below — one rule per statusColorClass() outcome
+   (the four built-ins, archive-mute, or one of the 8 hashed palette slots) —
+   so the full statusColor() value space is covered with no inline style. */
 .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; flex-shrink: 0; }
+.status-dot--backlog { background: #39c5cf; }
+.status-dot--todo { background: #58a6ff; }
+.status-dot--doing { background: #3fb950; }
+.status-dot--done { background: #a371f7; }
+.status-dot--archive { background: #6e7681; }
+.status-dot--palette-0 { background: #58a6ff; }
+.status-dot--palette-1 { background: #3fb950; }
+.status-dot--palette-2 { background: #d29922; }
+.status-dot--palette-3 { background: #a371f7; }
+.status-dot--palette-4 { background: #f778ba; }
+.status-dot--palette-5 { background: #39c5cf; }
+.status-dot--palette-6 { background: #f0883e; }
+.status-dot--palette-7 { background: #ff7b72; }
 /* card #102 final design: the third shared dot — the archived LOCATION ball.
-   Fixed ARCHIVE_COLOR (never varies per-card, like .epic-dot), so no inline
-   style is needed here either — only .status-dot writes its own color. */
+   Fixed ARCHIVE_COLOR (never varies per-card, like .epic-dot), so it's a
+   plain class rule, same as every .status-dot--* rule above now. */
 .archived-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #6e7681; vertical-align: middle; flex-shrink: 0; }
 /* verify finding: epicBadge()+statusBadge() are emitted back-to-back with no
    whitespace between them; the board tile gets its separation for free from
@@ -341,8 +358,12 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .map-blocked-pill text { fill: #f85149; font-size: 9px; }
 /* card #91: the status dot — a small filled circle carrying exactly the color
    the rect stroke used to. Built-in four via class (below); any other name
-   (custom column, unlisted on-disk value) has no CSS rule to reach for, so
-   buildMapSvg inlines the deterministic statusColor() hash instead.
+   (custom column, unlisted on-disk value) gets one of the 8 hashed
+   `status-palette-N` classes (card #49 verify finding: buildMapSvg used to
+   inline the deterministic statusColor() hash as `style="fill:..."` instead,
+   which a strict `style-src 'self'` CSP silently blocks — see
+   statusColorClass() in status-colors.js, the single source both this dot
+   and .status-dot--* above key off).
    card #102 REOPEN (STATUS DOTS NEVER MUTE): there used to be an archived-
    scoped override on this dot's selector here, out-specificity-ing the rules
    below so an archived node's dot always muted grey — that's what
@@ -356,6 +377,15 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .map-status-dot.status-doing { fill: #3fb950; }
 .map-status-dot.status-done { fill: #a371f7; }
 .map-status-dot.status-unknown { fill: #6e7681; }
+.map-status-dot.status-archive { fill: #6e7681; } /* literal on-disk status: archive/archived (card #57 mute) */
+.map-status-dot.status-palette-0 { fill: #58a6ff; }
+.map-status-dot.status-palette-1 { fill: #3fb950; }
+.map-status-dot.status-palette-2 { fill: #d29922; }
+.map-status-dot.status-palette-3 { fill: #a371f7; }
+.map-status-dot.status-palette-4 { fill: #f778ba; }
+.map-status-dot.status-palette-5 { fill: #39c5cf; }
+.map-status-dot.status-palette-6 { fill: #f0883e; }
+.map-status-dot.status-palette-7 { fill: #ff7b72; }
 /* card #91: the epic dot — REPLACES #59's orange stroke on the map, same
    EPIC_COLOR and "Epic" tooltip as the shared .epic-dot glyph above (SVG
    can't host that span, hence its own rule). No archived-mutes rule: epic is

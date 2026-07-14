@@ -31,18 +31,20 @@ access of their own:
 - **Loopback-only bind.** The server binds `127.0.0.1` explicitly (never
   `0.0.0.0` or a bare port), so no other device on your LAN can reach it —
   pinned by a regression test (`skills/web/test/server.test.js`).
-- **Origin/Referer + Host allowlist on every state-changing request.** Any
-  non-`GET` request (create/update/archive/restore/delete) is refused with
-  `403` if it carries a `Origin`, `Referer`, or `Host` header naming
-  somewhere other than `localhost`/`127.0.0.1`. This closes two browser-borne
-  paths that don't need OS access: a **CSRF** page on some other site trying
-  to drive a write here, and **DNS rebinding** (a hostile domain that
-  resolves to `127.0.0.1` after the browser has already trusted its origin).
-  A header that's simply *absent* is treated as a legitimate local client —
-  curl, a direct API call, an agent's tool calls — and is let through; only a
-  *present* header naming a disallowed origin/host is refused. This also
-  means direct localhost browser use, VSCode's Simple Browser, and plain
-  same-machine tool calls all keep working unmodified.
+- **Origin/Referer + Host allowlist on every request, reads included.** Any
+  request — a read (`GET /api/board`, card detail, …) or a write
+  (create/update/archive/restore/delete) alike — is refused with `403` if it
+  carries a `Origin`, `Referer`, or `Host` header naming somewhere other than
+  `localhost`/`127.0.0.1`. This closes two browser-borne paths that don't
+  need OS access: a **CSRF** page on some other site trying to drive a write
+  here, and **DNS rebinding** (a hostile domain that resolves to `127.0.0.1`
+  after the browser has already trusted its origin) — covering both halves of
+  rebinding, a driven write *and* a read that exfiltrates the board to
+  attacker JS. A header that's simply *absent* is treated as a legitimate
+  local client — curl, a direct API call, an agent's tool calls — and is let
+  through; only a *present* header naming a disallowed origin/host is
+  refused. This also means direct localhost browser use, VSCode's Simple
+  Browser, and plain same-machine tool calls all keep working unmodified.
 - **A Content-Security-Policy header on the served HTML**, plus an XSS sweep
   of every place the SPA renders card-derived text. The app has no inline
   `<script>`/`<style>` anywhere (every script is a separate `<script src>`,

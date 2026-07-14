@@ -1212,15 +1212,20 @@ test('the map node border is neutral; status moves to its own dot with a raw-sta
     const js = await (await fetch(`${base}/app.js`)).text();
     const svg = js.match(/function buildMapSvg\([\s\S]*?\nfunction /);
     assert.doesNotMatch(svg[0], /status-\$\{missing/, 'the node group no longer carries a status-* class');
-    assert.match(svg[0], /class="map-status-dot status-\$\{mapStatusClass\(n\.status\)\}"/,
-      'a dedicated status dot, colored the same way the rect stroke used to be');
+    // card #49 verify finding: the dot's color used to be an inline
+    // `style="fill:..."` attribute, which a strict `style-src 'self'` CSP
+    // (no unsafe-inline) silently blocks the browser from applying — it's a
+    // `status-${statusColorClass(n.status)}` CSS class now (app.css carries
+    // the color), same mechanism statusBadge() uses.
+    assert.match(svg[0], /class="map-status-dot status-\$\{statusColorClass\(n\.status\)\}"/,
+      'a dedicated status dot, colored via a CSS class the same way the rect stroke used to be');
+    assert.doesNotMatch(svg[0], /style="fill:/, 'no inline style attribute left on the dot — CSP style-src has no channel to break');
     assert.match(svg[0], /<title>\$\{escapeHtml\(n\.status\)\}<\/title>/,
       'the dot names the RAW on-disk status, not a bucketed label');
-    // card #102 reopen (STATUS DOTS NEVER MUTE): the inline hash override used
+    // card #102 reopen (STATUS DOTS NEVER MUTE): the custom-status color used
     // to step aside on an archived node so the CSS mute rule always won — that
-    // gate is gone now, so a custom status hashes its color on archived nodes too.
-    assert.match(svg[0], /customStatus \? ` style="fill:/,
-      'the inline custom-status color override applies on archived nodes too — no archived gate left (card #102 reopen)');
+    // gate is gone now (statusColorClass has no archived-flag input at all), so
+    // a custom status hashes its color on archived nodes exactly like a live one.
     assert.doesNotMatch(svg[0], /!n\.archived \? ` style="fill:/,
       'the old archived-gated inline override is gone');
   });
@@ -2378,11 +2383,35 @@ test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the fi
   });
 });
 
-test('GET requests are never blocked by the Origin/Host guard — only state-changing methods are checked (card #49)', async () => {
+// verify finding: the first pass exempted GET from the guard entirely, which
+// left DNS rebinding's read/exfiltration half open — a rebound hostile origin
+// is same-origin to the browser once resolved to 127.0.0.1, so a GET fetch
+// from that tab would return the full board with no write ever attempted.
+// The guard now applies uniformly; only a PRESENT disallowed header is
+// refused, so a normal top-level GET (which sends no Origin and whose Host
+// always matches the address actually loaded) keeps working unmodified.
+test('GET requests ARE blocked by the Origin/Host guard too — reads are not exempt (card #49 verify finding)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'GET', '/api/board', { headers: { origin: 'http://evil.example', host: 'evil.example' } });
-    assert.strictEqual(r.status, 200, 'reads stay open — the guard only gates POST/PATCH/DELETE mutations');
+    assert.strictEqual(r.status, 403, 'a hostile Origin/Host on a GET must be refused — DNS rebinding can read, not just write');
+  });
+});
+
+test('GET /api/board with no Origin/Referer/Host override succeeds — direct tool calls and normal browser navigation stay legitimate (card #49 verify finding)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await rawRequest(base, 'GET', '/api/board', {});
+    assert.strictEqual(r.status, 200);
+  });
+});
+
+test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (card #49 verify finding)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const port = new URL(base).port;
+    const r = await rawRequest(base, 'GET', '/api/board', { headers: { origin: `http://localhost:${port}` } });
+    assert.strictEqual(r.status, 200);
   });
 });
 

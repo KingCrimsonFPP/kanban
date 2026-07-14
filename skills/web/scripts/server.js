@@ -21,16 +21,21 @@ const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; " +
   "img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; " +
   "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
-// card #49: CSRF + DNS-rebinding guard for every state-changing request (any
-// non-GET method — POST/PATCH/DELETE today, and automatically any mutating
-// route added later). The board's real trust boundary is the FILES, not this
-// header check (SECURITY.md) — this is defense in depth against a browser
-// tab on some other origin silently driving a write here. A header that's
+// card #49: CSRF + DNS-rebinding guard for every request, reads included —
+// GET was exempted in the first pass (mutations only), which left DNS
+// rebinding's read/exfiltration half wide open: a rebound hostile origin is
+// same-origin to the browser once resolved to 127.0.0.1, so `fetch('/api/board')`
+// from that tab would return the full board with zero write ever attempted.
+// The board's real trust boundary is the FILES, not this header check
+// (SECURITY.md) — this is defense in depth against a browser tab on some
+// other origin silently reading or driving a write here. A header that's
 // simply ABSENT is a legitimate local client (curl, direct API calls, an
 // agent's tool calls) and is let through; only a PRESENT header naming
 // somewhere other than this machine's loopback is refused. Covers localhost
 // and 127.0.0.1 on any port — VSCode's Simple Browser and a plain browser tab
-// pointed at either both keep working.
+// pointed at either both keep working (neither sends an Origin header on a
+// same-origin top-level GET, and their Host header always matches the
+// address actually typed/loaded).
 const ALLOWED_HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/i;
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
@@ -78,9 +83,9 @@ function createServer(dir) {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
     try {
-      // card #49: reject state-changing requests carrying a disallowed
-      // Origin/Referer/Host before touching any route below.
-      if (req.method !== 'GET' && !originAllowed(req)) {
+      // card #49: reject every request — reads included — carrying a
+      // disallowed Origin/Referer/Host before touching any route below.
+      if (!originAllowed(req)) {
         return sendJSON(res, 403, { error: 'Forbidden: disallowed Origin/Referer/Host header' });
       }
       // static + board
