@@ -87,7 +87,6 @@ line in this table saying why not). Retired skills are deleted outright (git
 history keeps them recoverable — card #53).
 Web's `tree:<id>`/`path:<id>` dependency-focus search terms (card #74) are
 mirrored in cli as scoped "Dependencies tree/path for #id" Mermaid views (card
-#152); the context-menu sugar has no cli equivalent (no search box to write a
-term into). Not yet mirrored, pending rather than deliberate: the viewer
-(card #153) — its dependency view still stops at the existing whole-board
-Mermaid graph.
+#152) and in the viewer as `tree:`/`path:` search terms plus card-sheet
+"Dependency tree"/"Dependency path" tap actions (card #153); the context-menu
+sugar has no cli equivalent (no search box to write a term into).

@@ -259,9 +259,9 @@ Full CRUD, the `doing` entry gate (waiting + blocked), bulk actions, speedbumps,
 notifications, dependency view, assignee suggestions: **same behavior, same
 rules.** Web's `tree:`/`path:` dependency-focus search terms (card #74) are
 mirrored as the scoped "Dependencies tree/path for #id" variants above (card
-#152); the context-menu sugar has no cli equivalent to mirror — there's no
-search box to write a term into. Viewer parity is still pending, see card
-#153. Deliberately not
+#152), and as `tree:`/`path:` search terms plus card-sheet tap actions in the
+viewer (card #153); the context-menu sugar has no cli equivalent to mirror —
+there's no search box to write a term into. Deliberately not
 mirrored (medium mismatch): drag & drop (typed commands instead), collapse state
 and any `localStorage` persistence (a print is ephemeral), per-column persisted
 sort (on-demand re-print instead), the SVG map (Mermaid instead), the 5s poll

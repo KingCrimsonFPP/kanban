@@ -267,6 +267,12 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .mnode.ghost .mtitle,.mnode.ghost .mid{fill:var(--muted)}
 .medge{fill:none;stroke:var(--ink2);stroke-width:1.5;opacity:.6}
 .medge.ghostedge{stroke:var(--muted);stroke-dasharray:3 3;opacity:.5}
+/* card #151 (ported for #153): epic membership edges draw in their own
+   orange/dashed channel with their own arrowhead, mirroring kanban-web's
+   app.css .map-edge.epic-edge — so containment never reads as a real
+   sequencing dependency. */
+.medge.epicedge{stroke:#f0883e;stroke-dasharray:7 4;opacity:.85}
+.map-arrow-epic-head{fill:#f0883e}
 .map-iso-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
 .mapiso{background:var(--surface);border:1px solid var(--grid);border-radius:10px;padding:9px 12px;font-size:12.5px;opacity:.7;cursor:pointer;min-width:118px;max-width:220px}
 .mapiso .cid{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
@@ -367,6 +373,12 @@ const ASG=__ASSIGNEES__;
 const DATA=__DATA__;
 const NOTIFS=__NOTIFS__;
 let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false;
+// card #74's ratified design (point 6): the tree:/path: query's root card keeps
+// the existing selection glow even after the sheet closes. `sel` can't do
+// double duty here (render() reopens the sheet whenever sel!==null), so
+// focusRoot is a second, glow-only marker set by the graphfocus action and
+// cleared whenever the user makes an unrelated selection/query change.
+let focusRoot=null;
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
 const btn=(label,act,data)=>{const b=el("button",null,label);b.dataset.act=act;if(data)Object.assign(b.dataset,data);return b};
@@ -463,7 +475,7 @@ else if(k==="tags")c.tags=lstJS(v);else if(k==="waiting_for")c.w=lstJS(v);else i
 return}
 if(o.op==="create"){nseq++;const pid="n"+nseq;const cr={op:"create",title:o.title,priority:o.priority||"Normal",status:o.status||"backlog",_pid:pid};if(o.assignee)cr.assignee=o.assignee;if(o.body)cr.body=o.body;ops.push(cr);view.push({id:pid,t:o.title,s:cr.status,p:cr.priority,a:o.assignee||"",due:"",start:"",upd:"",tags:[],w:[],bl:"",body:o.body||"",fm:{}});return}}
 function cardNode(c,detail){
-const selc=String(sel)===String(c.id);
+const selc=String(sel)===String(c.id)||(focusRoot!=null&&String(focusRoot)===String(c.id));
 const ro=detail&&!!c.arch;
 const un=unresolved(c),br=blkReason(c);
 const d=el("div","card"+(selc&&!detail?" sel":"")+(isProv(c.id)?" prov":""));
@@ -844,7 +856,8 @@ let d;
 if(back){maxX=Math.max(maxX,x1+BOW,x2+BOW);d="M"+x1+","+y1+" C"+(x1+BOW)+","+y1+" "+(x2+BOW)+","+y2+" "+x2+","+y2}
 else{const midY=(y1+y2)/2;d="M"+x1+","+y1+" C"+x1+","+midY+" "+x2+","+midY+" "+x2+","+y2}
 const dimmed=(byId.get(e.from)&&byId.get(e.from).ghost)||(byId.get(e.to)&&byId.get(e.to).ghost);
-edgesG.appendChild(svgEl("path",{d:d,class:"medge"+(dimmed?" ghostedge":""),"marker-end":"url(#map-arrow)"}))});
+const epicEdge=e.kind==="epic";
+edgesG.appendChild(svgEl("path",{d:d,class:"medge"+(epicEdge?" epicedge":"")+(dimmed?" ghostedge":""),"marker-end":"url(#"+(epicEdge?"map-arrow-epic":"map-arrow")+")"}))});
 const nodesG=svgEl("g");
 pos.forEach((p,id)=>{const n=byId.get(id);if(n)nodesG.appendChild(mapNodeGroup(n,p))});
 const width=maxX+MPAD;
@@ -853,7 +866,11 @@ const svg=svgEl("svg",{class:"map-canvas",width:String(width),height:String(heig
 const defs=svgEl("defs");
 const marker=svgEl("marker",{id:"map-arrow",viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"});
 marker.appendChild(svgEl("path",{d:"M0,0 L10,5 L0,10 z"}));
-defs.appendChild(marker);svg.appendChild(defs);
+defs.appendChild(marker);
+const epicMarker=svgEl("marker",{id:"map-arrow-epic",viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"});
+epicMarker.appendChild(svgEl("path",{d:"M0,0 L10,5 L0,10 z",class:"map-arrow-epic-head"}));
+defs.appendChild(epicMarker);
+svg.appendChild(defs);
 svg.appendChild(edgesG);svg.appendChild(nodesG);
 return svg}
 function isoChip(n){
@@ -1161,6 +1178,7 @@ $("snew").addEventListener("click",()=>{nfMore=false;creating=true;sel=null;ren=
 $("pill").addEventListener("click",()=>{if(!ops.length)return;sc.scrollTo({top:sc.scrollHeight,behavior:"smooth"})});
 $("bell").addEventListener("click",()=>{const open=!notifView;sel=null;creating=false;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;notifView=open;render()});
 $("q").addEventListener("input",()=>{
+focusRoot=null;
 qTerms=resolveGraphTerms(String($("q").value||"").trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
 render();renderMap();renderGantt();renderCalendar()});
 sc.addEventListener("touchmove",e=>e.stopPropagation(),{passive:true});
@@ -1183,9 +1201,9 @@ if(t.dataset&&t.dataset.act==="pill"){pillEd=pillEd===t.dataset.pill?null:t.data
 if(t.getAttribute&&t.getAttribute("data-mapnode")!==null){
 const mid=t.getAttribute("data-mapnode");
 const mcCard=find(mid);
-if(mcCard){sel=mid;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}
+if(mcCard){sel=mid;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}
 return}
-if(t.id==="newbtn"){nfMore=false;creating=true;sel=null;ren=false;descEd=false;delArm=null;pillEd=null;render();return}
+if(t.id==="newbtn"){nfMore=false;creating=true;sel=null;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;render();return}
 if(t.id==="payload"){t.select();return}
 if(t.dataset&&t.dataset.stop)return;
 if(t.dataset&&t.dataset.rm!==undefined){ops.splice(+t.dataset.rm,1);rebuild();render();return}
@@ -1221,6 +1239,7 @@ if(act==="graphfocus"){
 const term=t.dataset.gk+":"+id;
 $("q").value=term;
 qTerms=resolveGraphTerms(String(term).trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
+focusRoot=id;
 closeCard();
 renderMap();renderGantt();renderCalendar();
 return}
@@ -1234,7 +1253,7 @@ if(act==="fmtoggle"){fmOpen=!fmOpen;render();return}
 if(act==="fmsave"){const k=t.dataset.key;const inp=document.getElementById("fm-"+k);if(inp){const obj={};obj[k]=inp.value.trim();queue({op:"edit",id:id,fm:obj})}render();return}
 if(act==="descsave"){queue({op:"edit",id:id,body:$("descin").value.trim()});descEd=false;render();return}
 if(act==="desccancel"){descEd=false;render();return}
-if(!act){if(t.closest("#modal"))return;sel=String(sel)===String(id)?null:id;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}});
+if(!act){if(t.closest("#modal"))return;sel=String(sel)===String(id)?null:id;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}});
 $("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeCard()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&(sel!==null||creating||notifView))closeCard()});
 render();
