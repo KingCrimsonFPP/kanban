@@ -17,8 +17,6 @@ nothing to host.
 
 ## What it looks like
 
-![The web editor](docs/images/web-board.png)
-
 A board is just a folder of cards — edit it from a browser, a terminal, or your
 phone. A guide for each editing surface:
 
