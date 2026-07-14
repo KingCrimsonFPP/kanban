@@ -218,4 +218,10 @@ bash <SCRIPTS_DIR>/list_all_cards.sh kanban/
 ```
 Output: All cards in pipe-delimited format (id|status|waiting_for|blocked|title), sorted by ID. Useful for parsing, debugging dependencies, or exporting board state.
 
+### Eligible Cards (agent pickup)
+```bash
+bash <SCRIPTS_DIR>/eligible_cards.sh kanban/ [assignee]
+```
+Output: `todo` cards (literal status) that are doing-gate clear — not waiting (`show_waiting.sh` semantics: dangling `waiting_for` ids and all-`done` deps don't count) and not blocked (`show_blocked.sh` predicate) — as `id|priority|assignee|title`, sorted by ID. The optional `assignee` arg filters the result and is quote-normalized, so `@afk` and `"@afk"` both match the on-disk `assignee: "@afk"`; omitted returns every assignee. The one-call answer to "what can an agent pick up right now" — no re-deriving the gate from raw card files.
+
 **Note:** `<SCRIPTS_DIR>` refers to the `scripts/` directory next to this SKILL.md file. All scripts take the kanban directory as the first argument. If omitted, they default to the current directory.
