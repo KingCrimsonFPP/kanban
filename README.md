@@ -29,9 +29,6 @@ nothing to host.
 ![Calendar](docs/images/calendar.png)
 *Calendar — a Monday-start month grid of range chips and due-date markers.*
 
-![Card detail](docs/images/card-detail.png)
-*Card detail — every field, dates, tags, and last-modified in one popup.*
-
 ![Mobile tap editor](docs/images/viewer.png)
 *Viewer — a self-contained HTML board you can tap through on a phone.*
 
