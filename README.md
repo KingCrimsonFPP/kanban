@@ -1,6 +1,6 @@
 # kanban
 
-Markdown kanban boards for [Claude Code](https://claude.com/claude-code).
+Markdown kanban boards for AI coding agents — built for [Claude Code](https://claude.com/claude-code), portable to GitHub Copilot and anywhere else `npx skills` reaches.
 
 A directory of `*.card.md` files **is** the board — no database, no daemon,
 just plain git-friendly Markdown. Four surfaces sit on top of it, so you (or
