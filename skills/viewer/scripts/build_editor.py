@@ -8,7 +8,7 @@ pastes back to Claude, which applies the ops to the card files — see the skill
 references/apply-protocol.md for exactly how.
 
 Usage:
-  python3 build_editor.py <kanban-directory> [--out editor.html]
+  python3 build_editor.py <kanban-directory> [--out kanban-viewer.html]
                           [--base-label "Jul 11, 3:08 pm CT"] [--base-iso 2026-07-11T20:08Z]
 
 Base defaults to now (UTC label) — pass the user's local time when you know it.
@@ -137,7 +137,7 @@ def read_notifications(kanban_dir):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("kanban_dir")
-    p.add_argument("--out", default="editor.html")
+    p.add_argument("--out", default="kanban-viewer.html")
     p.add_argument("--base-label", default="")
     p.add_argument("--base-iso", default="")
     a = p.parse_args()

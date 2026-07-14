@@ -19,7 +19,7 @@ allocation, archive-as-location).
 ## Generating the editor
 
 ```bash
-python3 <SCRIPTS_DIR>/build_editor.py <kanban-directory> [--out editor.html] \
+python3 <SCRIPTS_DIR>/build_editor.py <kanban-directory> [--out kanban-viewer.html] \
     [--base-label "Jul 11, 3:08 pm CT"] [--base-iso 2026-07-11T20:08Z]
 ```
 
