@@ -1,0 +1,17 @@
+nextId: 14
+assignees:
+  - handle: "@human"
+    name: "Human"
+    kind: human
+    description: "A human can grab it. Final say on trusted and destructive calls."
+  - handle: "@hitl"
+    name: "AI (HITL)"
+    kind: ai-hitl
+    description: "AI will grab it but needs a human in the loop (grilling, spec, tickets, approval) — it should make the AI think twice."
+  - handle: "@afk"
+    name: "AI (AFK)"
+    kind: ai-afk
+    description: "The AI can execute fully autonomously."
+priorities: [High, Normal, Low]
+tags: [frontend, backend, design, marketing, legal, infra]
+statuses: [backlog, todo, doing, done]
