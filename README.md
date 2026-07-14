@@ -31,6 +31,18 @@ phone. A guide for each editing surface:
 
 Two paths, depending on your harness.
 
+### Install skills (any harness)
+
+```
+npx skills add KingCrimsonFPP/kanban
+```
+
+The installer scans the repo, lists the four skills in a selection menu
+(name + short description), and installs the ones you pick into your agent
+harness — Claude Code, GitHub Copilot, and the other harnesses `npx skills`
+supports. Skills whose menu description leads with **(Claude Only)** depend
+on Claude Code built-ins and won't port cleanly elsewhere; details below.
+
 ### Plugin (Claude Code)
 
 ```
@@ -40,35 +52,6 @@ Two paths, depending on your harness.
 
 Installs all four skills at once, plus the `.claude-plugin/` marketplace
 wiring. Claude Code only.
-
-### Individual skills (any harness)
-
-Each skill under `skills/` is a self-contained `SKILL.md` — no cross-skill
-file references — following the Agent Skills format, which cross-harness
-installers such as `npx skills` can install one at a time into other coding
-agents (e.g. GitHub Copilot).
-
-> **Not live-verified.** The commands below are our best-effort reading of
-> how `npx skills` addresses a skill inside a GitHub repo (owner/repo plus
-> the in-repo subpath); we have not run them end-to-end against this repo.
-> Treat the exact subcommand/flags as provisional — confirm the real syntax
-> with `npx skills --help` (or its docs) before relying on this, and expect
-> to adjust the path shown here if it resolves skills differently (by
-> frontmatter `name` rather than folder path, a top-level index, etc.).
-
-| Skill | Frontmatter `name` | Repo path | Install (unverified) |
-| --- | --- | --- | --- |
-| AI card management | `kanban` | `skills/kanban/` | `npx skills add KingCrimsonFPP/kanban/skills/kanban` |
-| Web editor | `kanban-web` | `skills/web/` | `npx skills add KingCrimsonFPP/kanban/skills/web` |
-| CLI editor | `kanban-cli` | `skills/cli/` | `npx skills add KingCrimsonFPP/kanban/skills/cli` |
-| Mobile viewer | `kanban-viewer` | `skills/viewer/` | `npx skills add KingCrimsonFPP/kanban/skills/viewer` |
-
-Note the on-disk folder name (`skills/web`) doesn't match the skill's
-frontmatter `name` (`kanban-web`). That's harmless for Claude Code — it reads
-`name:` out of `SKILL.md`, not the folder — but if `npx skills` turns out to
-key off folder name instead of frontmatter, these folders may need a
-follow-up rename to `skills/kanban-web` etc. This wasn't changed speculatively
-pending that live check.
 
 #### Cross-harness caveats — what doesn't port cleanly
 
@@ -95,7 +78,14 @@ Not every skill degrades gracefully outside Claude Code:
 
 ## Quick start
 
-Run the bundled demo board from the repo root:
+With the skills installed, in your agent session:
+
+1. Run `/kanban` and tell it which folder you want to work on — it sets up
+   the board there (or adopts an existing directory of `*.card.md` files).
+2. Once your kanban is set up, ask `/kanban-web` to create the dashboard —
+   it starts the local server and hands you the board URL.
+
+Or try the bundled demo board straight from a clone of this repo:
 
 ```bash
 node skills/web/scripts/server.js examples/demo-board

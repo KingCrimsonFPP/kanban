@@ -1,6 +1,6 @@
 ---
 name: kanban-cli
-description: Full conversational editor for a Markdown kanban board — print the board, open cards by id, and create, edit, move, archive, restore, and delete cards (single or bulk), plus a notifications inbox and Mermaid dependency view. Claude-driven (no TUI), so it works identically at the local terminal AND under remote control on mobile. Use when the user wants to work a kanban board without the web app or the filesystem. For AI-initiated card management use the kanban skill; for a desktop browser editor use kanban-web.
+description: (Claude Only) Full conversational editor for a Markdown kanban board — print the board, open cards by id, and create, edit, move, archive, restore, and delete cards (single or bulk), plus a notifications inbox and Mermaid dependency view. Claude-driven (no TUI), so it works identically at the local terminal AND under remote control on mobile. Use when the user wants to work a kanban board without the web app or the filesystem. For AI-initiated card management use the kanban skill; for a desktop browser editor use kanban-web.
 ---
 
 # Kanban CLI
