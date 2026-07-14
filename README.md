@@ -133,6 +133,8 @@ adding it to the list.
 - [`CONTEXT.md`](CONTEXT.md) — the ubiquitous-language glossary for every term
   used across the four surfaces (board, card, status, waiting, blocked, the
   role trio, and more).
+- [`SECURITY.md`](SECURITY.md) — `kanban-web`'s threat model: the board files
+  are the trust boundary, not HTTP auth.
 
 ## License
 
