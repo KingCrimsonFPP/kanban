@@ -15,6 +15,21 @@ work; you can drag them around in a browser, chat through them at a terminal,
 or tap through them on a phone. One set of files, no export/import step,
 nothing to host.
 
+## What this is (and isn't)
+
+kanban is **data persistence and visualization for a task board — nothing
+more.** It is not a task runner, scheduler, or orchestrator: it doesn't pick
+up cards, dispatch agents, run workflows, or enforce what a status or an
+assignee handle is supposed to mean. Card frontmatter (`status`, `assignee`,
+`waiting_for`, `blocked`, and so on) is vocabulary — this repo defines the
+file format and gives you surfaces to read and write it, but interpreting
+that vocabulary as *work to actually do* is left entirely to whatever
+consumes the board (you, a script, an agent, an external dispatcher). If you
+want something that watches a board and autonomously executes what's on it,
+that's a separate layer you build or plug in on top — out of scope here by
+design, so this repo stays a small, inspectable substrate instead of an
+execution engine with opinions about your workflow.
+
 ## What it looks like
 
 A board is just a folder of cards — edit it from a browser, a terminal, or your
