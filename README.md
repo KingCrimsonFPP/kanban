@@ -20,10 +20,12 @@ nothing to host.
 ![The web editor](docs/images/web-board.png)
 
 A board is just a folder of cards — edit it from a browser, a terminal, or your
-phone. Two visual walkthroughs show each surface in depth:
+phone. A guide for each editing surface:
 
 - **[Web editor (desktop)](docs/web.md)** — the live browser app: board,
   dependency map, gantt, calendar, and full drag-drop CRUD.
+- **[CLI (conversational)](docs/cli.md)** — work the board by chatting with
+  Claude; the same operations, at a terminal or under remote control.
 - **[Mobile viewer](docs/viewer.md)** — a tap-through board for your phone that
   queues its edits back to Claude to apply.
 

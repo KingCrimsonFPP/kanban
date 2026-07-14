@@ -93,18 +93,10 @@ grammar works in every view.
 
 ![Bulk context menu](images/web-bulk-actions.png)
 
-## CLI — the conversational twin
+## Other surfaces
 
-`kanban-cli` runs the **same operations under the same rules** as the web
-editor, but with no server and no browser: Claude prints the board and you
-drive it with plain requests ("move #7 to doing", "create a card titled …",
-"archive the done cards"). Because it's just conversation, it works where the
-web app can't — a bare terminal, or Claude under remote control on your phone.
-
-Deliberately web-only (a printed board has no continuous canvas): drag & drop,
-the map (an SVG graph), gantt, and calendar, the date-picker popover, and
-`localStorage` persistence. Everything else — full CRUD, the `doing` entry gate, bulk edits,
-the notifications inbox, and the `config.yaml`-driven suggestions — is mirrored
-in the CLI. See [`CONTEXT.md`](../CONTEXT.md) for the full parity table.
-
-For editing away from a desktop, see the **[mobile viewer](viewer.md)**.
+The **[CLI](cli.md)** is this editor's conversational twin — the same
+operations and rules, driven by chat instead of a browser, so it works at a
+bare terminal or under remote control. The **[mobile viewer](viewer.md)** is
+the tap-through board for a phone or tablet. See [`CONTEXT.md`](../CONTEXT.md)
+for the full parity table across every surface.
