@@ -1888,6 +1888,28 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     toggleModalFullscreen(type);
   });
+  // Ctrl+S / Cmd+S (card #172): save whichever save-capable popup is open —
+  // the keyboard twin of its Save/Apply button, instead of the browser's
+  // save-page dialog mid-edit. save-hotkey.js owns the chord + target
+  // decision (strict chord — Shift/Alt chords never match; bulk-tags
+  // deliberately excluded, it has two competing actions and no single
+  // "save"). The edit/create modal goes through requestSubmit() so native
+  // validation and submitModal run exactly as a Save click; the two bulk
+  // popups click their Apply button, skipped while it's disabled. No
+  // save-capable popup open = plain no-op, same shape as #145 above.
+  const SAVE_APPLY_BUTTONS = { bulkSingle: '#bulk-single-apply', bulkSchedule: '#bulk-schedule-apply' };
+  document.addEventListener('keydown', (e) => {
+    const target = saveHotkeyTarget(e, {
+      edit: !$('#modal').classList.contains('hidden'),
+      bulkSingle: !$('#bulk-single').classList.contains('hidden'),
+      bulkSchedule: !$('#bulk-schedule').classList.contains('hidden'),
+    });
+    if (!target) return;
+    e.preventDefault();
+    if (target === 'edit') { $('#card-form').requestSubmit(); return; }
+    const btn = $(SAVE_APPLY_BUTTONS[target]);
+    if (btn && !btn.disabled) btn.click();
+  });
 });
 
 // --- Search box wiring (card #17): live filter-as-you-type, clear button,
