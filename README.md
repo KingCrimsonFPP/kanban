@@ -41,7 +41,8 @@ The installer scans the repo, lists the four skills in a selection menu
 (name + short description), and installs the ones you pick into your agent
 harness — Claude Code, GitHub Copilot, and the other harnesses `npx skills`
 supports. Skills whose menu description leads with **(Claude Only)** depend
-on Claude Code built-ins and won't port cleanly elsewhere; details below.
+on Claude Code built-ins and won't port cleanly elsewhere — see
+[cross-harness caveats](docs/cross-harness.md).
 
 ### Plugin (Claude Code)
 
@@ -52,29 +53,6 @@ on Claude Code built-ins and won't port cleanly elsewhere; details below.
 
 Installs all four skills at once, plus the `.claude-plugin/` marketplace
 wiring. Claude Code only.
-
-#### Cross-harness caveats — what doesn't port cleanly
-
-Not every skill degrades gracefully outside Claude Code:
-
-- **`kanban`** — portable. Plain file-contract instructions (card
-  frontmatter, `config.yaml`, `notifications.md`); no Claude-specific tool
-  calls.
-- **`kanban-web`** — portable. A Node-stdlib-only local server + vanilla-JS
-  SPA (`node skills/web/scripts/server.js <board-dir>`); works from any
-  harness that can run a shell command and open a browser.
-- **`kanban-cli`** — **Claude Code-only as written.** It's built entirely on
-  `AskUserQuestion`, a Claude Code built-in tool with no stand-in named here
-  for other harnesses. Porting it means replacing every `AskUserQuestion`
-  call with that harness's own prompt/confirmation mechanism (or plain
-  free-text Q&A) — not done in this repo.
-- **`kanban-viewer`** — **partially portable.** The generator
-  (`build_editor.py`) and the static HTML it produces are plain Python +
-  browser code with no Claude dependency. But the SKILL.md's delivery/apply
-  loop names Claude-specific tools and surfaces (`SendUserFile`, "Cowork",
-  the Claude mobile app) — another harness can reuse the underlying idea (run
-  the script, hand back the HTML, read a pasted payload back into the chat)
-  but not those exact tool calls.
 
 ## Quick start
 
@@ -179,6 +157,9 @@ adding it to the list.
   local-server exception, hand-rolled widgets, tolerant vocabulary registries,
   archive-column UI parity, the shared interaction grammar, the date triad,
   and the machine-managed `updated` field.
+- [`docs/cross-harness.md`](docs/cross-harness.md) — cross-harness caveats:
+  which skills port cleanly outside Claude Code and which carry the
+  (Claude Only) tag, and why.
 - [`CONTEXT.md`](CONTEXT.md) — the ubiquitous-language glossary for every term
   used across the four surfaces (board, card, status, waiting, blocked, the
   role trio, and more).
