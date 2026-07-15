@@ -12,6 +12,12 @@
 //   priority:high substring on priority
 //   tags:ui       substring on any one tag
 //   file:0011     substring on the card's filename (basename)
+//   assignee:@afk substring on the card's assignee handle. `A:`/`a:` (kanban.proj
+//                 #186) is a thin alias for this same scope — resolved to
+//                 'assignee' at parse time, before the KNOWN_FIELDS value/
+//                 lowercasing logic runs, so it shares every rule below with
+//                 the long form (case-insensitive substring, dropped when
+//                 valueless mid-typing).
 //   tree:74 / tree:#74   card #74's dependency tree — the connected component
 //                 (undirected) reachable from card 74 over the SAME edges the
 //                 map draws (waiting_for + #151 parent: membership).
@@ -37,10 +43,14 @@
 // card) pair doesn't have — see filterCards below for where that happens.
 const DG = (typeof module !== 'undefined' && module.exports) ? require('./dependency-graph') : window;
 
-const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file'];
+const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file', 'assignee'];
 // tree:/path: are deliberately NOT in KNOWN_FIELDS — that array drives the
 // lowercased-substring value semantics, which don't apply to a numeric id.
 const GRAPH_FIELDS = ['tree', 'path'];
+// kanban.proj #186: `A:`/`a:` is a thin alias for `assignee:` — resolved here,
+// before the KNOWN_FIELDS check, so the alias falls through the exact same
+// value/lowercasing path as the long form rather than duplicating it.
+const FIELD_ALIASES = { a: 'assignee' };
 
 function parseTerm(token) {
   const idShorthand = token.match(/^#(\d+)$/);
@@ -48,7 +58,7 @@ function parseTerm(token) {
 
   const prefixed = token.match(/^([A-Za-z]+):(.*)$/);
   if (prefixed) {
-    const key = prefixed[1].toLowerCase();
+    const key = FIELD_ALIASES[prefixed[1].toLowerCase()] || prefixed[1].toLowerCase();
     if (key === 'id') {
       const value = prefixed[2].trim();
       return value ? { field: 'id', value } : null;
@@ -84,6 +94,7 @@ function termMatchesCard(term, card) {
     case 'priority': return (card.priority || '').toLowerCase().includes(term.value);
     case 'tags': return tags.some((t) => t.toLowerCase().includes(term.value));
     case 'file': return (card.file || '').toLowerCase().includes(term.value);
+    case 'assignee': return (card.assignee || '').toLowerCase().includes(term.value);
     // card #74: pre-resolved by filterCards (below) into an id Set — a raw,
     // unresolved 'tree'/'path' term has no graph to resolve against here (a
     // single (term, card) pair isn't enough), so it matches nothing rather

@@ -19,13 +19,27 @@ test('id:42 parses as an exact id term, same as #42', () => {
   assert.deepStrictEqual(parseSearchQuery('id:42'), [{ field: 'id', value: '42' }]);
 });
 
-test('title: / body: / status: / priority: / tags: / file: parse as their own scoped term', () => {
+test('title: / body: / status: / priority: / tags: / file: / assignee: parse as their own scoped term', () => {
   assert.deepStrictEqual(parseSearchQuery('title:foo'), [{ field: 'title', value: 'foo' }]);
   assert.deepStrictEqual(parseSearchQuery('body:foo'), [{ field: 'body', value: 'foo' }]);
   assert.deepStrictEqual(parseSearchQuery('status:doing'), [{ field: 'status', value: 'doing' }]);
   assert.deepStrictEqual(parseSearchQuery('priority:high'), [{ field: 'priority', value: 'high' }]);
   assert.deepStrictEqual(parseSearchQuery('tags:ui'), [{ field: 'tags', value: 'ui' }]);
   assert.deepStrictEqual(parseSearchQuery('file:0011'), [{ field: 'file', value: '0011' }]);
+  assert.deepStrictEqual(parseSearchQuery('assignee:@afk'), [{ field: 'assignee', value: '@afk' }]);
+});
+
+// kanban.proj #186: A:/a: is a thin alias for assignee: — same field, same
+// value/lowercasing rules, just a shorter prefix to type.
+test('A: and a: alias assignee:, case-insensitively on the prefix itself', () => {
+  assert.deepStrictEqual(parseSearchQuery('A:@afk'), [{ field: 'assignee', value: '@afk' }]);
+  assert.deepStrictEqual(parseSearchQuery('a:@afk'), [{ field: 'assignee', value: '@afk' }]);
+  assert.deepStrictEqual(parseSearchQuery('A:@AFK'), [{ field: 'assignee', value: '@afk' }]); // value still lowercased
+});
+
+test('a valueless A:/a: prefix (mid-typing) is dropped, same as the other scoped prefixes', () => {
+  assert.deepStrictEqual(parseSearchQuery('A:'), []);
+  assert.deepStrictEqual(parseSearchQuery('a:'), []);
 });
 
 test('bare text (no prefix) parses as a null-field term', () => {
@@ -56,7 +70,7 @@ test('id: value is kept verbatim (not lowercased) — exact numeric compare need
 });
 
 test('an unrecognized field prefix falls back to a bare term over the whole token', () => {
-  assert.deepStrictEqual(parseSearchQuery('assignee:bob'), [{ field: null, value: 'assignee:bob' }]);
+  assert.deepStrictEqual(parseSearchQuery('owner:bob'), [{ field: null, value: 'owner:bob' }]);
 });
 
 test('#-prefixed non-numeric token is not id shorthand — falls back to a bare term', () => {
@@ -72,6 +86,7 @@ test('a scoped prefix with no value yet (mid-typing, e.g. "status:") is dropped,
   assert.deepStrictEqual(parseSearchQuery('priority:'), []);
   assert.deepStrictEqual(parseSearchQuery('tags:'), []);
   assert.deepStrictEqual(parseSearchQuery('file:'), []);
+  assert.deepStrictEqual(parseSearchQuery('assignee:'), []);
 });
 
 test('a valueless scoped prefix mixed with a real term keeps only the real term', () => {
@@ -126,6 +141,19 @@ test('tags: matches if ANY one tag contains the substring', () => {
 
 test('file: substring-matches the basename', () => {
   assert.deepStrictEqual(idsFor('file:0042'), [42]);
+});
+
+test('assignee: substring-matches the handle, case-insensitively; A:/a: match identically', () => {
+  const cards = [
+    { id: 1, title: 'x', body: '', status: 'todo', priority: 'Normal', tags: [], file: '', assignee: '@afk' },
+    { id: 2, title: 'y', body: '', status: 'todo', priority: 'Normal', tags: [], file: '', assignee: '@hitl' },
+  ];
+  const idsFor2 = (q) => filterCards(cards, parseSearchQuery(q)).map((c) => c.id);
+  assert.deepStrictEqual(idsFor2('assignee:afk'), [1]);
+  assert.deepStrictEqual(idsFor2('assignee:AFK'), [1]);
+  assert.deepStrictEqual(idsFor2('A:afk'), [1]);
+  assert.deepStrictEqual(idsFor2('a:afk'), [1]);
+  assert.deepStrictEqual(idsFor2('assignee:hitl'), [2]);
 });
 
 test('bare text hits title + body + tags, not status/priority', () => {
