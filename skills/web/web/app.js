@@ -449,6 +449,22 @@ function gate422Text(data) {
   return (data && data.error) || 'blocked';
 }
 
+// card #183: assigneeBadge() can't write a reserved custom color as an
+// inline-style HTML attribute string — a strict `style-src 'self'` CSP (no
+// unsafe-inline) blocks the browser from applying one at all, the exact #49
+// verify finding status-colors.js's own dots were fixed for. It instead
+// marks that one span with `data-assignee-color`; this small CSSOM pass
+// (never a string attribute, exactly the exception status-colors.js
+// documents) paints it after the innerHTML above lands. The common case —
+// no reserved colors configured — never touches this at all: the hashed dot
+// already carries a `.status-dot--palette-N` class with its color baked
+// into app.css.
+function paintAssigneeDots(root) {
+  root.querySelectorAll('[data-assignee-color]').forEach((dot) => {
+    dot.style.background = dot.dataset.assigneeColor;
+  });
+}
+
 // assigneeBadge/escapeHtml come from assignee-badge.js (bare globals, same
 // dual-environment pattern as refresh-policy.js/column-state.js — see #21).
 // card #39: every card-representing element in every view carries `card-el` +
@@ -488,9 +504,10 @@ function cardEl(card) {
   // escaped: date fields are free text by contract, never trust them in HTML.
   const sched = scheduleLabel(card, localTodayStr());
   el.innerHTML =
-    `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${card.epic ? epicBadge() : ''}${statusBadge(card)}${statusChip}${assigneeBadge(card)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
+    `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${card.epic ? epicBadge() : ''}${statusBadge(card)}${statusChip}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
     `<div class="card-title">${escapeHtml(card.title)}</div>` +
     (tags ? `<div class="card-tags">${tags}</div>` : '') + waiting;
+  paintAssigneeDots(el); // card #183: reserved custom colors need a CSSOM pass, see helper
   // epic #137: the red blocked pill — the sticker is a human stop sign, so
   // it reads as its own glyph, not a border (borders stay priority/status
   // territory). The reason is USER DATA: it goes in via textContent/title
@@ -536,12 +553,13 @@ function archiveCardEl(card, opts) {
   el.dataset.id = card.id;
   const sched = scheduleLabel(card, localTodayStr());
   el.innerHTML =
-    `<div class="card-head"><span class="card-id">#${card.id}</span>${showEpicDot && card.epic ? epicBadge() : ''}${statusBadge(card)}${archivedBadge()}${assigneeBadge(card)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
+    `<div class="card-head"><span class="card-id">#${card.id}</span>${showEpicDot && card.epic ? epicBadge() : ''}${statusBadge(card)}${archivedBadge()}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
     `<div class="card-title">${escapeHtml(card.title)}</div>` +
     `<div class="card-menu">` +
       `<button type="button" data-act="restore" data-id="${card.id}">Restore</button>` +
       `<button type="button" data-act="delete-arch" data-id="${card.id}">Delete</button>` +
     `</div>`;
+  paintAssigneeDots(el); // card #183: reserved custom colors need a CSSOM pass, see helper
   return el;
 }
 
@@ -1423,6 +1441,23 @@ function syncBlockedInputStyle() {
   $('#f-blocked').classList.toggle('blocked-active', isBlockedValue($('#f-blocked').value));
 }
 
+// card #183: the modal's own live color cue for the field currently being
+// typed — same dot glyph the board tiles wear (assigneeBadge's dot), kept in
+// sync on open and on every keystroke, same "reflect the live value, not the
+// saved one" pattern as syncBlockedInputStyle above. Hidden entirely for an
+// empty value (no assignee, no color to show) rather than rendering a dot
+// nobody asked for.
+function syncAssigneeDot() {
+  const handle = $('#f-assignee').value.trim();
+  const dot = $('#f-assignee-dot');
+  dot.hidden = !handle;
+  if (!handle) return;
+  const cls = assigneeColorClass(handle, state.assignees);
+  dot.className = cls ? `assignee-dot status-dot--${cls}` : 'assignee-dot';
+  dot.style.background = cls ? '' : (assigneeColor(handle, state.assignees) || '');
+  dot.title = handle;
+}
+
 // card #54: presetStatus (a live column id — always a listed status, so
 // renderStatusOptions already carries it) aims a new card at the column whose
 // + was clicked. The hidden #f-status field submits it even while the form is
@@ -1440,6 +1475,7 @@ function openModal(card, presetStatus) {
   $('#f-blocked').value = card && card.blocked ? card.blocked : '';
   syncBlockedInputStyle(); // epic #137: red border iff the value passes the predicate
   $('#f-assignee').value = card && card.assignee ? card.assignee : '';
+  syncAssigneeDot(); // card #183: live color cue matches whatever the field now holds
   $('#f-start').value = card && card.start_date ? card.start_date : ''; // card #36
   $('#f-end').value = card && card.end_date ? card.end_date : ''; // card #40: the triad's "to"
   $('#f-due').value = card && card.due_date ? card.due_date : '';
@@ -1534,6 +1570,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#card-form').addEventListener('submit', submitModal);
   $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback
+  $('#f-assignee').addEventListener('input', syncAssigneeDot); // card #183: live color-dot feedback
   $('#modal-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('edit'));
   // Single delegated listener on #board covers all five columns (renderBoard()
   // rebuilds the DOM every call — manual refresh, poll, drag, toggle — so

@@ -9,6 +9,7 @@
 //       name: "Alex"
 //       kind: human       # suggested: human | ai-hitl | ai-afk (free string)
 //       description: "…"
+//       color: "#a371f7"  # card #183: OPTIONAL reserved color; absent = hashed
 //
 // Same tolerant hand-rolled parsing discipline as notifications-store: skip
 // what doesn't parse, never fatal. The registry suggests, it never validates.
@@ -50,6 +51,11 @@ function parseConfig(text) {
           name: scalar(cur.name !== undefined ? cur.name : ''),
           kind: scalar(cur.kind !== undefined ? cur.kind : ''),
           description: scalar(cur.description !== undefined ? cur.description : ''),
+          // card #183: OPTIONAL reserved color, same suggest-never-validate
+          // contract as every other field here — an empty string means
+          // "no reservation", not an invalid one; the color picks a hashed
+          // fallback in that case (assignee-colors.js), never this store's job.
+          color: scalar(cur.color !== undefined ? cur.color : ''),
         });
       }
       cur = null;
@@ -102,7 +108,7 @@ function serializeConfig(config) {
   if (config.assignees && config.assignees.length) {
     out += 'assignees:\n';
     for (const a of config.assignees) {
-      out += `  - handle: ${quote(a.handle)}\n    name: ${quote(a.name)}\n    kind: ${quote(a.kind)}\n    description: ${quote(a.description)}\n`;
+      out += `  - handle: ${quote(a.handle)}\n    name: ${quote(a.name)}\n    kind: ${quote(a.kind)}\n    description: ${quote(a.description)}\n    color: ${quote(a.color || '')}\n`;
     }
   }
   return out;

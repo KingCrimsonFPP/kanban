@@ -87,24 +87,65 @@ def read_statuses(kanban_dir):
 
 DEFAULT_ASSIGNEES = ["@human", "@hitl", "@afk"]
 
-def read_assignees(kanban_dir):
-    """config.yaml's `assignees` registry (card #132) drives the assignee
-    choices; the role trio (@human/@hitl/@afk) applies when the file or key
-    is absent or empty. Registries suggest, never validate."""
+def _assignees_block(kanban_dir):
+    """The raw `assignees:` section text, or None — shared by read_assignees
+    and read_assignee_colors so both parse the exact same slice."""
     path = os.path.join(kanban_dir, "config.yaml")
     try:
         text = open(path, encoding="utf-8", errors="replace").read()
     except OSError:
-        return DEFAULT_ASSIGNEES
+        return None
     m = re.search(r"^assignees:[^\n]*\n(.*?)(?=^\S|\Z)", text, re.M | re.S)
-    if not m:
+    return m.group(1) if m else None
+
+def read_assignees(kanban_dir):
+    """config.yaml's `assignees` registry (card #132) drives the assignee
+    choices; the role trio (@human/@hitl/@afk) applies when the file or key
+    is absent or empty. Registries suggest, never validate."""
+    block = _assignees_block(kanban_dir)
+    if block is None:
         return DEFAULT_ASSIGNEES
     # Tolerant like the web parser: any `handle:` line in the section counts,
     # whether or not it opens its entry, blank lines between entries included.
     handles = [h.strip().strip('"').strip("'")
-               for h in re.findall(r"handle:\s*([^\n#]+)", m.group(1))]
+               for h in re.findall(r"handle:\s*([^\n#]+)", block)]
     handles = [h for h in handles if h]
     return handles or DEFAULT_ASSIGNEES
+
+def _scalar(raw):
+    """Same trailing-comment/quote contract as kanban-web's yaml-list.js
+    scalar(): a quoted value keeps everything between the quotes verbatim
+    (a hex color's own `#` included); an unquoted value only drops a comment
+    that's preceded by whitespace, never a `#` that IS the value (a bare
+    `color: #ff00ff` is legal — the `[^\\n#]` trick every OTHER field here
+    uses would truncate it at that leading hash)."""
+    s = raw.strip()
+    if len(s) >= 2 and ((s[0] == '"' and s[-1] == '"') or (s[0] == "'" and s[-1] == "'")):
+        return s[1:-1]
+    m = re.search(r"\s#", s)
+    return s[:m.start()].strip() if m else s
+
+def read_assignee_colors(kanban_dir):
+    """config.yaml assignees registry — card #183: an OPTIONAL `color:` field
+    reserves a color for that handle, same suggest-never-validate contract as
+    every other registry field (kanban-web's config-store.js parses the same
+    field). Returns {handle: color} only for entries that set one; a handle
+    absent here just hashes in the JS (acol()), same as an unlisted status."""
+    block = _assignees_block(kanban_dir)
+    if block is None:
+        return {}
+    colors, cur = {}, None
+    for line in block.splitlines():
+        hm = re.match(r"\s*-?\s*handle:\s*(.+)$", line)
+        if hm:
+            cur = _scalar(hm.group(1))
+            continue
+        cm = re.match(r"\s*color:\s*(.+)$", line)
+        if cm and cur:
+            v = _scalar(cm.group(1))
+            if v:
+                colors[cur] = v
+    return colors
 
 def read_notifications(kanban_dir):
     """notifications.md entries (card #134), tolerant like the web store:
@@ -170,6 +211,7 @@ def main():
                     .replace("__BASE_ISO__", iso)
                     .replace("__STATUSES__", emb(read_statuses(a.kanban_dir)))
                     .replace("__ASSIGNEES__", emb([""] + read_assignees(a.kanban_dir)))
+                    .replace("__ASSIGNEE_COLORS__", emb(read_assignee_colors(a.kanban_dir)))
                     .replace("__NOTIFS__", emb(read_notifications(a.kanban_dir)))
                     .replace("__DATA__", emb(cards)))
     open(a.out, "w", encoding="utf-8").write(html)
@@ -370,6 +412,15 @@ const cname=s=>CNAMES[s]||s;
 const ccol=s=>CCOL[s]||"#888780";
 const ARCHC="#8a8880";
 const ASG=__ASSIGNEES__;
+const ASGCOL=__ASSIGNEE_COLORS__;
+// card #183: assignee color — a reserved config.yaml `color:` wins; else the
+// handle hashes into the fixed 8-slot palette kanban-web's status-colors.js
+// STATUS_PALETTE uses (same djb2-xor hash, same hexes) so a handle colors the
+// same on both surfaces. Reuse, not reinvention: this viewer's own statuses
+// (ccol above) never grew that hashing, but assignees deliberately borrow it.
+const APALETTE=["#58a6ff","#3fb950","#d29922","#a371f7","#f778ba","#39c5cf","#f0883e","#ff7b72"];
+function ahash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h}
+function acol(a){const t=(a||"").trim();if(!t)return null;if(ASGCOL[t])return ASGCOL[t];return APALETTE[ahash(t.toLowerCase())%APALETTE.length]}
 const DATA=__DATA__;
 const NOTIFS=__NOTIFS__;
 let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false;
@@ -485,8 +536,10 @@ if(c.p==="High")d.appendChild(el("span","badge","HIGH"));
 if(un.length){const wb=el("span","badge wbadge","waiting");wb.title="waiting on "+un.map(x=>"#"+x).join(", ");d.appendChild(wb)}
 if(br!==null){const bb=el("span","badge","blocked");bb.title="blocked"+(br?": "+br:"");d.appendChild(bb)}
 const tEl=el("div","ttl",c.t);if(detail&&!ro){tEl.dataset.tap="ren";tEl.title="Tap to rename"}d.appendChild(tEl);
-const m=[];if(c.a)m.push(c.a);if(c.due)m.push("due "+c.due);if(c.p==="Low")m.push("Low");
-if(m.length)d.appendChild(el("div","meta",m.join(" \\u00b7 ")));
+const mp=[];if(c.a){const s=el("span",null);const dt=el("span","dot");dt.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle";dt.style.background=acol(c.a);dt.title=c.a;s.appendChild(dt);s.appendChild(document.createTextNode(c.a));mp.push(s)}
+if(c.due)mp.push(document.createTextNode("due "+c.due));
+if(c.p==="Low")mp.push(document.createTextNode("Low"));
+if(mp.length){const meta=el("div","meta");mp.forEach((p,i)=>{if(i>0)meta.appendChild(document.createTextNode(" \\u00b7 "));meta.appendChild(p)});d.appendChild(meta)}
 if(detail&&ro){
 // Card #142: archived cards open READ-ONLY — pills are plain text, no
 // editors/actions/all-fields; restore stays conversational.
@@ -494,7 +547,7 @@ const top=el("div","toprow");
 const mk=(txt,color)=>{const s=el("span","fpill");if(color){const dt=el("span","dot");dt.style.background=color;s.appendChild(dt)}s.appendChild(document.createTextNode(txt));return s};
 top.appendChild(mk("archived",ARCHC));
 top.appendChild(mk(cname(c.s),ccol(c.s)));
-if(c.a)top.appendChild(mk(c.a));
+if(c.a)top.appendChild(mk(c.a,acol(c.a)));
 top.appendChild(mk(c.p));
 d.insertBefore(top,d.firstChild)}
 else if(detail){
@@ -506,7 +559,9 @@ const sp=el("button","fpill");sp.dataset.act="pill";sp.dataset.pill="status";
 const sdot=el("span","dot");sdot.style.background=ccol(c.s);
 sp.appendChild(sdot);sp.appendChild(document.createTextNode(cname(c.s)));
 top.appendChild(sp);
-const ap=btn(c.a||"no assignee","pill",{pill:"assignee"});ap.className="fpill";top.appendChild(ap);
+const ap=el("button","fpill");ap.dataset.act="pill";ap.dataset.pill="assignee";
+if(c.a){const adot=el("span","dot");adot.style.background=acol(c.a);ap.appendChild(adot)}
+ap.appendChild(document.createTextNode(c.a||"no assignee"));top.appendChild(ap);
 const pp=btn(c.p,"pill",{pill:"priority"});pp.className="fpill";top.appendChild(pp);
 d.insertBefore(top,d.firstChild);
 const slot=el("div","acts");slot.style.borderTop="none";slot.style.marginTop="0";slot.style.paddingTop="0";

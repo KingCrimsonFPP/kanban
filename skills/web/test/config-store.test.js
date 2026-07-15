@@ -26,9 +26,28 @@ test('parseConfig reads nextId scalar and the assignees list', () => {
   assert.strictEqual(c.nextId, 28);
   assert.strictEqual(c.assignees.length, 2);
   assert.deepStrictEqual(c.assignees[0], {
-    handle: '@alex', name: 'Alex', kind: 'human', description: 'The human. Final say.',
+    handle: '@alex', name: 'Alex', kind: 'human', description: 'The human. Final say.', color: '',
   });
   assert.strictEqual(c.assignees[1].kind, 'ai-afk');
+});
+
+// --- card #183: OPTIONAL reserved color, same suggest-never-validate field ----
+
+test('parseConfig reads an assignee\'s optional color field; absent defaults to empty string', () => {
+  const withColor = cfg.parseConfig('assignees:\n  - handle: "@alex"\n    color: "#a371f7"\n');
+  assert.strictEqual(withColor.assignees[0].color, '#a371f7');
+  const withoutColor = cfg.parseConfig('assignees:\n  - handle: "@bob"\n');
+  assert.strictEqual(withoutColor.assignees[0].color, '');
+});
+
+test('parseConfig tolerates an unquoted hex color (the leading # is the value, not a comment marker)', () => {
+  const c = cfg.parseConfig('assignees:\n  - handle: "@alex"\n    color: #a371f7\n');
+  assert.strictEqual(c.assignees[0].color, '#a371f7');
+});
+
+test('serializeConfig round-trips a reserved color through parseConfig', () => {
+  const c = cfg.parseConfig('assignees:\n  - handle: "@alex"\n    color: "#a371f7"\n');
+  assert.deepStrictEqual(cfg.parseConfig(cfg.serializeConfig(c)), c);
 });
 
 test('parseConfig tolerates missing sections: assignees only, nextId only, empty', () => {

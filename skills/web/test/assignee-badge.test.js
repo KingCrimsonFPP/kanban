@@ -1,16 +1,49 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { assigneeBadge, escapeHtml, resolveAssignees, DEFAULT_ASSIGNEES } = require('../web/assignee-badge');
+const { assigneeColorClass, assigneeColor } = require('../web/assignee-colors');
 
-test('assigneeBadge renders an escaped span when assignee is set', () => {
-  assert.strictEqual(assigneeBadge({ assignee: '@alex' }), '<span class="card-assignee">@alex</span>');
+// --- card #183: the badge grew a colored dot, same glyph contract as statusBadge ---
+
+test('assigneeBadge renders an escaped span with a colored dot when assignee is set (card #183)', () => {
+  const html = assigneeBadge({ assignee: '@alex' }, []);
+  assert.match(html, /^<span class="card-assignee" title="@alex">/);
+  assert.match(html, />@alex<\/span>$/);
+  const cls = assigneeColorClass('@alex', []);
+  assert.match(html, new RegExp(`class="assignee-dot status-dot--${cls}"`), 'hashed color reuses the status-dot--palette-N class verbatim');
+  assert.doesNotMatch(html, /data-assignee-color/, 'no CSSOM hook needed for the hashed case');
+});
+
+test('assigneeBadge still renders (unregistered/no registry passed) — assignees param is optional', () => {
+  const html = assigneeBadge({ assignee: '@alex' });
+  assert.match(html, /class="card-assignee"/);
+  assert.match(html, /class="assignee-dot status-dot--palette-\d"/);
+});
+
+test('assigneeBadge carries a data-assignee-color attribute for a RESERVED custom color — no fixed class exists for an arbitrary hex (card #183)', () => {
+  const assignees = [{ handle: '@alex', color: '#ff00ff' }];
+  const html = assigneeBadge({ assignee: '@alex' }, assignees);
+  assert.match(html, /class="assignee-dot" data-assignee-color="#ff00ff"/);
+  assert.doesNotMatch(html, /status-dot--palette/, 'a reserved color never rides a hashed class');
+});
+
+test('assigneeBadge escapes a hostile reserved color value in the data attribute (card #183)', () => {
+  const assignees = [{ handle: '@alex', color: '"><script>x</script>' }];
+  const html = assigneeBadge({ assignee: '@alex' }, assignees);
+  assert.doesNotMatch(html, /<script>x<\/script>"/);
+  assert.match(html, /data-assignee-color="&quot;&gt;&lt;script&gt;x&lt;\/script&gt;"/);
+});
+
+test('assigneeBadge tooltips the handle and escapes it in both the title and the text (card #183)', () => {
+  const html = assigneeBadge({ assignee: '<b>&"\'' }, []);
+  assert.match(html, /title="&lt;b&gt;&amp;&quot;&#39;"/);
+  assert.match(html, />&lt;b&gt;&amp;&quot;&#39;<\/span>$/);
 });
 
 test('assigneeBadge escapes &, <, >, ", and \' in the assignee value', () => {
-  assert.strictEqual(
-    assigneeBadge({ assignee: '<b>&"\'' }),
-    '<span class="card-assignee">&lt;b&gt;&amp;&quot;&#39;</span>',
-  );
+  const html = assigneeBadge({ assignee: '<b>&"\'' }, []);
+  assert.doesNotMatch(html, /<b>/);
+  assert.match(html, /&lt;b&gt;&amp;&quot;&#39;/);
 });
 
 test('assigneeBadge returns empty string when assignee is null (server sends null for unset)', () => {
