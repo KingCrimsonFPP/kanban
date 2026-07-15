@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { parseSearchQuery, cardMatchesQuery, filterCards } = require('../web/search');
+const { parseSearchQuery, cardMatchesQuery, filterCards, searchSuggestionItems } = require('../web/search');
 
 // --- parseSearchQuery: syntax table from card #17 -------------------------
 
@@ -244,3 +244,43 @@ test('cardMatchesQuery called directly with an UNRESOLVED tree:/path: term match
 function idsFor2(cards, query) {
   return filterCards(cards, parseSearchQuery(query)).map((c) => c.id);
 }
+
+// --- searchSuggestionItems (kanban.proj #187): the search box autocomplete --
+
+test('typing a bare fragment suggests it plain, plus every KNOWN_FIELDS scoped form', () => {
+  assert.deepStrictEqual(searchSuggestionItems('@afk'), [
+    { value: '@afk', label: '@afk' },
+    { value: 'title:@afk', label: 'title:@afk' },
+    { value: 'body:@afk', label: 'body:@afk' },
+    { value: 'status:@afk', label: 'status:@afk' },
+    { value: 'priority:@afk', label: 'priority:@afk' },
+    { value: 'tags:@afk', label: 'tags:@afk' },
+    { value: 'file:@afk', label: 'file:@afk' },
+    { value: 'assignee:@afk', label: 'assignee:@afk' },
+  ]);
+});
+
+test('an empty query, or a query ending in whitespace (no segment being typed), suggests nothing', () => {
+  assert.deepStrictEqual(searchSuggestionItems(''), []);
+  assert.deepStrictEqual(searchSuggestionItems('   '), []);
+  assert.deepStrictEqual(searchSuggestionItems('status:todo '), []);
+});
+
+test('a segment that already carries a colon (recognized or not) suggests nothing — already scoped', () => {
+  assert.deepStrictEqual(searchSuggestionItems('status:do'), []);
+  assert.deepStrictEqual(searchSuggestionItems('owner:bob'), []);
+});
+
+test('earlier terms are preserved verbatim in `value`, untouched in `label`', () => {
+  const items = searchSuggestionItems('status:todo @afk');
+  assert.deepStrictEqual(items[0], { value: 'status:todo @afk', label: '@afk' });
+  const assigneeItem = items.find((i) => i.label === 'assignee:@afk');
+  assert.deepStrictEqual(assigneeItem, { value: 'status:todo assignee:@afk', label: 'assignee:@afk' });
+});
+
+test('multiple earlier terms all survive into value, space-joined, only the last segment completes', () => {
+  const items = searchSuggestionItems('status:todo tags:ui af');
+  assert.deepStrictEqual(items[0], { value: 'status:todo tags:ui af', label: 'af' });
+  const assigneeItem = items.find((i) => i.label === 'assignee:af');
+  assert.deepStrictEqual(assigneeItem, { value: 'status:todo tags:ui assignee:af', label: 'assignee:af' });
+});

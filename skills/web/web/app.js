@@ -1935,6 +1935,14 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     input.focus();
   });
+  // card #187: autocomplete dropdown, same hand-rolled combobox (native
+  // <datalist> misrenders in VSCode's Simple Browser — see attachCombobox's
+  // own header comment) the create/edit form uses for priority/assignee/tags.
+  // getOptions reads input.value itself (searchSuggestionItems computes
+  // fresh candidates from whatever's currently typed) rather than a static
+  // list — preFiltered/selectOnFocus:false are the two opt-outs that make
+  // that fit; see attachCombobox's comments at each for why.
+  attachCombobox(input, () => searchSuggestionItems(input.value), { preFiltered: true, selectOnFocus: false });
 });
 
 // --- Map view wiring (card #19; reshaped by #39): top-bar toggle + the bits
@@ -3774,8 +3782,18 @@ function attachCombobox(input, getOptions, opts = {}) {
   // replaces it) — filtering only applies while typing. A stale value that
   // matches nothing (e.g. an unregistered assignee on an old card) must not
   // leave the menu empty on click.
+  //
+  // card #187: opts.preFiltered opts a caller OUT of the comboboxSuggestions
+  // re-filter pass — for the search box, getOptions() (searchSuggestionItems)
+  // already IS the filter: it generates candidates fresh from the segment
+  // being typed rather than filtering a static vocabulary, so re-filtering
+  // its own output by substring-of-the-WHOLE-input would wrongly drop every
+  // scoped candidate as soon as the box holds more than one term (their
+  // `value` embeds the untouched earlier terms, which no longer appear
+  // verbatim inside the newly-scoped tail). The three form fields (priority/
+  // assignee/tags) don't pass this — unchanged behavior.
   const open = (filtered) => {
-    items = filtered ? comboboxSuggestions(getOptions(), input.value, opts) : getOptions();
+    items = (filtered && !opts.preFiltered) ? comboboxSuggestions(getOptions(), input.value, opts) : getOptions();
     if (!items.length) return close();
     highlightIndex = -1; // every (re)open starts with nothing highlighted, including re-filters mid-typing
     menu.replaceChildren(...items.map((o) => {
@@ -3791,7 +3809,18 @@ function attachCombobox(input, getOptions, opts = {}) {
     menu.hidden = false;
   };
   let typed = false; // has the user typed since the menu opened?
-  input.addEventListener('focus', () => { typed = false; input.select(); open(false); });
+  // card #187: opts.selectOnFocus (default true, unchanged for the form
+  // fields) — the search box holds a multi-term query, not one replaceable
+  // value, so select-all-on-focus would arm every next keystroke to wipe the
+  // whole thing. It also opens with nothing (open(false) → getOptions() → []
+  // for an empty/untyped segment, see searchSuggestionItems), so skipping
+  // the select is silent for the common empty-box case and only matters once
+  // there's a query already in the box.
+  input.addEventListener('focus', () => {
+    typed = false;
+    if (opts.selectOnFocus !== false) input.select();
+    open(false);
+  });
   input.addEventListener('input', (e) => { if (e.isTrusted) { typed = true; open(true); } });
   input.addEventListener('blur', close);
   input.addEventListener('keydown', (e) => {

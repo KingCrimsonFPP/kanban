@@ -143,10 +143,55 @@ function filterCards(cards, terms) {
   return cards.filter((card) => cardMatchesQuery(card, resolved));
 }
 
+// kanban.proj #187: the search box's autocomplete dropdown. Pure candidate
+// generation — no DOM, mirrors every other module here. Only the LAST
+// whitespace-separated segment of the query is ever completed (the terms
+// before it are query grammar the parser already accepted; re-suggesting
+// scopes for them would be noise), same "complete what's currently being
+// typed" contract as combobox.js's tagMode, just space- instead of
+// comma-delimited.
+//
+// Given that segment, offers the bare term plus every KNOWN_FIELDS scoped
+// form (title:/body:/status:/priority:/tags:/file:/assignee: — literally
+// "the grammar", so a future new scope shows up here for free with no
+// second list to maintain). tree:/path: are excluded: they take a numeric
+// card id, not free text, so completing e.g. "tree:@afk" would never match
+// anything.
+//
+// No suggestions (empty array, dropdown stays closed) when:
+// - the segment is empty (nothing typed yet, or trailing whitespace —
+//   same "not-yet-a-term" contract parseTerm uses for a bare "status:")
+// - the segment already carries a recognized OR unrecognized `foo:` prefix
+//   (a colon anywhere in it) — it's already scoped, or already a bare
+//   fallback term; re-offering scopes on top of that reads as broken, not
+//   helpful
+//
+// `value` is the FULL replacement text for the input (prior terms preserved
+// verbatim, segment replaced) — so picking a suggestion is a plain whole-
+// value swap, no special-cased "insert at cursor" logic needed. `label` is
+// just the new term, undecorated by the terms before it, so the menu reads
+// as "here's what this word could become" rather than repeating the whole
+// query back on every row.
+function searchSuggestionItems(raw) {
+  const text = String(raw || '');
+  if (/\s$/.test(text)) return []; // trailing space: no segment is being typed right now
+  const parts = text.split(/\s+/).filter(Boolean);
+  const segment = parts.pop() || '';
+  if (!segment || segment.includes(':')) return [];
+  const prefix = parts.length ? `${parts.join(' ')} ` : '';
+  const items = [{ value: prefix + segment, label: segment }];
+  KNOWN_FIELDS.forEach((field) => {
+    const label = `${field}:${segment}`;
+    items.push({ value: prefix + label, label });
+  });
+  return items;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseSearchQuery, cardMatchesQuery, filterCards };
+  module.exports = { parseSearchQuery, cardMatchesQuery, filterCards, searchSuggestionItems };
 } else {
   window.parseSearchQuery = parseSearchQuery;
   window.cardMatchesQuery = cardMatchesQuery;
   window.filterCards = filterCards;
+  window.searchSuggestionItems = searchSuggestionItems;
 }
