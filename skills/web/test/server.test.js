@@ -837,6 +837,43 @@ test('GET /status-colors.js serves the status color helpers; html loads it befor
   });
 });
 
+// card #180 fix: card #172 wired save-hotkey.js into app.html and wrote pure-
+// logic tests for it, but never added it to server.js's static-route
+// allowlist — it 404'd on every real server, so `window.saveHotkeyTarget` was
+// never defined and the whole Ctrl+S feature threw a silent ReferenceError in
+// the browser console instead of saving anything. save-hotkey.test.js's
+// require()-based tests couldn't see this (a route 404 only exists over HTTP).
+// This is the same shape test as status-colors.js above — the guard below
+// generalizes it so no future web/*.js can ship this way again.
+test('GET /save-hotkey.js serves the Ctrl+S save-target logic; html loads it before app.js (card #180, was 404 since card #172)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const res = await fetch(`${base}/save-hotkey.js`);
+    assert.strictEqual(res.status, 200);
+    assert.match(res.headers.get('content-type'), /text\/javascript/);
+    const html = await (await fetch(`${base}/`)).text();
+    assert.ok(html.indexOf('save-hotkey.js') > -1 && html.indexOf('save-hotkey.js') < html.indexOf('app.js'));
+  });
+});
+
+// General guard for this whole bug class: every <script src="/x.js"> app.html
+// loads must be reachable over HTTP, not just present on disk — a file can be
+// committed, wired into app.html, and fully unit-tested via require() while
+// still 404ing for every real browser if server.js's static-route allowlist
+// forgets it (exactly how save-hotkey.js shipped dead above).
+test('every non-app.js script app.html loads is served (not 404) by the running server', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    const scripts = [...html.matchAll(/<script src="\/([\w.-]+\.js)"><\/script>/g)].map((m) => m[1]);
+    assert.ok(scripts.length > 10, 'sanity: app.html should list a bunch of scripts');
+    for (const name of scripts) {
+      const res = await fetch(`${base}/${name}`);
+      assert.strictEqual(res.status, 200, `${name} is wired into app.html but server.js's static allowlist 404s it`);
+    }
+  });
+});
+
 test('GET /api/cards/1/detail returns raw frontmatter, absolute path, and body', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
