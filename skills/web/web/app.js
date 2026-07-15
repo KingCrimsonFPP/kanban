@@ -1923,6 +1923,21 @@ function clearSearch() {
   renderBoard();
 }
 
+// kanban.proj #189: append a scoped term to whatever's already in the search
+// box (assignee cue / tag click on a card tile) and re-render — same direct-
+// call convention as focusOn() (card #74, further down): set the box, call
+// renderBoard() straight, no synthetic 'input' event needed. Idempotent
+// rather than a toggle: clicking the same assignee/tag again while its term
+// is already present is a no-op — simpler than tracking "did I add this" to
+// support removing it again, and the card leaves the choice open.
+function addSearchTerm(term) {
+  const input = $('#search-input');
+  const terms = input.value.trim() ? input.value.trim().split(/\s+/) : [];
+  if (terms.includes(term)) return;
+  input.value = terms.concat(term).join(' ');
+  renderBoard();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const input = $('#search-input');
   input.addEventListener('input', () => renderBoard());
@@ -3604,6 +3619,21 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!el) return;
     if (e.target.closest('button, select, input, a')) return;
     const id = Number(el.dataset.id);
+    // kanban.proj #189: an assignee cue or a tag is a search shortcut, not a
+    // way to open/select the card underneath it — handled here, ahead of the
+    // select/open logic below, additive guard only (no restructuring of
+    // either element; #183 is concurrently touching .card-assignee's inner
+    // markup on its own branch). See addSearchTerm for the additive/no-op
+    // contract.
+    const cue = e.target.closest('.card-assignee, .tag');
+    if (cue) {
+      const card = state.active.concat(state.archived).find((c) => c.id === id);
+      if (card) {
+        if (cue.classList.contains('card-assignee') && card.assignee) addSearchTerm(`assignee:${card.assignee}`);
+        else if (cue.classList.contains('tag')) addSearchTerm(`tags:${cue.textContent}`);
+      }
+      return;
+    }
     // card #144: file-manager selection grammar (was: shift toggles one, #25).
     // Shift+click ADDS the whole range between the anchor and the target, in
     // the active view's rendered order; ctrl/cmd+click toggles one card and
