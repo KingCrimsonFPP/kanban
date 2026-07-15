@@ -82,7 +82,9 @@ instead), the date-picker popover (cli input is already free text), drag & drop,
 search-as-you-type, the header copy-board-path button (card #55 — a browser needs
 a clipboard affordance; a terminal transcript is already selectable text, and cli
 prints the board path on request), popup fullscreen and its Alt+Enter hotkey
-(card #145 — a printed board has no popups or keyboard chords). A feature added to one editor lands in the other (or gets a
+(card #145 — a printed board has no popups or keyboard chords), and the
+Ctrl+S/Cmd+S save-the-open-popup hotkey (card #172 — same no-popups-no-chords
+reasoning). A feature added to one editor lands in the other (or gets a
 line in this table saying why not). Retired skills are deleted outright (git
 history keeps them recoverable — card #53).
 Web's `tree:<id>`/`path:<id>` dependency-focus search terms (card #74) are
