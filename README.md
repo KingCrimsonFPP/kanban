@@ -1,6 +1,6 @@
 # kanban
 
-Markdown kanban boards for AI coding agents — built for [Claude Code](https://claude.com/claude-code), portable to GitHub Copilot and anywhere else `npx skills` reaches.
+Markdown kanban boards for AI coding agents.
 
 A directory of `*.card.md` files **is** the board — no database, no daemon,
 just plain git-friendly Markdown. Four surfaces sit on top of it, so you (or
@@ -17,18 +17,9 @@ nothing to host.
 
 ## What this is (and isn't)
 
-kanban is **data persistence and visualization for a task board — nothing
-more.** It is not a task runner, scheduler, or orchestrator: it doesn't pick
-up cards, dispatch agents, run workflows, or enforce what a status or an
-assignee handle is supposed to mean. Card frontmatter (`status`, `assignee`,
-`waiting_for`, `blocked`, and so on) is vocabulary — this repo defines the
-file format and gives you surfaces to read and write it, but interpreting
-that vocabulary as *work to actually do* is left entirely to whatever
-consumes the board (you, a script, an agent, an external dispatcher). If you
-want something that watches a board and autonomously executes what's on it,
-that's a separate layer you build or plug in on top — out of scope here by
-design, so this repo stays a small, inspectable substrate instead of an
-execution engine with opinions about your workflow.
+kanban **only keeps track of your board's state — by itself it executes
+nothing.** It's the file format plus surfaces to read and write it; picking up
+cards, dispatching agents, or running workflows is a separate layer on top.
 
 ## What it looks like
 
