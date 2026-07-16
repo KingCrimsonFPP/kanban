@@ -11,6 +11,7 @@ const {
   subviewTitle, timeToMinutes, assignLanes, timeGridLayout,
   minutesToTime, CALENDAR_DRAG_SNAP_MIN,
   rescheduleRangeAtTime, rescheduleDueAtTime, resizeRangeAtTime,
+  calendarCreateStart,
 } = require('../web/calendar-model');
 
 // --- view mode (card #37: board / map / calendar; card #38 added gantt) ------
@@ -925,4 +926,24 @@ test('resizeRangeAtTime: returns null on a zero-delta resize', () => {
 test('resizeRangeAtTime: an unknown edge value returns null', () => {
   const card = { id: 30, title: 'd', start_date: '2026-07-10T09:00', end_date: '2026-07-10T10:30' };
   assert.strictEqual(resizeRangeAtTime(card, 'middle', 600), null);
+});
+
+// --- calendarCreateStart (card #193: click-to-create prefill) ---------------------
+
+test('calendarCreateStart: no rawMin (month/all-day double-click) prefills a date-only day', () => {
+  assert.strictEqual(calendarCreateStart('2026-07-20'), '2026-07-20');
+  assert.strictEqual(calendarCreateStart('2026-07-20', null), '2026-07-20');
+});
+
+test('calendarCreateStart: a time-grid rawMin snaps to the CALENDAR_DRAG_SNAP_MIN grid', () => {
+  assert.strictEqual(calendarCreateStart('2026-07-20', 0), '2026-07-20T00:00');
+  assert.strictEqual(calendarCreateStart('2026-07-20', 600), '2026-07-20T10:00'); // already on-grid
+  assert.strictEqual(calendarCreateStart('2026-07-20', 37), '2026-07-20T00:30'); // 37 -> nearest 15 (30)
+  assert.strictEqual(calendarCreateStart('2026-07-20', 53), '2026-07-20T01:00'); // 53 -> nearest 15 (60)
+});
+
+test('calendarCreateStart: clamps a rawMin from a click above/below the grid', () => {
+  assert.strictEqual(calendarCreateStart('2026-07-20', -20), '2026-07-20T00:00');
+  assert.strictEqual(calendarCreateStart('2026-07-20', 1439), '2026-07-20T23:59'); // snaps past 1439, then clamps
+  assert.strictEqual(calendarCreateStart('2026-07-20', 1500), '2026-07-20T23:59');
 });

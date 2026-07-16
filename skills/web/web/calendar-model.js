@@ -548,6 +548,23 @@ function resizeRangeAtTime(card, edge, targetMin) {
   return null; // unknown edge — defensive, never throw from a drag handler
 }
 
+// === card #193: click-to-create prefill =============================================
+// The calendar's create affordance (double-click on empty cell space — see
+// app.js's dblclick glue) hands this a day and, for the time grid only, the
+// raw pointer minute; this decides the create modal's `start_date` prefill.
+// A month/all-day double-click has only a DAY to offer, so the prefill is
+// date-only. A time-grid double-click also snaps to the same
+// CALENDAR_DRAG_SNAP_MIN grid #109's retime/resize gestures already use, so a
+// card created here lands exactly where a dragged one would. Pre-fills START
+// only (ADR 0007: start_date is the working range's "from") — never
+// due_date, and the modal's status is left at its own default (unlike the
+// #54 column-header "+", which also presets status).
+function calendarCreateStart(day, rawMin) {
+  if (rawMin == null) return day;
+  const snapped = Math.round(rawMin / CALENDAR_DRAG_SNAP_MIN) * CALENDAR_DRAG_SNAP_MIN;
+  return withDateTime(day, Math.max(0, Math.min(1439, snapped)));
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VIEW_MODES, CALENDAR_MAX_CHIPS_PER_DAY,
@@ -560,6 +577,7 @@ if (typeof module !== 'undefined' && module.exports) {
     subviewTitle, timeToMinutes, assignLanes, timeGridLayout,
     minutesToTime, CALENDAR_DRAG_SNAP_MIN, // card #109: time-grid drag/resize
     rescheduleRangeAtTime, rescheduleDueAtTime, resizeRangeAtTime,
+    calendarCreateStart, // card #193: click-to-create prefill
   };
 } else {
   window.VIEW_MODES = VIEW_MODES;
@@ -596,4 +614,5 @@ if (typeof module !== 'undefined' && module.exports) {
   window.rescheduleRangeAtTime = rescheduleRangeAtTime;
   window.rescheduleDueAtTime = rescheduleDueAtTime;
   window.resizeRangeAtTime = resizeRangeAtTime;
+  window.calendarCreateStart = calendarCreateStart; // card #193: click-to-create prefill
 }
