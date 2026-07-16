@@ -3996,7 +3996,11 @@ attachCombobox($('#f-tags'), () => state.tags.map((v) => ({ value: v })), { tagM
 // Browser. Manual typing stays fully legal — the picker only ever writes
 // values the free-text contract already allows (pickDay reuses shiftValue, so
 // a typed time tail survives a pick). The pure rules (pickDay/initialMonth)
-// live in date-picker.js; month math is calendar-model.js's.
+// live in date-picker.js; month math is calendar-model.js's. Card #197 added
+// a 🕒 clock toggle inside the popover: ON reveals a hand-rolled HH:MM text
+// control and writes a THH:MM tail (hasTime/withTime/withoutTime, also in
+// date-picker.js); OFF strips it back to a bare day. Picking a day still
+// preserves whatever tail is already there, exactly as before #197.
 //
 // ONE popover instance serves all fields (the combobox-menu discipline of one
 // menu per anchor doesn't fit here — the grid is heavy, and only one can be
@@ -4037,6 +4041,23 @@ function datePickerPop() {
       renderDatePicker();
       return;
     }
+    // Card #197: the clock toggle. ON attaches DEFAULT_TIME (or whatever tail
+    // is already there — can't happen since the button only shows "add" when
+    // hasTime is false, but withTime's replace semantics make this safe
+    // either way); OFF strips back to the bare day. Re-renders in place
+    // (doesn't close the popover) so the day grid stays open for further
+    // picking. Disabled buttons never dispatch click, but the flag is
+    // checked anyway — defensive, matches the nav/day guards above.
+    const clockBtn = e.target.closest('.dp-clock-toggle');
+    if (clockBtn && datePickerFor && !clockBtn.disabled) {
+      const input = datePickerFor;
+      input.value = hasTime(input.value) ? withoutTime(input.value) : withTime(input.value, DEFAULT_TIME);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      renderDatePicker();
+      const timeInput = pop.querySelector('.dp-time-input');
+      if (timeInput) { timeInput.focus(); timeInput.select(); } // just revealed — let the user type straight over the default
+      return;
+    }
     const dayBtn = e.target.closest('.dp-day');
     if (dayBtn && datePickerFor) {
       const input = datePickerFor;
@@ -4047,6 +4068,20 @@ function datePickerPop() {
       closeDatePicker();
       input.focus();
     }
+  });
+  // Live-updates the field's time tail as the hand-rolled HH:MM text control
+  // is typed into — separate from the click listener above because typing
+  // fires 'input', not 'click'. Deliberately does NOT call renderDatePicker():
+  // a mid-typing re-render would replaceChildren the very node being typed
+  // into and drop focus/cursor position (the click handlers above don't have
+  // this problem — they don't touch a control the user is still composing
+  // text in).
+  pop.addEventListener('input', (e) => {
+    const timeInput = e.target.closest('.dp-time-input');
+    if (!timeInput || !datePickerFor) return;
+    const input = datePickerFor;
+    input.value = withTime(input.value, timeInput.value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   });
   document.body.appendChild(pop);
   return pop;
@@ -4085,18 +4120,50 @@ function renderDatePicker() {
     grid.appendChild(h);
   }
   const today = localTodayStr();
-  const selected = dayPart(datePickerFor.value); // '' when the field is empty/garbage — then nothing is marked selected
+  const currentDay = dayPart(datePickerFor.value); // '' when the field is empty/garbage — then nothing is marked selected
   for (const cell of monthGrid(year, monthIndex)) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'dp-day' + (cell.inMonth ? '' : ' outside') +
-      (cell.date === today ? ' today' : '') + (selected && cell.date === selected ? ' selected' : '');
+      (cell.date === today ? ' today' : '') + (currentDay && cell.date === currentDay ? ' selected' : '');
     b.dataset.day = cell.date;
     b.textContent = cell.day;
     b.title = cell.date;
     grid.appendChild(b);
   }
-  pop.replaceChildren(controls, grid);
+  // Card #197: clock toggle + HH:MM control. State is DERIVED from the
+  // field's value on every render (same discipline as `currentDay`/selected
+  // above) — no separate ON/OFF flag that could fall out of sync with what's
+  // actually in the input. Disabled when there's no parseable day: "add a
+  // time to the date" presupposes a date already exists (the button stays
+  // greyed out until one does, same disabled-control idiom the #42 bulk
+  // schedule row uses for its 📅 button). No native <input type="time"> —
+  // ADR 0003's rationale (native popups misplace themselves in Simple
+  // Browser) applies just as much to time as to date, so this reuses the
+  // exact plain-text-input style the date fields themselves already use:
+  // free text, never validated, from the same card #36 contract.
+  const timeRow = document.createElement('div');
+  timeRow.className = 'date-picker-time';
+  const timeOn = hasTime(datePickerFor.value);
+  const clockBtn = document.createElement('button');
+  clockBtn.type = 'button';
+  clockBtn.className = 'dp-clock-toggle' + (timeOn ? ' on' : '');
+  clockBtn.disabled = !currentDay;
+  clockBtn.textContent = '🕒';
+  clockBtn.title = timeOn ? 'Remove time' : 'Add a time';
+  clockBtn.setAttribute('aria-label', clockBtn.title);
+  clockBtn.setAttribute('aria-pressed', String(timeOn));
+  timeRow.appendChild(clockBtn);
+  if (timeOn) {
+    const timeInput = document.createElement('input');
+    timeInput.type = 'text';
+    timeInput.className = 'dp-time-input';
+    timeInput.placeholder = 'HH:MM';
+    timeInput.setAttribute('aria-label', 'Time');
+    timeInput.value = timePart(datePickerFor.value); // set via property, not an HTML string — no escaping needed
+    timeRow.appendChild(timeInput);
+  }
+  pop.replaceChildren(controls, grid, timeRow);
   pop.hidden = false;
   positionDatePicker();
 }

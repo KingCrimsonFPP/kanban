@@ -151,6 +151,10 @@ bound to `127.0.0.1` only.
   each takes a date (`YYYY-MM-DD`) or local datetime (`YYYY-MM-DDTHH:MM`), never
   validated. Every date field also has a 📅 calendar-picker button (card #41) —
   manual entry stays fully legal, and picking a day preserves a typed time tail.
+  The popover also carries a 🕒 clock toggle (card #197): ON reveals a
+  hand-rolled HH:MM control and appends it to the value (defaulting to 09:00),
+  OFF strips it back to a bare date; disabled until a date exists to attach a
+  time to.
   Compat: a card with start + due but no end still ranges start→due.
   The server assigns the next id and writes a new
   `<0000-id>.<slug>.card.md` (id zero-padded to 4 digits, e.g. `0009.new-thing.card.md`).

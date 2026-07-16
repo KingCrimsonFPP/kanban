@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { pickDay, initialMonth } = require('../web/date-picker');
+const { pickDay, initialMonth, hasTime, withTime, withoutTime, DEFAULT_TIME } = require('../web/date-picker');
 
 // --- pickDay: what the input's value becomes when a popover day is clicked ---
 
@@ -55,4 +55,61 @@ test('initialMonth falls back to today\'s month for empty/garbage current values
 test('initialMonth falls back to today for impossible months', () => {
   assert.deepStrictEqual(initialMonth('2026-13-05', '2026-07-09'), { year: 2026, monthIndex: 6 });
   assert.deepStrictEqual(initialMonth('2026-00-15', '2026-07-09'), { year: 2026, monthIndex: 6 });
+});
+
+// --- clock toggle (card #197): hasTime/withTime/withoutTime ------------------
+
+test('hasTime is false for a plain date, empty, or garbage value', () => {
+  assert.strictEqual(hasTime('2026-07-09'), false);
+  assert.strictEqual(hasTime(''), false);
+  assert.strictEqual(hasTime('soon'), false);
+  assert.strictEqual(hasTime(null), false);
+  assert.strictEqual(hasTime(undefined), false);
+});
+
+test('hasTime is true whenever a T-tail is present, however garbage', () => {
+  assert.strictEqual(hasTime('2026-07-09T14:30'), true);
+  assert.strictEqual(hasTime('2026-07-09T14:30:59'), true);
+  assert.strictEqual(hasTime('2026-07-09Tnonsense'), true); // never-validate, card #36
+});
+
+test('withTime attaches the given HH:MM to a plain date', () => {
+  assert.strictEqual(withTime('2026-07-09', '09:00'), '2026-07-09T09:00');
+});
+
+test('withTime REPLACES an existing time tail rather than appending', () => {
+  assert.strictEqual(withTime('2026-07-09T14:30', '09:00'), '2026-07-09T09:00');
+  assert.strictEqual(withTime('2026-07-09T14:30:59', '09:00'), '2026-07-09T09:00');
+});
+
+test('withTime is a no-op on empty/garbage values with no parseable day', () => {
+  assert.strictEqual(withTime('', '09:00'), '');
+  assert.strictEqual(withTime('soon', '09:00'), 'soon');
+  assert.strictEqual(withTime(null, '09:00'), null);
+  assert.strictEqual(withTime(undefined, '09:00'), undefined);
+});
+
+test('withoutTime strips a time tail back to the bare day', () => {
+  assert.strictEqual(withoutTime('2026-07-09T14:30'), '2026-07-09');
+  assert.strictEqual(withoutTime('2026-07-09T14:30:59'), '2026-07-09');
+});
+
+test('withoutTime is idempotent on a value with no time tail', () => {
+  assert.strictEqual(withoutTime('2026-07-09'), '2026-07-09');
+});
+
+test('withoutTime is a no-op on empty/garbage values with no parseable day', () => {
+  assert.strictEqual(withoutTime('', ), '');
+  assert.strictEqual(withoutTime('soon'), 'soon');
+  assert.strictEqual(withoutTime(null), null);
+  assert.strictEqual(withoutTime(undefined), undefined);
+});
+
+test('withTime then withoutTime round-trips back to the original bare day', () => {
+  const day = '2026-07-09';
+  assert.strictEqual(withoutTime(withTime(day, DEFAULT_TIME)), day);
+});
+
+test('DEFAULT_TIME is a fixed HH:MM constant (deterministic, not the wall clock)', () => {
+  assert.strictEqual(DEFAULT_TIME, '09:00');
 });

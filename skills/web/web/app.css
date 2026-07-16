@@ -711,6 +711,19 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .dp-day.today { border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff inset; }
 .dp-day.selected { background: #1f6feb; border-color: #388bfd; color: #fff; }
 .dp-day.selected:hover { background: #388bfd; }
+/* Card #197: clock toggle. ON state highlights like .dp-day.selected (same
+   blue-fill vocabulary); disabled (no parseable day yet) fades like
+   .dp-day.outside. The revealed HH:MM control is a plain text input styled
+   like the date fields themselves — no native <input type="time">, same
+   ADR 0003 reasoning as the rest of this popover. */
+.date-picker-time { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.dp-clock-toggle { padding: 3px 7px; font-size: 0.85em; line-height: 1; border-radius: 4px; }
+.dp-clock-toggle.on { background: #1f6feb; border-color: #388bfd; }
+.dp-clock-toggle:disabled { opacity: 0.45; cursor: default; }
+/* .date-picker-pop lives outside .modal (body-mounted, escaping the modal's
+   overflow), so it doesn't inherit the `.modal input` base styling — restated
+   here rather than widening that selector for one field outside the form. */
+.dp-time-input { width: 72px; padding: 3px 6px; font-size: 0.8em; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; font-family: inherit; }
 
 /* Notifications (card #22) */
 .notif-btn { position: relative; display: inline-flex; align-items: center; padding: 6px 8px; }
