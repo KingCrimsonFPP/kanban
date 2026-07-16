@@ -369,6 +369,18 @@ bound to `127.0.0.1` only.
   included; an open #95 combobox menu exempts alt-chorded Enter, so the hotkey wins
   there too (plain Enter keeps the menu's pick grammar). No popup open = no-op; the
   notifications popup isn't fullscreen-capable and is unaffected.
+  **Ctrl+F / Cmd+F (kanban.proj #198)** focuses the search box instead of opening
+  the browser's own find bar (`preventDefault`) and pre-fills `#` with the caret
+  right after it, so typing digits immediately forms the `#<id>` exact-match term
+  in a couple of keystrokes (erase the `#` by hand for any other query — that's
+  fine, cheap). A box that already holds a query gets select-all instead of the
+  `#` prefill — typing overwrites it, same as any focused input — so the chord
+  can never silently clobber a query someone already typed (`search-hotkey.js`
+  owns this decision). Suppressed while any modal/popup is open — the mirror of
+  card #172's Ctrl+S, which only fires *inside* an open popup: every popup's
+  `.modal-backdrop` covers the whole viewport, hiding the search bar behind it,
+  so this hotkey only fires *outside* one and the browser's native find stands
+  in while a popup is up.
 - **Comboboxes (card #30; keyboard grammar by card #95)** — the form's Assignee
   (and Priority/Tags, incl. the bulk-edit popups' copies) fields suggest values from
   `config.yaml`'s lists (see below) while still accepting free text. Tab/click

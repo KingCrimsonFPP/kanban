@@ -1985,7 +1985,9 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- Search box wiring (card #17): live filter-as-you-type, clear button,
 // `/` focuses the box (skipped while any input/textarea/select/contentEditable
 // already has focus, so it doesn't hijack typing elsewhere — including inside
-// either modal, whose fields are all one of those tag names).
+// either modal, whose fields are all one of those tag names). Ctrl+F/Cmd+F
+// (kanban.proj #198) also focuses it, with its own `#`-prefill/select-all
+// logic — see the keydown listener below.
 function clearSearch() {
   const input = $('#search-input');
   if (!input || !input.value) return;
@@ -2019,6 +2021,30 @@ window.addEventListener('DOMContentLoaded', () => {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (active && active.isContentEditable)) return;
     e.preventDefault();
     input.focus();
+  });
+  // Ctrl+F / Cmd+F (kanban.proj #198): focus the search box, preventDefault
+  // on the browser's own find bar. search-hotkey.js owns the chord + value
+  // decision — an empty box gets "#" prefilled with the caret right after it
+  // (typing digits immediately forms the #<id> exact-match term), a box that
+  // already holds a query gets select-all instead, so the chord never
+  // silently clobbers a query someone already typed (typing overwrites the
+  // selection, same as any focused input). Suppressed while any modal/popup
+  // is open (anyModalOpen(), the same guard the 5s poll uses) — every
+  // popup's .modal-backdrop covers the whole viewport, so the search bar
+  // sits hidden behind it; browser's native find stands in that case
+  // instead — mirror of card #172's Ctrl+S, which only fires INSIDE a popup,
+  // this one only fires OUTSIDE one. Unlike the "/" hotkey above, no
+  // active-element check is needed: Ctrl+F never inserts a literal
+  // character into whatever's focused, so there's nothing for it to hijack.
+  document.addEventListener('keydown', (e) => {
+    const result = searchHotkeyPrefill(e, { modalOpen: anyModalOpen(), currentValue: input.value });
+    if (!result) return;
+    e.preventDefault();
+    const changed = result.value !== input.value;
+    input.value = result.value;
+    if (changed) renderBoard();
+    input.focus();
+    input.setSelectionRange(result.selectionStart, result.selectionEnd);
   });
   // card #187: autocomplete dropdown, same hand-rolled combobox (native
   // <datalist> misrenders in VSCode's Simple Browser — see attachCombobox's
