@@ -1,6 +1,6 @@
 # kanban
 
-Markdown kanban boards for [Claude Code](https://claude.com/claude-code).
+Markdown kanban boards for AI coding agents.
 
 A directory of `*.card.md` files **is** the board — no database, no daemon,
 just plain git-friendly Markdown. Four surfaces sit on top of it, so you (or
@@ -14,6 +14,12 @@ diffable in the same PRs. Claude can create and move cards as part of its own
 work; you can drag them around in a browser, chat through them at a terminal,
 or tap through them on a phone. One set of files, no export/import step,
 nothing to host.
+
+## What this is (and isn't)
+
+kanban **keeps track of your board's state — by itself it executes nothing.**
+It's the file format plus surfaces to read and write it; you can use other tools
+to pick up cards, dispatch agents, and run workflows based on the board state.
 
 ## What it looks like
 
