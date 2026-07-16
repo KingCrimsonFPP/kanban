@@ -48,6 +48,12 @@
         <button type="submit" id="modal-save" class="icon-btn" title="Save" aria-label="Save">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
         </button>
+        <!-- kanban.proj #200: reveals/hides #row-prompt below (independent of
+             #50's "Show more fields" — see that row's own comment). Writes the
+             `prompt` field, a signal FOR the AI to pick up (not a sticker). -->
+        <button type="button" id="modal-ai-btn" class="icon-btn" title="AI prompt" aria-label="AI prompt" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"></path><path d="M19 15l0.8 2.2L22 18l-2.2 0.8L19 21l-0.8-2.2L16 18l2.2-0.8L19 15z"></path></svg>
+        </button>
         <button type="button" id="modal-fullscreen-btn" class="icon-btn" title="Expand to full screen" aria-label="Expand to full screen" aria-pressed="false">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
         </button>
@@ -87,6 +93,20 @@
       <label class="modal-extra">Start date <span class="date-field"><input id="f-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
       <label class="modal-extra">End date <span class="date-field"><input id="f-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
       <label class="modal-extra">Due date <span class="date-field"><input id="f-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
+    </div>
+    <!-- kanban.proj #200: the `prompt` field's own input, revealed/hidden by
+         the header's AI sparkle button — NOT by #50's "Show more fields"
+         (no .modal-extra class here), so it works from the minimal 3-click
+         quick-capture flow too (title, click AI, type prompt, Enter). Placed
+         after the Assignee+dates row so Assignee stays the DOM/tab order's
+         fixed 2nd focusable field (kanban.proj #199) in every state — this
+         row only ever becomes reachable 3rd, never inserted ahead of it.
+         openModal() auto-reveals it on edit when the card already carries a
+         prompt (never hides existing data behind an unclicked toggle); a new
+         card starts collapsed, same "don't show empty fields uninvited"
+         instinct as #50. -->
+    <div class="row hidden" id="row-prompt">
+      <label>AI prompt <input id="f-prompt" placeholder="Instruction for the AI to pick up"></label>
     </div>
     <!-- card #50: minimal-first create. Everything below this point down to
          Description (the .modal-extra groups — two whole rows plus the

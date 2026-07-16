@@ -73,6 +73,19 @@ neither badge is tap-to-filter here — this editor has no additive
 query-append affordance for any badge yet (the tree:/path: buttons overwrite
 the whole query box instead), so it isn't mirrored for review/blocked either.
 
+**Deliberate gap (kanban.proj #200):** kanban-web's AI-prompt sparkle button
+— a dedicated reveal control that writes the `prompt` field (a signal FOR
+the AI to pick up, not a sticker; see that skill's own write-up) — has no
+twin here. It doesn't need one for editing an EXISTING `prompt` line: the
+"All fields" grid above is generic (`Object.keys(c.fm)`), so a card that
+already carries one gets an `fm-prompt` row for free, same as any other
+unknown key a board grows. What's missing is adding a prompt to a card that
+doesn't have one yet — `prompt` isn't in the grid's `staples` list
+(`start_date, end_date, due_date, tags, waiting_for, blocked, review`, in
+`build_editor.py`), so unlike `blocked`/`review` it can't be freshly set
+from empty here; the sparkle button's dedicated always-offered field is the
+only affordance for that today.
+
 The create form's assignee suggestions come from the board registry
 (`config.yaml` `assignees`); with no registry it suggests the
 `@human`/`@hitl`/`@afk` role trio (card #132 — CONTEXT.md's Role trio glossary).
