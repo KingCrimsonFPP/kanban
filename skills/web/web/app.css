@@ -762,6 +762,21 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .gantt-label.selected { outline: 2px solid #58a6ff; outline-offset: -2px; border-radius: 4px; background: #0d1b2a; }
 .map-node.selected rect { fill: #0d1b2a; }
 .map-node.selected { filter: drop-shadow(0 0 4px #58a6ff); }
+/* kanban.proj #201: `.epic` (card #45, above) and `.selected` (this block)
+   are both 2-class selectors setting the same property — background here,
+   SVG fill on the map node — and `.selected` is declared later, so it wins
+   the same-specificity tie outright and the epic wash silently disappears
+   the moment an epic card is selected. That's fine for status fills (the
+   comment above is explicit: status color SHOULD cede to the selection
+   wash), but epic is a durable identity, not a transient status, so it
+   shouldn't lose to selection the same way. A 3-class override beats both
+   2-class rules regardless of source order, so the epic wash reasserts
+   itself while selection's own outline/glow (a property epic never
+   touches) keeps showing too. The gantt BAR needs no twin here — its epic
+   wash is already a box-shadow (card #45), a different property than
+   .gantt-bar.selected's background, so there was never a tie to lose. */
+.card.epic.selected, .cal-chip.epic.selected, .gantt-label.epic.selected { background: rgba(240, 136, 62, 0.12); }
+.map-node.epic.selected rect { fill: rgba(240, 136, 62, 0.12); }
 .context-menu { position: fixed; z-index: 60; background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 4px; display: flex; flex-direction: column; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 .context-menu button { background: transparent; border: none; text-align: left; padding: 6px 10px; border-radius: 4px; }
 .context-menu button:hover { background: #30363d; }
