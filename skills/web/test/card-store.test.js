@@ -408,7 +408,7 @@ test('toJSON exposes the public card shape without internal underscores', () => 
   const dir = tmpBoard();
   const j = cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md')));
   assert.deepStrictEqual(Object.keys(j).sort(), [
-    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151)
+    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'review', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151); review joined (ADR 0009, card #181)
   ]);
   assert.strictEqual(j._order, undefined);
 });
@@ -1246,6 +1246,70 @@ test('hard cutover: a legacy blocked_by line carries no edges but survives verba
   assert.strictEqual(cs.updateCard(dir, 1, { status: 'doing' }).status, 'doing', 'legacy edges never gate');
   assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^blocked_by: \[2\]$/m,
     'the unmanaged line is preserved verbatim for card #141 to migrate');
+});
+
+// --- ADR 0009 (card #181): the review sticker — blocked's sibling, no gate --
+
+test('readCardFile parses the review sticker verbatim (quotes stripped) and defaults it to null (ADR 0009)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-rev-'));
+  fs.writeFileSync(path.join(dir, '0001.a.card.md'),
+    `---\nid: 1\nstatus: todo\nreview: "PR #6"\n---\n\n# A\n\nbody\n`);
+  fs.writeFileSync(path.join(dir, '0002.b.card.md'),
+    `---\nid: 2\nstatus: todo\n---\n\n# B\n\nbody\n`);
+  fs.writeFileSync(path.join(dir, '0003.c.card.md'),
+    `---\nid: 3\nstatus: todo\nreview: false\n---\n\n# C\n\nbody\n`);
+  const byId = new Map(cs.listActive(dir).map((c) => [c.id, c]));
+  assert.strictEqual(byId.get(1).review, 'PR #6');
+  assert.strictEqual(byId.get(2).review, null, 'no line = null, never an empty string');
+  assert.strictEqual(byId.get(3).review, 'false', 'a hand-written false round-trips for display; the predicate says not in review');
+});
+
+test('updateCard writes a valid review value and strips an invalid/clear one — same lean rule as blocked (ADR 0009)', () => {
+  const dir = tmpBoard();
+  cs.updateCard(dir, 2, { review: '  PR #6  ' });
+  let raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
+  assert.match(raw, /^review: PR #6$/m, 'trimmed text written verbatim');
+  cs.updateCard(dir, 2, { review: '' });
+  raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
+  assert.doesNotMatch(raw, /^review:/m, 'a blank clears — the line is removed, never `review: ` boilerplate');
+  cs.updateCard(dir, 2, { review: 'false' });
+  raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
+  assert.doesNotMatch(raw, /^review:/m, 'the YAML-false special-case is "clear" — never written as `review: false`');
+  cs.updateCard(dir, 2, { review: '!!!' });
+  raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
+  assert.doesNotMatch(raw, /^review:/m, 'no-alphanumeric junk is not a valid sticker — stripped');
+  cs.updateCard(dir, 2, { review: true });
+  raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
+  assert.match(raw, /^review: true$/m, 'an API boolean true writes the bare sticker — review, text unspecified');
+});
+
+test('updateCard leaves an on-disk review line alone when the PATCH does not mention it (ADR 0009)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-rev-'));
+  fs.writeFileSync(path.join(dir, '0001.a.card.md'),
+    `---\nid: 1\nstatus: todo\nreview: PR #6\n---\n\n# A\n\nbody\n`);
+  cs.updateCard(dir, 1, { priority: 'High' });
+  assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^review: PR #6$/m);
+});
+
+test('createCard writes a valid review sticker and drops an invalid one (ADR 0009)', () => {
+  const dir = tmpBoard();
+  const stickered = cs.createCard(dir, { title: 'Stickered', status: 'todo', review: 'PR #6' });
+  assert.strictEqual(stickered.review, 'PR #6');
+  assert.match(fs.readFileSync(cs.findCardFile(dir, stickered.id), 'utf8'), /^review: PR #6$/m);
+  const clear = cs.createCard(dir, { title: 'Clear', status: 'todo', review: '   ' });
+  assert.strictEqual(clear.review, null);
+  assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, clear.id), 'utf8'), /^review:/m);
+});
+
+test('review does NOT gate doing entry, unlike blocked — updateCard and createCard both succeed straight into doing (ADR 0009)', () => {
+  const dir = tmpBoard(); // card 1 is done — never waiting
+  cs.updateCard(dir, 1, { review: 'PR #6' });
+  const moved = cs.updateCard(dir, 1, { status: 'doing' });
+  assert.strictEqual(moved.status, 'doing');
+  assert.strictEqual(moved.review, 'PR #6', 'the sticker survives the move — no eviction, no clearing');
+  const born = cs.createCard(dir, { title: 'In review at birth', status: 'doing', review: 'PR #9' });
+  assert.strictEqual(born.status, 'doing');
+  assert.strictEqual(born.review, 'PR #9');
 });
 
 // --- card #151: `parent` — epic membership id -------------------------------
