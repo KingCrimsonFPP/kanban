@@ -174,6 +174,12 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 /* epic #137: the edit form's blocked input goes red exactly while its value
    passes the predicate — colorless otherwise. */
 #f-blocked.blocked-active { border-color: #f85149; }
+/* ADR 0009 (card #181): review is blocked's sibling sticker — "finished,
+   approve me" rather than a stop sign, so its own gold/yellow pill, distinct
+   from the waiting amber accent (#d29922), the epic orange wash (#f0883e),
+   and the blocked red (#f85149). Exact shade pending Franc's sign-off. */
+.review-pill { background: rgba(234,197,79,0.15); border: 1px solid #eac54f; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #eac54f; margin-left: 4px; flex-shrink: 0; }
+#f-review.review-active { border-color: #eac54f; }
 .card-menu { display: flex; gap: 8px; margin-top: 8px; }
 .card-menu button { padding: 2px 8px; font-size: 0.72em; }
 .toast { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: #161b22; border: 1px solid #f85149; color: #f0f6fc; padding: 10px 16px; border-radius: 6px; z-index: 20; }

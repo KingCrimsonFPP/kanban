@@ -190,6 +190,19 @@ test('the edit form carries the waiting_for ids input AND the blocked reason inp
   });
 });
 
+test('the edit form carries the review text input, wired to the gold-border predicate (ADR 0009, card #181)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    assert.match(html, /Review \(text\) <input id="f-review"/, 'the review sticker input, text as free text');
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.match(js, /review: \$\('#f-review'\)\.value\.trim\(\)/, 'submit sends the raw sticker text — the store\'s lean rule judges it');
+    assert.match(js, /classList\.toggle\('review-active', isReviewValue\(\$\('#f-review'\)\.value\)\)/,
+      'the gold border tracks the SHARED predicate, not a local re-implementation');
+    assert.match(js, /\$\('#f-review'\)\.addEventListener\('input', syncReviewInputStyle\)/, 'live while typing');
+  });
+});
+
 test('the board tile renders the waiting badge with UNRESOLVED ids only, and the blocked pill via textContent/title only (epic #137)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
@@ -205,6 +218,29 @@ test('the board tile renders the waiting badge with UNRESOLVED ids only, and the
     const innerHtmlStmt = fn.match(/el\.innerHTML =[\s\S]*?;\r?\n/)[0]; // CRLF-tolerant (core.autocrlf)
     assert.ok(!innerHtmlStmt.includes('card.blocked') && !innerHtmlStmt.includes('blockedLabel'),
       'the reason never rides the innerHTML write — pill is appended via DOM property assignment after it');
+  });
+});
+
+test('the board tile renders the review pill via textContent/title only, same XSS discipline as blocked (ADR 0009, card #181)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function cardEl\([\s\S]*?\nfunction /)[0];
+    assert.match(fn, /pill\.textContent = 'review'/);
+    assert.match(fn, /pill\.title = reviewLabel\(card\.review\)/);
+    const innerHtmlStmt = fn.match(/el\.innerHTML =[\s\S]*?;\r?\n/)[0];
+    assert.ok(!innerHtmlStmt.includes('card.review') && !innerHtmlStmt.includes('reviewLabel'),
+      'the text never rides the innerHTML write — pill is appended via DOM property assignment after it');
+  });
+});
+
+test('clicking the blocked or review pill appends the bare presence term to the search box (card #189\'s click-to-filter mechanism)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.match(js, /closest\('\.card-assignee, \.tag, \.blocked-pill, \.review-pill'\)/, 'the pills join the existing click-to-filter cue selector');
+    assert.match(js, /cue\.classList\.contains\('blocked-pill'\)\) addSearchTerm\('blocked:'\)/);
+    assert.match(js, /cue\.classList\.contains\('review-pill'\)\) addSearchTerm\('review:'\)/);
   });
 });
 

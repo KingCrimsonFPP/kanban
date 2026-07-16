@@ -66,7 +66,15 @@ bound to `127.0.0.1` only.
   "Waiting on:" badge listing **unresolved ids only** (deps resolve against
   active + archived cards; a dangling id never shows; the badge disappears on
   its own when every dep lands); a blocked card wears a red "blocked" pill
-  whose tooltip carries the reason. A card whose on-disk
+  whose tooltip carries the reason. `review` (ADR 0009, card #181) is
+  `blocked`'s sibling sticker — "finished, approve me" rather than "stuck,
+  act so I can proceed" — same presence predicate and lean rule, its own
+  gold pill (tooltip carries the text), and it does **NOT** join the doing
+  gate above: a card can enter or stay in `doing` while wearing a `review`
+  sticker. Both stickers are searchable (`review:`/`blocked:` — bare = the
+  sticker is present, `review:PR`/`blocked:vendor` = case-insensitive
+  substring on its text) and clicking either pill appends that bare term to
+  the search box (card #189's mechanism). A card whose on-disk
   status isn't in the list renders in the **first** column (the catch-all) with a
   small dashed raw-status chip; the file is **never rewritten** — promotion = the
   human adds the status to `config.yaml`, and the next poll files the card under its
@@ -114,14 +122,16 @@ bound to `127.0.0.1` only.
   surviving reload, the auto-refresh poll, and composing with search filtering and
   collapsed columns. Hidden while a column is collapsed (nothing to sort there).
 - **Create** — "+ New card" opens a modal (title, status, priority, epic checkbox, tags,
-  waiting-for ids, blocked reason, assignee, start date, end date, due date,
+  waiting-for ids, blocked reason, review text, assignee, start date, end date, due date,
   description). Epic #137 split the old single dependency input in two:
   `f-waiting` ("Waiting for (ids, comma-sep)") takes the `waiting_for`
   dependency edges, and `f-blocked` ("Blocked (reason)") takes the manual
   impediment sticker's reason as free text — that input wears a red border
   exactly while its value passes the blocked predicate (trimmed value with
   ≥ 1 alphanumeric character; `false`/`no` → not blocked, `true` → blocked
-  with reason unspecified), live as you type. Every live
+  with reason unspecified), live as you type. `f-review` ("Review (text)"),
+  ADR 0009's sibling of `f-blocked`, takes the `review` sticker's text —
+  same predicate, same live border feedback in gold rather than red. Every live
   **expanded column header also carries a small "+"** (card #54) opening the same
   modal pre-aimed at that column — the hidden status field submits the preset even
   while the form is minimal, and "Show more fields" reveals the dropdown with it
@@ -146,9 +156,9 @@ bound to `127.0.0.1` only.
   `<0000-id>.<slug>.card.md` (id zero-padded to 4 digits, e.g. `0009.new-thing.card.md`).
 - **Edit** — click a card's "Edit" to change its fields, title, and description. The body
   (incl. `## Narrative`) and any frontmatter keys the form doesn't manage are preserved
-  verbatim; the form-managed fields (status, priority, epic, tags, waiting_for, blocked, assignee,
+  verbatim; the form-managed fields (status, priority, epic, tags, waiting_for, blocked, review, assignee,
   start date, end date, due date) are re-written from the form — clearing any managed field
-  (a blank priority/assignee/start/end/due, empty tags or waiting_for, a blocked
+  (a blank priority/assignee/start/end/due, empty tags or waiting_for, a blocked or review
   value failing the sticker predicate — blank, `false`, `no` — an unchecked Epic) removes its
   frontmatter line entirely (card #51: no-data fields — empty string, null, empty
   array — are never written, so no `tags: []` boilerplate; id, status, and `updated`

@@ -12,8 +12,8 @@
   <h1>Kanban<span id="project-name" class="project-name"></span> <button type="button" id="board-copy-btn" class="board-copy-btn" title="Copy the board folder's absolute path" aria-label="Copy the board folder's absolute path">&#x29C9;</button></h1>
   <div class="search-bar">
     <input type="search" id="search-input" class="search-input" autocomplete="off"
-      placeholder="Search… (#id, title:, body:, status:, priority:, tags:, file:, assignee:/A:)"
-      title="Space-separated terms AND together. Prefix a term with title:/body:/status:/priority:/tags:/file:/assignee: (A:/a: alias) to scope it, or #id / id:42 for an exact card. Press / to focus, Esc to clear.">
+      placeholder="Search… (#id, title:, body:, status:, priority:, tags:, file:, assignee:/A:, review:, blocked:)"
+      title="Space-separated terms AND together. Prefix a term with title:/body:/status:/priority:/tags:/file:/assignee: (A:/a: alias) to scope it, or #id / id:42 for an exact card. Bare review:/blocked: matches the sticker's presence; review:PR / blocked:vendor substring-matches its text. Press / to focus, Esc to clear.">
     <button type="button" id="search-clear-btn" class="search-clear hidden" title="Clear search (Esc)" aria-label="Clear search">&#10005;</button>
   </div>
   <div class="actions">
@@ -90,11 +90,15 @@
     <!-- epic #137: waiting_for = dependency edges (sequencing), blocked = the
          manual impediment sticker with the reason as its value. The blocked
          input wears a red border only while its value passes the shared
-         predicate (see the stylesheet's .blocked-active rule). -->
+         predicate (see the stylesheet's .blocked-active rule). ADR 0009
+         (card #181): review is blocked's sibling sticker — "finished,
+         approve me" rather than "stuck, act so I can proceed" — same
+         predicate, same live-border feedback, own gold .review-active rule. -->
     <div class="row modal-extra">
       <label>Tags (comma-sep) <input id="f-tags"></label>
       <label>Waiting for (ids, comma-sep) <input id="f-waiting"></label>
       <label>Blocked (reason) <input id="f-blocked" placeholder="empty = not blocked"></label>
+      <label>Review (text) <input id="f-review" placeholder="empty = not in review"></label>
     </div>
     <!-- card #85: Assignee joins Title in the #50 minimal form (the user's
          "+ -> title -> @afk -> Enter" queue-it flow). Unlike the other three
