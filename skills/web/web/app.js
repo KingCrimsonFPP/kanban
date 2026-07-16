@@ -1528,8 +1528,19 @@ function syncReviewInputStyle() {
 // kanban.proj #200: shows/hides #row-prompt and keeps the header AI button's
 // aria-pressed in sync — the toggle IS the reveal, so unlike #50's one-way
 // "Show more fields" this can flip back off too (click again to collapse).
+// kanban.proj #204: shown also means moved — the row becomes the form's
+// very first field (ahead of Title), since reaching for the sparkle means
+// the prompt IS the thing you're about to type. Hidden always means back in
+// its permanent DOM slot, right before "Show more fields" (kanban.proj #199's
+// Title -> Assignee tab order is untouched — this only ever displaces the
+// row itself, never Assignee). CSS `order` can't give this a real tab order
+// (Tab follows DOM order, not paint order — the reasoning card #85's now-
+// retired assignee-row DOM-move helper already spells out), so this really
+// moves the node, both directions, on every call — not just the first.
 function setPromptRowVisible(show) {
-  $('#row-prompt').classList.toggle('hidden', !show);
+  const row = $('#row-prompt');
+  $('#card-form').insertBefore(row, show ? $('#f-title').closest('label') : $('#show-more-btn'));
+  row.classList.toggle('hidden', !show);
   $('#modal-ai-btn').setAttribute('aria-pressed', String(show));
 }
 
