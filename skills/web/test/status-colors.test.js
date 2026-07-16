@@ -144,6 +144,9 @@ test('app.css washes every surface\'s .epic class in epicColorSoft() — no epic
   assert.ok(css.includes(`.gantt-bar.epic { box-shadow: inset 0 0 0 9999px ${soft}; }`), 'gantt bar epic wash is a box-shadow overlay, not background');
   // The map node tints its SVG rect fill instead of drawing a circle.
   assert.ok(css.includes(`.map-node.epic rect { fill: ${soft}; }`), 'map node epic wash tints the rect fill, not a circle');
+  // kanban.proj #196: the card detail popup's own twin — its own rule since
+  // `.modal`'s solid background is spoken for, same as the gantt bar/map node above.
+  assert.ok(css.includes(`.modal.detail-modal.epic { background: ${soft}; }`), 'detail popup epic wash on the panel background');
   // card #151: the membership edge + its arrowhead are LINES, not circles —
   // untouched by #45, still wearing solid EPIC_COLOR.
   assert.ok(css.includes(`.map-edge.epic-edge { stroke: ${EPIC_COLOR};`), 'membership edge carries EPIC_COLOR');

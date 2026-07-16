@@ -208,7 +208,13 @@ bound to `127.0.0.1` only.
   column is a separate matter — it renders through that same `archiveCardEl`
   function but never sets the flag, so it still shows no epic cue at all,
   before or after #91/#45 (that column isn't the map, and neither card
-  touched it).
+  touched it). **kanban.proj #196** gave the card detail popup the same wash:
+  `openDetailModal` toggles `.epic` on the popup's own `.modal.detail-modal`
+  panel from the fetched detail's `epic` boolean (`cardDetail` in
+  card-store.js now carries it, same tolerant read the tiles use), and
+  `.modal.detail-modal.epic` in app.css paints the identical `epicColorSoft()`
+  12% wash over the panel's background — the raw `epic: true` frontmatter row
+  still shows in the popup's frontmatter table unchanged, the wash is additive.
 - **Status dot (card #97; NEVER mutes for archive, card #102 reopen)** — `statusBadge()`
   (status-colors.js) renders on every card rendering: board tiles (live
   AND archived, unlike the epic wash the Archive column gets this one too), the map's
