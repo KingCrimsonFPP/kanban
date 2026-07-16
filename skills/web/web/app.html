@@ -109,11 +109,13 @@
          this comment — script-load-order tests match the first occurrence of
          that substring in the served HTML, an early false hit breaks them. -->
     <div class="row" id="row-assignee-dates">
-      <!-- card #183: a small live color cue, same glyph the board tiles show
-           (assignee-badge.js's assigneeBadge dot) — kept in sync with the
-           input's current value by syncAssigneeDot(), populated on open and
-           on every keystroke, same pattern as #f-blocked's live style sync. -->
-      <label>Assignee <span id="f-assignee-dot" class="assignee-dot" hidden></span><input id="f-assignee"></label>
+      <!-- card #183 (kanban.proj #191 replaced the dot with tinted text): the
+           input's own text is a live color cue, same handle-color tint the
+           board tiles show (assignee-badge.js's assigneeBadge) — kept in
+           sync with the input's current value by syncAssigneeColor(),
+           populated on open and on every keystroke, same pattern as
+           #f-blocked's live style sync. -->
+      <label>Assignee <input id="f-assignee"></label>
       <!-- card #40 date triad: start/end form the working range ("from"/"to"),
            due is the independent deadline; each takes a date or a local datetime.
            card #41: every date field pairs its free-text input with a 📅 button

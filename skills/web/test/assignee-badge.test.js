@@ -3,28 +3,27 @@ const assert = require('node:assert');
 const { assigneeBadge, escapeHtml, resolveAssignees, DEFAULT_ASSIGNEES } = require('../web/assignee-badge');
 const { assigneeColorClass, assigneeColor } = require('../web/assignee-colors');
 
-// --- card #183: the badge grew a colored dot, same glyph contract as statusBadge ---
+// --- kanban.proj #191: the badge tints the handle text, no dot glyph ---------
 
-test('assigneeBadge renders an escaped span with a colored dot when assignee is set (card #183)', () => {
+test('assigneeBadge renders an escaped span with a tinted handle when assignee is set (card #183, kanban.proj #191)', () => {
   const html = assigneeBadge({ assignee: '@alex' }, []);
-  assert.match(html, /^<span class="card-assignee" title="@alex">/);
-  assert.match(html, />@alex<\/span>$/);
   const cls = assigneeColorClass('@alex', []);
-  assert.match(html, new RegExp(`class="assignee-dot status-dot--${cls}"`), 'hashed color reuses the status-dot--palette-N class verbatim');
+  assert.match(html, new RegExp(`^<span class="card-assignee assignee-text--${cls}" title="@alex">`), 'hashed color rides an assignee-text--palette-N class, not a dot');
+  assert.match(html, />@alex<\/span>$/);
+  assert.doesNotMatch(html, /<span class="assignee-dot/, 'no dot glyph');
   assert.doesNotMatch(html, /data-assignee-color/, 'no CSSOM hook needed for the hashed case');
 });
 
 test('assigneeBadge still renders (unregistered/no registry passed) — assignees param is optional', () => {
   const html = assigneeBadge({ assignee: '@alex' });
-  assert.match(html, /class="card-assignee"/);
-  assert.match(html, /class="assignee-dot status-dot--palette-\d"/);
+  assert.match(html, /class="card-assignee assignee-text--palette-\d"/);
 });
 
-test('assigneeBadge carries a data-assignee-color attribute for a RESERVED custom color — no fixed class exists for an arbitrary hex (card #183)', () => {
+test('assigneeBadge carries a data-assignee-color attribute on the span itself for a RESERVED custom color — no fixed class exists for an arbitrary hex (card #183, kanban.proj #191)', () => {
   const assignees = [{ handle: '@alex', color: '#ff00ff' }];
   const html = assigneeBadge({ assignee: '@alex' }, assignees);
-  assert.match(html, /class="assignee-dot" data-assignee-color="#ff00ff"/);
-  assert.doesNotMatch(html, /status-dot--palette/, 'a reserved color never rides a hashed class');
+  assert.match(html, /^<span class="card-assignee" title="@alex" data-assignee-color="#ff00ff">/);
+  assert.doesNotMatch(html, /assignee-text--palette/, 'a reserved color never rides a hashed class');
 });
 
 test('assigneeBadge escapes a hostile reserved color value in the data attribute (card #183)', () => {

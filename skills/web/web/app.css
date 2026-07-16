@@ -104,21 +104,6 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 /* card #102 final design: archivedBadge() always follows statusBadge()
    directly (epic, status, archived order) — same fused-dot risk, same fix. */
 .status-dot + .archived-dot { margin-left: 4px; }
-/* card #183: the assignee color dot — same 8px shape as .status-dot/
-   .epic-dot. Lives INSIDE .card-assignee (below), not a .card-head sibling,
-   so it needs no adjacent-sibling gap rule of its own; .card-assignee's own
-   flex gap spaces it from the handle text. The HASHED case reuses
-   .status-dot--palette-N verbatim for its color (assigneeBadge combines both
-   classes) — this rule only ever supplies the shape. A RESERVED custom color
-   has no class to reuse (open value space) and is painted by one small CSSOM
-   assignment instead (app.js's paintAssigneeDots/syncAssigneeDot) — never an
-   inline style="" attribute (same CSP reasoning as .status-dot, card #49). */
-.assignee-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-/* card #183: the modal's own copy of the dot (see #f-assignee-dot, next to
-   the Assignee label) sits in plain inline flow, not a flex parent — the
-   shape rule above already forces inline-block sizing there regardless, this
-   just adds breathing room since there's no flex gap to lean on. */
-#f-assignee-dot { margin: 0 4px; }
 .card.high { border-left: 3px solid #f85149; }
 .card.low { border-left: 3px solid #6e7681; opacity: 0.85; } /* card #30: muted last-tier priority */
 /* card #30: hand-rolled combobox menu — native datalist misrenders in VSCode's Simple Browser */
@@ -158,6 +143,25 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .status-chip { background: #21262d; border: 1px dashed #6e7681; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #8b949e; margin-left: 6px; }
 .card-schedule { margin-left: auto; color: #8b949e; font-size: 0.72em; white-space: nowrap; } /* card #44: the Due date sort's key, visible */
 .card-assignee { display: inline-flex; align-items: center; gap: 4px; background: #21262d; border: 1px solid #30363d; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #8b949e; margin-left: 6px; }
+/* kanban.proj #191: the assignee cue was a small colored dot next to the
+   handle (card #183); this replaces it — the handle TEXT itself wears the
+   color instead, no separate glyph. The HASHED case gets a class per palette
+   slot (same 8 hexes/numbering as status-colors.js's STATUS_PALETTE and its
+   .status-dot--palette-N twin — parallel class family, not a reuse, since
+   this sets `color` not `background`); source order alone breaks the tie
+   with .card-assignee's own `color: #8b949e` above (same specificity, later
+   wins — no !important needed). A RESERVED custom color has no fixed class
+   (open value space) — app.js's paintAssigneeColors paints .card-assignee
+   itself via one small CSSOM assignment instead (data-assignee-color
+   attribute), same CSP `style-src 'self'` reasoning as everywhere else here. */
+.assignee-text--palette-0 { color: #58a6ff; }
+.assignee-text--palette-1 { color: #3fb950; }
+.assignee-text--palette-2 { color: #d29922; }
+.assignee-text--palette-3 { color: #a371f7; }
+.assignee-text--palette-4 { color: #f778ba; }
+.assignee-text--palette-5 { color: #39c5cf; }
+.assignee-text--palette-6 { color: #f0883e; }
+.assignee-text--palette-7 { color: #ff7b72; }
 .card-title { font-size: 0.9em; margin: 4px 0; }
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .tag { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 1px 8px; font-size: 0.7em; color: #9ca3af; }

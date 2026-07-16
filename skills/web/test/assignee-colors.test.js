@@ -79,17 +79,18 @@ test('assigneeColorClass is deterministic and pure, same contract as statusColor
   assert.strictEqual(assigneeColorClass('@bot', []), assigneeColorClass('@bot', []));
 });
 
-// --- doc pin: SKILL.md documents the Assignee dot glyph (card #183) -----------
+// --- doc pin: SKILL.md documents the Assignee text color (card #183, kanban.proj #191) ---
 
-test('SKILL.md documents the Assignee dot, citing card #183 and the reserved/hashed contract', () => {
+test('SKILL.md documents the Assignee text color, citing card #183/kanban.proj #191 and the reserved/hashed contract', () => {
   const skill = fs.readFileSync(path.join(__dirname, '..', 'SKILL.md'), 'utf8');
-  const bullet = skill.match(/- \*\*Assignee dot \(card #183\)\*\*[\s\S]*?(?=\n- \*\*|\n## )/);
-  assert.ok(bullet, 'the Assignee dot bullet exists');
+  const bullet = skill.match(/- \*\*Assignee text color \(card #183, kanban\.proj #191\)\*\*[\s\S]*?(?=\n- \*\*|\n## )/);
+  assert.ok(bullet, 'the Assignee text color bullet exists');
   assert.match(bullet[0], /assigneeBadge\(\)/, 'names the helper');
-  assert.match(bullet[0], /status-dot--palette-N/, 'states the hashed case reuses the status-dot classes verbatim');
+  assert.match(bullet[0], /assignee-text--palette-N/, 'states the hashed case uses the parallel assignee-text--palette-N class');
   assert.match(bullet[0], /data-assignee-color/, 'states the reserved-color CSSOM hook');
-  assert.match(bullet[0], /paintAssigneeDots/, 'names the CSSOM-painting function');
-  assert.match(bullet[0], /syncAssigneeDot/, 'names the modal live-sync function');
+  assert.match(bullet[0], /paintAssigneeColors/, 'names the CSSOM-painting function');
+  assert.match(bullet[0], /syncAssigneeColor/, 'names the modal live-sync function');
+  assert.doesNotMatch(bullet[0], /colored dot|dot glyph/, 'no leftover dot-glyph language');
 });
 
 test('SKILL.md documents the OPTIONAL assignees[].color config field, citing card #183', () => {
