@@ -638,6 +638,22 @@ bound to `127.0.0.1` only.
   (that would *create* a missing field, a distinct feature), dragging a timed
   block into the all-day band or vice-versa, cross-midnight/multi-day resize, and
   auto-scroll near the grid edge.
+  **Click-to-create (card #193)** — ADR 0006 pins a plain click on empty
+  calendar space to clearing the selection, so create rides a DIFFERENT
+  gesture: double-click. Double-clicking empty space in the month grid, the
+  all-day band, or a time-grid day column opens the create modal pre-aimed at
+  the click, same hidden-field-submits-while-minimal trick as the #54 column
+  "+" but for `#f-start` alone — month/all-day gives a date-only `start_date`;
+  a time-grid slot gives a `YYYY-MM-DDTHH:MM` snapped to the same
+  `CALENDAR_DRAG_SNAP_MIN` grid #109's drag/resize already use
+  (`calendarCreateStart`, calendar-model.js). Only `start_date` is pre-filled
+  — never `due_date` (ADR 0007: start is the working range's "from") — and
+  status is left at the modal's own default, unlike the #54 "+", since a
+  calendar cell doesn't imply one. A double-click that lands on a chip is the
+  chip's own affair (the shared #39 card-el grammar), not this one, so it's
+  excluded before the cell/column lookup ever runs. cli has no calendar (see
+  CONTEXT.md's parity table) and the viewer's own calendar has no click-to-
+  create either — a deliberate, unbuilt gap, not an oversight.
 - **Gantt view** — a top-bar "📊 Gantt" button swaps the board for a day-granular
   timeline: each dated live card gets a row (dated ARCHIVED cards join too, opt-in
   via the Archive pill below, card #98's 2026 reopen) — the **working range** as a bar

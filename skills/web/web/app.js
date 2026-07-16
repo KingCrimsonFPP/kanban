@@ -1484,7 +1484,12 @@ function syncAssigneeColor() {
 // + was clicked. The hidden #f-status field submits it even while the form is
 // minimal (#50), and "Show more fields" reveals the dropdown with it selected.
 // No preset (the global "+ New card" button) keeps the first-column default.
-function openModal(card, presetStatus) {
+// card #193: presetStart (calendarCreateStart's output — a date or local
+// datetime) aims a new card at the calendar cell/slot that was double-clicked,
+// same hidden-field-submits-while-minimal trick, but for #f-start alone;
+// status is deliberately left at its own default here (see the Calendar view
+// dblclick glue below for why).
+function openModal(card, presetStatus, presetStart) {
   $('#modal-title').textContent = card ? `Edit #${card.id}` : 'New card';
   $('#f-id').value = card ? card.id : '';
   $('#f-title').value = card ? card.title : '';
@@ -1499,7 +1504,7 @@ function openModal(card, presetStatus) {
   syncReviewInputStyle(); // ADR 0009: gold border iff the value passes the predicate
   $('#f-assignee').value = card && card.assignee ? card.assignee : '';
   syncAssigneeColor(); // card #183: live color cue matches whatever the field now holds
-  $('#f-start').value = card && card.start_date ? card.start_date : ''; // card #36
+  $('#f-start').value = card ? (card.start_date || '') : (presetStart || ''); // card #36; card #193: calendar click-create prefill
   $('#f-end').value = card && card.end_date ? card.end_date : ''; // card #40: the triad's "to"
   $('#f-due').value = card && card.due_date ? card.due_date : '';
   $('#f-epic').checked = card ? !!card.epic : false; // card #59: edit preserves the flag; create starts unchecked
@@ -2752,6 +2757,26 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('#cal-prev-btn')) { shiftCalendarWindow(-1); return; }
     if (e.target.closest('#cal-next-btn')) { shiftCalendarWindow(1); return; }
     if (e.target.closest('#cal-today-btn')) { calendarAnchor = null; renderCalendarView(); }
+  });
+  // card #193: click-to-create. ADR 0006 pins plain-click-on-empty-cell to
+  // clearing the selection, so create rides double-click instead — a gesture
+  // no existing calendar interaction uses, on the SAME empty-cell-space
+  // Q0 relies on (a click landing on a chip never reaches here — see the
+  // .card-el guard below — so it can never fight the shared #39 grammar).
+  // Month/all-day cells only carry a day; time-grid columns also carry the
+  // pointer's y, converted to a snapped minute the same way the #109 drag
+  // math does (CAL_PX_PER_MIN). Status is left at the modal's own default —
+  // unlike the #54 column "+", a calendar cell doesn't imply a status.
+  $('#calendar-view').addEventListener('dblclick', (e) => {
+    if (isDragging || ganttDrag || calTimeDrag) return; // same guard as the contextmenu listener below: never fire out from under a live drag
+    if (e.target.closest('.card-el')) return; // a chip's dblclick is its own affair, not a create gesture
+    const dayCell = e.target.closest('.cal-day, .cal-tg-allday-cell');
+    if (dayCell) { openModal(null, null, calendarCreateStart(dayCell.dataset.day)); return; }
+    const col = e.target.closest('.cal-tg-col');
+    if (col) {
+      const r = col.getBoundingClientRect();
+      openModal(null, null, calendarCreateStart(col.dataset.day, (e.clientY - r.top) / CAL_PX_PER_MIN));
+    }
   });
   // card #101: right-click SOLO on the calendar's own pills — same reasoning
   // as the map's contextmenu listener above (own listener so a miss falls
