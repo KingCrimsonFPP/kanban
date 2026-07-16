@@ -8,6 +8,11 @@ const { allocateId } = require('./config-store');
 // Dual-environment — the browser loads the same file as a plain <script>, so
 // store and UI can never drift on what "waiting"/"blocked"/"review" means.
 const { isBlockedValue, blockedReason, isReviewValue, unresolvedWaits } = require('../web/waiting-blocked');
+// kanban.proj #200: the `prompt` field's single-line quoting — the same
+// quote/unquote yaml-list.js already gives notifications.md's `message`
+// field, reused here rather than forked (see the field's own writer note in
+// updateCard below for why it needs real escaping, unlike blocked/review).
+const { quote, unquote } = require('./yaml-list');
 
 // values[k] = substring after the FIRST ':' (including its leading space), kept verbatim.
 function parseFrontmatter(raw) {
@@ -155,6 +160,13 @@ function readCardFile(file, archived = false) {
     // it never gates `doing` entry — see the entry-gate check in updateCard/
     // createCard below, which reads only waiting_for/blocked.
     review: stripQuotes(get('review')) || null,
+    // kanban.proj #200: a signal FOR the AI — opposite polarity to blocked/
+    // review (signals FROM the card TO a human). Unlike those two, it's not a
+    // sticker (no presence predicate, never gates `doing`) — plain optional
+    // free text, always written quoted (see updateCard), so unquote() here
+    // undoes that; a hand-typed unquoted value still reads fine (unquote is a
+    // no-op on anything that isn't wrapped in matching quotes).
+    prompt: unquote(get('prompt')) || null,
     tags: parseList(get('tags')),
     assignee: stripQuotes(get('assignee')) || null,
     start_date: get('start_date') || null, // card #36: range start ("from"), date or local datetime, never validated
@@ -304,6 +316,24 @@ function updateCard(dir, id, changes) {
     if (isReviewValue(changes.review)) setField(order, values, 'review', String(changes.review).trim());
     else removeField(order, values, 'review');
   }
+  // Prompt (kanban.proj #200): joins blocked/review's family here (same
+  // section, same lean rule — a blank clears the line) but is NOT a sticker:
+  // no presence predicate, no doing-gate involvement, opposite polarity — a
+  // signal FOR the AI to pick up rather than FROM the card TO a human. How a
+  // dispatcher consumes/clears it is a follow-up card (see this skill's
+  // SKILL.md); this layer only owns the managed-write contract. Always
+  // quoted (yaml-list's quote/unquote, the same contract notifications.md's
+  // `message` field already uses) since free-form prompt text routinely
+  // carries ':'/'#'/quotes that would corrupt an unquoted single-line
+  // frontmatter value — unlike blocked/review's short bare reason, never
+  // quoted. Embedded newlines collapse to a space first: frontmatter is
+  // strictly one value per physical line, so a real newline in the value
+  // would otherwise split it into a bogus second line.
+  if (changes.prompt !== undefined) {
+    const p = String(changes.prompt == null ? '' : changes.prompt).replace(/\r?\n/g, ' ').trim();
+    if (p) setField(order, values, 'prompt', quote(p));
+    else removeField(order, values, 'prompt');
+  }
   // Optional fields: non-empty sets, empty string CLEARS (removes the line —
   // bulk unassign, card #32; also makes the edit form's blank actually clear),
   // undefined leaves the card alone. A blank never injects an empty line —
@@ -413,6 +443,9 @@ function createCard(dir, input) {
   // Review sticker (ADR 0009): same lean rule; birth into `doing` is never
   // refused by it (only waiting_for/blocked gate entry, above).
   if (isReviewValue(input.review)) { order.push('review'); values.review = ` ${String(input.review).trim()}`; }
+  // Prompt (kanban.proj #200): same lean rule, always quoted — see updateCard's note.
+  const promptVal = String(input.prompt == null ? '' : input.prompt).replace(/\r?\n/g, ' ').trim();
+  if (promptVal) { order.push('prompt'); values.prompt = ` ${quote(promptVal)}`; }
   // card #51: trimmed guard — a whitespace-only assignee is no data (quoteAssignee trims it to '')
   if (String(input.assignee || '').trim()) { order.push('assignee'); values.assignee = ` ${quoteAssignee(input.assignee)}`; }
   // card #52: a card born directly in literal 'todo'/'done' counts as a
@@ -470,8 +503,8 @@ function cardDetail(dir, id) {
 // the board (`0011.foo.card.md`), not a filesystem path that would leak the
 // board's on-disk location to every client of this JSON.
 function toJSON(card) {
-  const { id, status, priority, waiting_for, blocked, review, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file } = card;
-  return { id, status, priority, waiting_for, blocked, review, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
+  const { id, status, priority, waiting_for, blocked, review, prompt, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file } = card;
+  return { id, status, priority, waiting_for, blocked, review, prompt, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
 }
 
 function archiveCard(dir, id) {

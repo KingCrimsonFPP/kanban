@@ -131,7 +131,10 @@ bound to `127.0.0.1` only.
   ≥ 1 alphanumeric character; `false`/`no` → not blocked, `true` → blocked
   with reason unspecified), live as you type. `f-review` ("Review (text)"),
   ADR 0009's sibling of `f-blocked`, takes the `review` sticker's text —
-  same predicate, same live border feedback in gold rather than red. Every live
+  same predicate, same live border feedback in gold rather than red.
+  `f-prompt` ("AI prompt") is a third free-text field but NOT a sticker — see
+  the AI prompt bullet below for its own reveal mechanics, quoting, and the
+  `prompt` frontmatter field it writes. Every live
   **expanded column header also carries a small "+"** (card #54) opening the same
   modal pre-aimed at that column — the hidden status field submits the preset even
   while the form is minimal, and "Show more fields" reveals the dropdown with it
@@ -162,9 +165,9 @@ bound to `127.0.0.1` only.
   `<0000-id>.<slug>.card.md` (id zero-padded to 4 digits, e.g. `0009.new-thing.card.md`).
 - **Edit** — click a card's "Edit" to change its fields, title, and description. The body
   (incl. `## Narrative`) and any frontmatter keys the form doesn't manage are preserved
-  verbatim; the form-managed fields (status, priority, epic, tags, waiting_for, blocked, review, assignee,
+  verbatim; the form-managed fields (status, priority, epic, tags, waiting_for, blocked, review, prompt, assignee,
   start date, end date, due date) are re-written from the form — clearing any managed field
-  (a blank priority/assignee/start/end/due, empty tags or waiting_for, a blocked or review
+  (a blank priority/assignee/start/end/due/prompt, empty tags or waiting_for, a blocked or review
   value failing the sticker predicate — blank, `false`, `no` — an unchecked Epic) removes its
   frontmatter line entirely (card #51: no-data fields — empty string, null, empty
   array — are never written, so no `tags: []` boilerplate; id, status, and `updated`
@@ -172,6 +175,57 @@ bound to `127.0.0.1` only.
   default a missing priority to Normal), and each date field's 📅
   picker works here too (manual entry stays; time tails survive a picked day).
   `updated` is machine-managed (card #35, see below) and never shown as a form field.
+- **AI prompt (kanban.proj #200)** — a hand-rolled inline-SVG sparkle button
+  (`#modal-ai-btn`, ADR 0003's convention — same icon-btn styling as
+  Save/Fullscreen/Close, tooltip "AI prompt") sits in the create/edit modal's
+  header actions, between Save and Fullscreen. Clicking it reveals/hides
+  `#row-prompt`, a single free-text input (`f-prompt`) that writes the
+  optional `prompt` frontmatter field — a signal FOR the AI to pick up and
+  act on, the **opposite polarity** of `blocked`/`review` just above (those
+  signal FROM the card TO a human; this signals FROM a human TO whichever
+  agent next processes the card — including as a way to answer a `blocked`
+  or `review` sticker without touching those fields directly). It is NOT a
+  third sticker: no presence predicate, no `doing`-gate involvement, and
+  `eligible_cards.sh` (the `/kanban` dispatcher's picker) does not exclude on
+  it. **How a dispatcher discovers, consumes, and clears a queued prompt is
+  explicitly out of scope here — pickup semantics land with a dispatcher
+  follow-up card.** This app's job stops at the managed-write contract:
+  card-store.js's lean rule (a blank clears the line, same as every optional
+  field) plus one difference from blocked/review — the value is always
+  written **quoted** (`yaml-list.js`'s `quote`/`unquote`, the same contract
+  `notifications.md`'s `message` field already uses), because free-form
+  prompt text routinely contains `:`/`#`/quotes that would corrupt an
+  unquoted single-line frontmatter value; an embedded newline collapses to a
+  space first, since frontmatter is one value per physical line. **Reveal
+  placement:** the row sits right after the Assignee+dates row and before
+  "Show more fields" — not between Title and Assignee (kanban.proj #199 pins
+  Assignee as the fixed 2nd focusable field in every form state) and not
+  gated behind `.modal-extra`/"Show more fields" either, so the field stays
+  reachable from the #50 minimal create flow (a "type title, click the
+  sparkle, type a prompt, Enter" quick-queue gesture, mirroring #85's
+  Assignee-in-minimal-form precedent). `openModal()` auto-reveals the row
+  when the card being edited already carries a prompt (existing data is
+  never hidden behind an unclicked toggle) and leaves it collapsed
+  otherwise — new cards always start collapsed. **Visibility (at-a-glance
+  read):** deliberately **nothing beyond the detail popup's frontmatter
+  table** — no tile glyph, unlike the epic wash/status dot/archived
+  ball/blocked/review pills every other flag field gets. Justification: (1)
+  every one of those existing glyphs earned a multi-card design pass (the
+  epic dot alone went dot → wash across cards #59/#91/#45; the status dot
+  needed a #102 reopen) precisely because getting a board-scan cue right
+  takes real design iteration against actual usage — premature here, since
+  (2) the field's consumption lifecycle isn't built yet (the dispatcher
+  follow-up above), so it's still undefined whether "presence" should read
+  as "queued", "in progress", or "stale, already answered" — a glyph shipped
+  now would likely need the same rework the epic dot went through once that
+  contract lands; and (3) prompt text is unbounded free-form (unlike
+  blocked/review's short reason or epic's boolean), so a compact presence-only
+  glyph would need its own design pass anyway. The generic frontmatter table
+  (`renderFrontmatterTable`/`parseFrontmatter` in app.js — pre-existing,
+  zero new code) already renders any raw `prompt: "…"` line verbatim,
+  escaped, the instant card-store.js writes it, so the value is never
+  actually hidden — only not glanceable from the board. Revisit once the
+  dispatcher follow-up defines what "presence" means operationally.
 - **Epic/wayfinder (card #59; glyph redesigned by card #91; dot retired for a
   background wash by card #45)** — the form's Epic checkbox (inside the #50
   "Show more fields" section) writes the optional `epic: true` frontmatter

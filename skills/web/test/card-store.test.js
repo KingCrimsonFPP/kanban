@@ -415,7 +415,7 @@ test('toJSON exposes the public card shape without internal underscores', () => 
   const dir = tmpBoard();
   const j = cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md')));
   assert.deepStrictEqual(Object.keys(j).sort(), [
-    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'review', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151); review joined (ADR 0009, card #181)
+    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'prompt', 'review', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151); review joined (ADR 0009, card #181); prompt joined (kanban.proj #200)
   ]);
   assert.strictEqual(j._order, undefined);
 });
@@ -1317,6 +1317,84 @@ test('review does NOT gate doing entry, unlike blocked — updateCard and create
   const born = cs.createCard(dir, { title: 'In review at birth', status: 'doing', review: 'PR #9' });
   assert.strictEqual(born.status, 'doing');
   assert.strictEqual(born.review, 'PR #9');
+});
+
+// --- kanban.proj #200: the `prompt` field — a signal FOR the AI, opposite --
+// polarity to blocked/review (signals FROM the card TO a human). Joins their
+// family in the store (same lean rule) but is not a sticker: no predicate, no
+// doing-gate involvement. Always single-line-quoted, unlike blocked/review's
+// bare verbatim write.
+
+test('readCardFile parses a quoted prompt (quotes+escapes undone) and defaults it to null', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
+  fs.writeFileSync(path.join(dir, '0001.a.card.md'),
+    `---\nid: 1\nstatus: todo\nprompt: "say \\"hi\\" — see #6: ok?"\n---\n\n# A\n\nbody\n`);
+  fs.writeFileSync(path.join(dir, '0002.b.card.md'), `---\nid: 2\nstatus: todo\n---\n\n# B\n\nbody\n`);
+  const byId = new Map(cs.listActive(dir).map((c) => [c.id, c]));
+  assert.strictEqual(byId.get(1).prompt, 'say "hi" — see #6: ok?', 'quotes stripped, escapes undone');
+  assert.strictEqual(byId.get(2).prompt, null, 'no line = null, never an empty string');
+});
+
+test('readCardFile tolerates a hand-typed unquoted prompt line (never validated)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
+  fs.writeFileSync(path.join(dir, '0001.a.card.md'), `---\nid: 1\nstatus: todo\nprompt: rerun the tests\n---\n\n# A\n\nbody\n`);
+  assert.strictEqual(cs.listActive(dir)[0].prompt, 'rerun the tests');
+});
+
+test('updateCard writes a prompt quoted (colons/hashes/quotes survive) and a blank clears the line (#51 lean rule)', () => {
+  const dir = tmpBoard();
+  cs.updateCard(dir, 2, { prompt: '  investigate #6: is the fix "done"?  ' });
+  let raw = fs.readFileSync(cs.findCardFile(dir, 2), 'utf8');
+  assert.match(raw, /^prompt: "investigate #6: is the fix \\"done\\"\?"$/m, 'trimmed, quoted, internal quotes escaped');
+  const reread = cs.readCardFile(cs.findCardFile(dir, 2));
+  assert.strictEqual(reread.prompt, 'investigate #6: is the fix "done"?', 'round-trips exactly through write+read');
+  cs.updateCard(dir, 2, { prompt: '' });
+  raw = fs.readFileSync(cs.findCardFile(dir, 2), 'utf8');
+  assert.doesNotMatch(raw, /^prompt:/m, 'a blank clears — the line is removed, never `prompt: ""` boilerplate');
+  cs.updateCard(dir, 2, { prompt: '   ' });
+  raw = fs.readFileSync(cs.findCardFile(dir, 2), 'utf8');
+  assert.doesNotMatch(raw, /^prompt:/m, 'whitespace-only is no data either');
+});
+
+test('updateCard collapses an embedded newline in prompt to a space — frontmatter is one value per physical line', () => {
+  const dir = tmpBoard();
+  cs.updateCard(dir, 2, { prompt: 'line one\nline two' });
+  const raw = fs.readFileSync(cs.findCardFile(dir, 2), 'utf8');
+  assert.match(raw, /^prompt: "line one line two"$/m);
+  assert.strictEqual((raw.match(/^prompt:/gm) || []).length, 1, 'never splits into a second frontmatter line');
+});
+
+test('updateCard leaves an on-disk prompt line alone when the PATCH does not mention it', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
+  fs.writeFileSync(path.join(dir, '0001.a.card.md'), `---\nid: 1\nstatus: todo\nprompt: "keep me"\n---\n\n# A\n\nbody\n`);
+  cs.updateCard(dir, 1, { title: 'renamed' });
+  assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^prompt: "keep me"$/m);
+});
+
+test('createCard writes a quoted prompt and omits the line when blank (#51 lean rule)', () => {
+  const dir = tmpBoard();
+  const withPrompt = cs.createCard(dir, { title: 'Queued', status: 'todo', prompt: 'apply the review feedback' });
+  assert.strictEqual(withPrompt.prompt, 'apply the review feedback');
+  assert.match(fs.readFileSync(cs.findCardFile(dir, withPrompt.id), 'utf8'), /^prompt: "apply the review feedback"$/m);
+  const clear = cs.createCard(dir, { title: 'No prompt', status: 'todo', prompt: '   ' });
+  assert.strictEqual(clear.prompt, null);
+  assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, clear.id), 'utf8'), /^prompt:/m);
+});
+
+test('prompt never gates doing entry — unlike blocked, and unlike review it carries no predicate at all', () => {
+  const dir = tmpBoard(); // card 1 is done — never waiting
+  const born = cs.createCard(dir, { title: 'Straight into doing', status: 'doing', prompt: 'go' });
+  assert.strictEqual(born.status, 'doing');
+  const moved = cs.updateCard(dir, 1, { status: 'doing', prompt: 'still fine' });
+  assert.strictEqual(moved.status, 'doing');
+  assert.strictEqual(moved.prompt, 'still fine', 'the field survives the move — no eviction, no clearing');
+});
+
+test('toJSON carries prompt in the public card shape', () => {
+  const dir = tmpBoard();
+  cs.updateCard(dir, 2, { prompt: 'do the thing' });
+  const j = cs.toJSON(cs.readCardFile(cs.findCardFile(dir, 2)));
+  assert.strictEqual(j.prompt, 'do the thing');
 });
 
 // --- card #151: `parent` — epic membership id -------------------------------

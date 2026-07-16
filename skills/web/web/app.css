@@ -315,6 +315,10 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .modal-header-actions { display: flex; gap: 6px; flex-shrink: 0; order: -1; } /* icon-btn is flex (block-level) — without this the header icons stack vertically */
 .icon-btn svg { width: 16px; height: 16px; display: block; }
 .icon-btn.danger:hover { background: #3d1418; border-color: #f85149; color: #f85149; }
+/* kanban.proj #200: same active-toggle treatment as #map-toggle-btn/
+   #calendar-toggle-btn/#gantt-toggle-btn below — a filled highlight while
+   #row-prompt is revealed. */
+#modal-ai-btn[aria-pressed="true"] { background: #1f6feb; border-color: #388bfd; color: #fff; }
 .detail-frontmatter table { width: 100%; border-collapse: collapse; font-size: 0.8em; }
 .detail-frontmatter tr { border-bottom: 1px solid #21262d; }
 .detail-frontmatter tr:last-child { border-bottom: none; }

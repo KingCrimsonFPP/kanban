@@ -610,6 +610,52 @@ test('kanban.proj #199: edit opens the SAME card-form markup as create — Assig
   });
 });
 
+test('kanban.proj #200: the AI prompt button matches the modal\'s icon-btn styling, sits in the header actions, and carries the "AI prompt" tooltip', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    // inline-SVG icon button, ADR 0003's hand-rolled-widget convention — same
+    // shape as its Save/Fullscreen/Close siblings, not a native/emoji control.
+    assert.match(html, /<button type="button" id="modal-ai-btn" class="icon-btn" title="AI prompt" aria-label="AI prompt" aria-pressed="false">\s*<svg[\s\S]*?<\/svg>\s*<\/button>/);
+    const saveIdx = html.indexOf('id="modal-save"');
+    const aiIdx = html.indexOf('id="modal-ai-btn"');
+    const fsIdx = html.indexOf('id="modal-fullscreen-btn"');
+    assert.ok(saveIdx > -1 && aiIdx > -1 && fsIdx > -1, 'all three header buttons present');
+    assert.ok(saveIdx < aiIdx && aiIdx < fsIdx, 'AI button sits between Save and Fullscreen in the header actions group');
+  });
+});
+
+test('kanban.proj #200: #row-prompt starts hidden, sits after the Assignee row and before "Show more fields" (never ahead of Assignee, kanban.proj #199)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    assert.match(html, /<div class="row hidden" id="row-prompt">\s*<label>AI prompt <input id="f-prompt"[^>]*><\/label>\s*<\/div>/,
+      'collapsed by default (the .hidden utility class, not the #50 .modal-extra family — it must stay reachable while the form is minimal)');
+    const assigneeIdx = html.indexOf('id="f-assignee"');
+    const promptRowIdx = html.indexOf('id="row-prompt"');
+    const showMoreIdx = html.indexOf('id="show-more-btn"');
+    assert.ok(assigneeIdx > -1 && promptRowIdx > -1 && showMoreIdx > -1, 'all anchor elements present');
+    assert.ok(assigneeIdx < promptRowIdx && promptRowIdx < showMoreIdx,
+      'the prompt row lands after Assignee (never between Title and Assignee) and before "Show more fields"');
+  });
+});
+
+test('kanban.proj #200: app.js wires the prompt field through open/snapshot/submit and the AI button toggles #row-prompt', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const open = js.match(/function openModal\([\s\S]*?\n\}/)[0];
+    assert.match(open, /f-prompt'\)\.value = card && card\.prompt \? card\.prompt : ''/, 'prefills the saved prompt on edit, blank on create');
+    assert.match(open, /setPromptRowVisible\(Boolean\(card && card\.prompt\)\)/, 'auto-reveals only when the card already carries one — never hides existing data');
+    const snapshot = js.match(/function snapshotFormFields\([\s\S]*?\n\}/)[0];
+    assert.match(snapshot, /prompt: \$\('#f-prompt'\)\.value/, 'prompt joins the #26 dirty-check baseline');
+    const submit = js.match(/async function submitModal\([\s\S]*?\n\}/)[0];
+    assert.match(submit, /prompt: \$\('#f-prompt'\)\.value\.trim\(\)/, 'the save payload carries the trimmed prompt — the store applies the #51 lean rule');
+    assert.match(js, /function setPromptRowVisible\(show\) \{[\s\S]*?row-prompt[\s\S]*?modal-ai-btn[\s\S]*?\n\}/, 'one helper owns both the row visibility and the button\'s aria-pressed state');
+    assert.match(js, /modal-ai-btn'\)\.addEventListener\('click', \(\) => \{[\s\S]*?row-prompt[\s\S]*?setPromptRowVisible/, 'the header button toggles the row via the shared helper');
+  });
+});
+
 test('index html has a "Last modified" line element in the detail popup header (card #35)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
