@@ -17,9 +17,9 @@ nothing to host.
 
 ## What this is (and isn't)
 
-kanban **only keeps track of your board's state — by itself it executes
-nothing.** It's the file format plus surfaces to read and write it; picking up
-cards, dispatching agents, or running workflows is a separate layer on top.
+kanban **keeps track of your board's state — by itself it executes nothing.**
+It's the file format plus surfaces to read and write it; you can use other tools
+to pick up cards, dispatch agents, and run workflows based on the board state.
 
 ## What it looks like
 
