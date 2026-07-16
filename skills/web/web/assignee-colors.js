@@ -40,14 +40,15 @@ function assigneeColor(handle, assignees) {
 // The CSS-class twin of assigneeColor(), same reasoning as statusColorClass:
 // a strict `style-src 'self'` CSP blocks inline style="" attributes. The
 // HASHED outcome lands on one of the 8 fixed palette slots, which already has
-// a CSS rule — status-colors.js's own `.status-dot--palette-N` — reused
-// verbatim (a hashed assignee and a hashed status can land on the exact same
-// class/hex on purpose; determinism, not uniqueness across the two systems,
-// is still the whole contract). A RESERVED custom color is an open value
-// space with no class to reuse, so this returns null for that case — the
-// caller paints it with one small CSSOM assignment instead (never a string
-// style attribute; see app.js's assignee-dot color pass / assignee-badge.js's
-// data-assignee-color attribute).
+// a hex — the SAME hexes status-colors.js's own `.status-dot--palette-N`
+// bakes in, mirrored by assignee-badge.js's own `.assignee-text--palette-N`
+// text-color rules (kanban.proj #191: assignee color tints the handle text,
+// not a dot, so it needs its own class family with the same numbering/hexes
+// rather than reusing the dot's `background` rule verbatim). A RESERVED
+// custom color is an open value space with no class to reuse, so this
+// returns null for that case — the caller paints it with one small CSSOM
+// assignment instead (never a string style attribute; see app.js's
+// paintAssigneeColors / assignee-badge.js's data-assignee-color attribute).
 function assigneeColorClass(handle, assignees) {
   const h = normalizeHandle(handle);
   if (!h) return null;

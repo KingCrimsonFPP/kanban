@@ -17,23 +17,25 @@ function escapeHtml(s) {
 // Empty string when unset (server sends null) so no "undefined"/blank badge
 // ever renders; escaped like every other card-derived string.
 //
-// card #183: a small colored dot joins the handle, same glyph contract as
-// statusBadge()'s dot (status-colors.js). `assignees` is the board's config
-// registry (state.assignees) — optional so old call sites/tests that don't
-// pass one still render (no registry = every handle hashes, same as
-// statusColor with no custom statuses configured). The hashed case reuses
-// the exact `.status-dot--palette-N` CSS classes statusBadge() already
-// defines — zero new color CSS. A RESERVED config.yaml color has no fixed
-// class (open value space), so it rides a `data-assignee-color` attribute
-// instead; app.js paints it via one CSSOM assignment after insertion — never
-// a string style="" attribute (CSP style-src 'self', no unsafe-inline).
+// card #183 (kanban.proj #191 replaced the dot with tinted text): the handle
+// itself wears the assignee color — no separate dot glyph. `assignees` is
+// the board's config registry (state.assignees) — optional so old call
+// sites/tests that don't pass one still render (no registry = every handle
+// hashes, same as statusColor with no custom statuses configured). The
+// hashed case gets an `.assignee-text--palette-N` class (app.css — same 8
+// hexes/numbering as status-colors.js's STATUS_PALETTE, a parallel class
+// family since it sets `color` not statusBadge()'s `background`). A
+// RESERVED config.yaml color has no fixed class (open value space), so the
+// span rides a `data-assignee-color` attribute instead; app.js paints it via
+// one CSSOM assignment after insertion — never a string style="" attribute
+// (CSP style-src 'self', no unsafe-inline).
 function assigneeBadge(card, assignees) {
   if (!card.assignee) return '';
   const handle = card.assignee;
   const cls = ACOL.assigneeColorClass(handle, assignees);
-  const dotClass = cls ? `assignee-dot status-dot--${cls}` : 'assignee-dot';
+  const textClass = cls ? ` assignee-text--${cls}` : '';
   const reserved = cls ? '' : ` data-assignee-color="${escapeHtml(ACOL.assigneeColor(handle, assignees) || '')}"`;
-  return `<span class="card-assignee" title="${escapeHtml(handle)}"><span class="${dotClass}"${reserved}></span>${escapeHtml(handle)}</span>`;
+  return `<span class="card-assignee${textClass}" title="${escapeHtml(handle)}"${reserved}>${escapeHtml(handle)}</span>`;
 }
 
 // Card #132: the @human/@hitl/@afk role trio is THE canonical default — a

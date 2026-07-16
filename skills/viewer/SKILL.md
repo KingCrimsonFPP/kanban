@@ -60,13 +60,15 @@ The create form's assignee suggestions come from the board registry
 (`config.yaml` `assignees`); with no registry it suggests the
 `@human`/`@hitl`/`@afk` role trio (card #132 — CONTEXT.md's Role trio glossary).
 Every place an assignee handle shows (board tile meta line, the archived
-sheet's read-only pill, the editable sheet's assignee pill) wears a small
-colored dot — card #183, parity with kanban-web's own assignee dot: an
-`assignees[].color` reservation in `config.yaml` wins, else the handle hashes
-into the same fixed 8-color palette kanban-web's `status-colors.js`
-`STATUS_PALETTE` uses (same djb2-xor hash, same hexes — `acol()`/`APALETTE`/
-`ahash()` in this skill's embedded JS), so a handle colors identically on
-both surfaces. An unregistered handle just hashes, same as an unlisted status.
+sheet's read-only pill, the editable sheet's assignee pill) has its TEXT
+tinted in that assignee's color — card #183, parity with kanban-web's own
+assignee text tint (kanban.proj #191 replaced the original small colored dot
+on both surfaces with this text treatment): an `assignees[].color`
+reservation in `config.yaml` wins, else the handle hashes into the same
+fixed 8-color palette kanban-web's `status-colors.js` `STATUS_PALETTE` uses
+(same djb2-xor hash, same hexes — `acol()`/`APALETTE`/`ahash()` in this
+skill's embedded JS), so a handle colors identically on both surfaces. An
+unregistered handle just hashes, same as an unlisted status.
 
 Besides the board, the editor ships three read-only views over the same
 embedded snapshot (cards #111–#113): **Map** (`waiting_for` dependency graph,

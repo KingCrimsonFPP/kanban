@@ -418,6 +418,9 @@ const ASGCOL=__ASSIGNEE_COLORS__;
 // STATUS_PALETTE uses (same djb2-xor hash, same hexes) so a handle colors the
 // same on both surfaces. Reuse, not reinvention: this viewer's own statuses
 // (ccol above) never grew that hashing, but assignees deliberately borrow it.
+// kanban.proj #191: acol()'s value now tints the handle TEXT (every call
+// site below sets it via `.style.color`), not a dot glyph — the color
+// derivation itself is unchanged, only the presentation.
 const APALETTE=["#58a6ff","#3fb950","#d29922","#a371f7","#f778ba","#39c5cf","#f0883e","#ff7b72"];
 function ahash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h}
 function acol(a){const t=(a||"").trim();if(!t)return null;if(ASGCOL[t])return ASGCOL[t];return APALETTE[ahash(t.toLowerCase())%APALETTE.length]}
@@ -536,7 +539,7 @@ if(c.p==="High")d.appendChild(el("span","badge","HIGH"));
 if(un.length){const wb=el("span","badge wbadge","waiting");wb.title="waiting on "+un.map(x=>"#"+x).join(", ");d.appendChild(wb)}
 if(br!==null){const bb=el("span","badge","blocked");bb.title="blocked"+(br?": "+br:"");d.appendChild(bb)}
 const tEl=el("div","ttl",c.t);if(detail&&!ro){tEl.dataset.tap="ren";tEl.title="Tap to rename"}d.appendChild(tEl);
-const mp=[];if(c.a){const s=el("span",null);const dt=el("span","dot");dt.style.cssText="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle";dt.style.background=acol(c.a);dt.title=c.a;s.appendChild(dt);s.appendChild(document.createTextNode(c.a));mp.push(s)}
+const mp=[];if(c.a){const s=el("span",null);s.style.color=acol(c.a);s.title=c.a;s.appendChild(document.createTextNode(c.a));mp.push(s)}
 if(c.due)mp.push(document.createTextNode("due "+c.due));
 if(c.p==="Low")mp.push(document.createTextNode("Low"));
 if(mp.length){const meta=el("div","meta");mp.forEach((p,i)=>{if(i>0)meta.appendChild(document.createTextNode(" \\u00b7 "));meta.appendChild(p)});d.appendChild(meta)}
@@ -547,7 +550,7 @@ const top=el("div","toprow");
 const mk=(txt,color)=>{const s=el("span","fpill");if(color){const dt=el("span","dot");dt.style.background=color;s.appendChild(dt)}s.appendChild(document.createTextNode(txt));return s};
 top.appendChild(mk("archived",ARCHC));
 top.appendChild(mk(cname(c.s),ccol(c.s)));
-if(c.a)top.appendChild(mk(c.a,acol(c.a)));
+if(c.a){const s=el("span","fpill");s.style.color=acol(c.a);s.appendChild(document.createTextNode(c.a));top.appendChild(s)}
 top.appendChild(mk(c.p));
 d.insertBefore(top,d.firstChild)}
 else if(detail){
@@ -560,7 +563,7 @@ const sdot=el("span","dot");sdot.style.background=ccol(c.s);
 sp.appendChild(sdot);sp.appendChild(document.createTextNode(cname(c.s)));
 top.appendChild(sp);
 const ap=el("button","fpill");ap.dataset.act="pill";ap.dataset.pill="assignee";
-if(c.a){const adot=el("span","dot");adot.style.background=acol(c.a);ap.appendChild(adot)}
+if(c.a)ap.style.color=acol(c.a);
 ap.appendChild(document.createTextNode(c.a||"no assignee"));top.appendChild(ap);
 const pp=btn(c.p,"pill",{pill:"priority"});pp.className="fpill";top.appendChild(pp);
 d.insertBefore(top,d.firstChild);
