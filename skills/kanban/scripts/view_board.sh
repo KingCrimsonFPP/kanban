@@ -11,9 +11,11 @@
 #   [waiting: #x #y] — UNRESOLVED `waiting_for` ids only: a listed card that
 #     exists (live or archived) and is not `done`. Dangling ids are
 #     non-blocking; no flag at all when every dep is done.
-#   [BLOCKED] — the manual `blocked:` sticker passes the predicate (trimmed
-#     value contains >=1 alphanumeric; false/no -> not blocked; true ->
-#     blocked, reason unspecified).
+#   [blocked: <reason>] — the manual `blocked:` sticker passes the predicate
+#     (trimmed value contains >=1 alphanumeric; false/no -> not blocked; true
+#     -> blocked, reason unspecified).
+#   [review: <text>] — the `review:` sticker (ADR 0009, card #181), blocked's
+#     sibling — same predicate, applied to `review`. Does NOT gate `doing`.
 # Usage: bash view_board.sh [kanban-directory]
 
 KANBAN_DIR="${1:-kanban}"
@@ -48,6 +50,27 @@ blocked_reason() {
     case "$lower" in
         false|no) return 1 ;;
         true) printf 'reason unspecified'; return 0 ;;
+    esac
+    case "$v" in
+        *[[:alnum:]]*) printf '%s' "$v"; return 0 ;;
+    esac
+    return 1
+}
+
+# review's sibling of blocked_reason — same predicate, applied to the
+# `review` field (ADR 0009, card #181).
+review_text() {
+    local v="$1"
+    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+    case "$v" in
+        \"*\") v="${v#\"}"; v="${v%\"}" ;;
+        \'*\') v="${v#\'}"; v="${v%\'}" ;;
+    esac
+    local lower
+    lower=$(printf '%s' "$v" | tr '[:upper:]' '[:lower:]')
+    case "$lower" in
+        false|no) return 1 ;;
+        true) printf 'text unspecified'; return 0 ;;
     esac
     case "$v" in
         *[[:alnum:]]*) printf '%s' "$v"; return 0 ;;
@@ -94,6 +117,7 @@ for f in "$KANBAN_DIR"/*.card.md; do
     priority=$(field "$f" priority)
     waiting_raw=$(field "$f" waiting_for)
     blocked_raw=$(field "$f" blocked)
+    review_raw=$(field "$f" review)
     t=$(title "$f")
     [ -z "$t" ] && t=$(basename "$f" .md)
 
@@ -113,6 +137,12 @@ for f in "$KANBAN_DIR"/*.card.md; do
     # bare true sticker).
     if reason=$(blocked_reason "$blocked_raw"); then
         line="$line [blocked: $reason]"
+    fi
+
+    # Review flag: blocked's sibling sticker (ADR 0009, card #181) — same
+    # inline shape, own text, never affects the doing-gate above.
+    if text=$(review_text "$review_raw"); then
+        line="$line [review: $text]"
     fi
 
     # Unknown status -> first column, raw status shown (card #31's promotion
