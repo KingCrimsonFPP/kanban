@@ -144,8 +144,10 @@ bound to `127.0.0.1` only.
   Assignee joins Title in the minimal form (card #85, with its combobox suggestions
   still working) so a three-click flow — column "+", type title, pick an assignee,
   Enter — is enough to queue a card straight to a specific assignee (e.g. `@afk`)
-  without ever opening "Show more fields"; the full form's assignee+dates row (#47)
-  is unchanged, Assignee just also renders ahead of the reveal button while minimal.
+  without ever opening "Show more fields". The full form's assignee+dates row (#47)
+  now lives in that same spot permanently (kanban.proj #199), so Tab visits
+  Title then Assignee as the first two fields in the expanded/edit form too —
+  Start/End/Due tag along right after (same row), everything else follows.
   The date triad (card #40):
   start/end form the from-to **working range**, due is the independent **deadline**;
   each takes a date (`YYYY-MM-DD`) or local datetime (`YYYY-MM-DDTHH:MM`), never

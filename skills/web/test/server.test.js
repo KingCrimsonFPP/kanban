@@ -527,7 +527,7 @@ test('create form ships the minimal-first pieces: show-more button, .modal-extra
   });
 });
 
-test('card #85: Assignee joins Title in the minimal create form; the #47 assignee+dates row keeps its full-form layout', async () => {
+test('card #85: Assignee joins Title in the minimal create form', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -541,21 +541,46 @@ test('card #85: Assignee joins Title in the minimal create form; the #47 assigne
     for (const id of ['f-start', 'f-end', 'f-due']) {
       assert.ok(row[1].includes(`id="${id}"`), `${id} still lives in the row`);
     }
-    // The static markup keeps the row at its original #47 slot (right before
-    // Description, after the other two .modal-extra rows) — the full/edit
-    // form's byte-identical layout depends on that. It is #show-more-btn that
-    // is out of place here: type="button" between Title and the row.
-    assert.ok(html.indexOf('id="show-more-btn"') < html.indexOf('id="row-assignee-dates"'),
-      'source order: Title, show-more-btn, [the two hidden .modal-extra rows,] row-assignee-dates, Description');
+  });
+});
+
+test('kanban.proj #199: Assignee is the DOM/tab order\'s second focusable field after Title, in EVERY form state', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    // card #47's assignee+dates row now sits right after Title as its one
+    // static position — before "Show more fields" and before the two
+    // .modal-extra rows and Description. This alone makes Assignee the
+    // second focusable field after Title in BOTH the minimal create form
+    // (#85, unchanged: dates hidden, so Assignee is visually adjacent to
+    // Title too) and the expanded/edit form (new: dates now tag along, but
+    // Assignee — the row's first field — is still tab stop #2).
+    const titleIdx = html.indexOf('id="f-title"');
+    const rowIdx = html.indexOf('id="row-assignee-dates"');
+    const assigneeIdx = html.indexOf('id="f-assignee"');
+    const showMoreIdx = html.indexOf('id="show-more-btn"');
+    const statusRowIdx = html.indexOf('id="f-status"');
+    assert.ok(titleIdx > -1 && rowIdx > -1 && assigneeIdx > -1 && showMoreIdx > -1 && statusRowIdx > -1,
+      'all anchor elements present');
+    assert.ok(titleIdx < rowIdx, 'Title precedes the assignee+dates row');
+    assert.ok(rowIdx < assigneeIdx, 'the row wraps the Assignee input');
+    assert.ok(assigneeIdx < showMoreIdx, 'Assignee precedes "Show more fields" — no field sits between Title and Assignee');
+    assert.ok(showMoreIdx < statusRowIdx, 'Status/Priority/Epic (and everything else) still follows "Show more fields"');
+    // Fixed defect (audit #85): flex `order` used to fake a visual position
+    // while leaving real DOM/tab order pointed elsewhere — a WCAG 2.4.3
+    // focus-order violation. Still true: no `order` hack anywhere for this
+    // row or the button, in any state — the row's one static source position
+    // IS its tab position now, so there is nothing left to fake.
     const css = await (await fetch(`${base}/app.css`)).text();
-    // Fixed defect (audit #85): flex `order` used to fake the visual position
-    // while leaving real DOM/tab order pointed at "Show more fields" first —
-    // a WCAG 2.4.3 focus-order violation. No `order` hack survives; instead
-    // app.js physically moves the row next to Title while minimal (below).
-    assert.doesNotMatch(css, /#card-form\.minimal\s+#row-assignee-dates\s*\{[^}]*order:/,
-      'no order hack faking the row\'s minimal-mode position');
-    assert.doesNotMatch(css, /#card-form\.minimal\s+#show-more-btn\s*\{[^}]*order:/,
-      'no order hack faking the button\'s minimal-mode position');
+    assert.doesNotMatch(css, /#row-assignee-dates\s*\{[^}]*order:/, 'no order hack positions the row');
+    assert.doesNotMatch(css, /#show-more-btn\s*\{[^}]*order:/, 'no order hack positions the button');
+    // #199 removed card #85's placeAssigneeRow() runtime DOM move entirely —
+    // the static position above now serves every state, so there is no
+    // script left to do that job. Assert it's actually gone (regression
+    // guard: a reviewer re-adding a JS-side move would defeat the point of
+    // making the position static and no-JS-required).
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.doesNotMatch(js, /placeAssigneeRow/, 'no runtime row-move helper survives — the row\'s position is static now');
     // Fixed defect (audit #85): the assignee combobox menu opens with the
     // FULL registry list below a modal that, in minimal mode, is only
     // Title+Assignee+button tall — position:absolute clipped it against the
@@ -564,23 +589,24 @@ test('card #85: Assignee joins Title in the minimal create form; the #47 assigne
     // renders in flow and grows the modal instead of floating past its edge.
     assert.match(css, /#card-form\.minimal\s+\.combobox-menu\s*\{[^}]*position:\s*static/,
       'minimal-mode combobox menu renders in flow — no clipping past the short modal\'s edge');
+  });
+});
+
+test('kanban.proj #199: edit opens the SAME card-form markup as create — Assignee is Tab stop #2 there too (no separate edit template)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    // create and edit share one <form id="card-form"> (openModal() just
+    // toggles .minimal and fills values — see app.js) — a single served
+    // page has exactly one card-form, so the #199 static reorder covers
+    // both without any edit-specific markup to keep in sync.
+    assert.strictEqual((html.match(/id="card-form"/g) || []).length, 1,
+      'create and edit share one form element — one reorder fixes both');
     const js = await (await fetch(`${base}/app.js`)).text();
-    // Fixed defect (audit #85): DOM/tab order must actually match the visual
-    // order in minimal mode — not just look right via CSS. openModal (every
-    // open, create or edit) and the "Show more fields" handler (mid-open
-    // expand) both re-place the row: next to Title while minimal, restored to
-    // its original #47 slot the instant minimal lifts, so the full/edit form
-    // is never left with the row parked in the wrong place.
     const open = js.match(/function openModal\([\s\S]*?\n\}/);
     assert.ok(open, 'openModal found in app.js');
-    assert.match(open[0], /placeAssigneeRow\(/, 'openModal re-places the row on every open (create AND edit)');
-    const showMore = js.match(/\$\('#show-more-btn'\)\.addEventListener\('click', \(\) => \{[\s\S]*?\}\);/);
-    assert.ok(showMore, "show-more-btn's click handler found in app.js");
-    assert.match(showMore[0], /placeAssigneeRow\(/, 'expanding mid-open also restores the row to its full-form slot');
-    const place = js.match(/function placeAssigneeRow\([\s\S]*?\n\}/);
-    assert.ok(place, 'placeAssigneeRow found in app.js');
-    assert.match(place[0], /show-more-btn['"]\)\.before\(|insertBefore\([^,]*,\s*\$\('#show-more-btn'\)\)/,
-      'minimal: the row physically moves to sit right before "Show more fields"');
+    // edit (a card is passed) opens full/expanded, never minimal (card #50)
+    assert.match(open[0], /isMinimalCreate\(Boolean\(card\)/, 'edit (card present) never opens minimal — the expanded order is what edit sees');
   });
 });
 

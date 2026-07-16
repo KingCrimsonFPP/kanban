@@ -56,11 +56,43 @@
     </div>
     <input type="hidden" id="f-id">
     <label>Title <input id="f-title" required></label>
-    <!-- card #50: minimal-first create. Everything below Title (the .modal-extra
-         groups — three whole rows plus the description) starts hidden for NEW
-         cards behind this button; openModal() drives it with one form-level
-         class (#card-form.minimal), one-way per open, never persisted. Edit
-         always opens full. Card #85 exempts Assignee: see the row below. -->
+    <!-- card #85 put Assignee right after Title in the #50 minimal form (the
+         "+ -> title -> @afk -> Enter" queue-it flow). kanban.proj #199:
+         Franc wants that SAME Title -> Assignee tab order in the expanded/edit
+         form too, so this row (card #47's assignee+dates row) now lives here,
+         right after Title, as its one and only static position — no longer a
+         minimal-only detour. Unlike the two .modal-extra rows below, this row
+         does NOT hide wholesale: only the three DATE labels inside it carry
+         modal-extra individually, so Assignee alone stays visible while
+         minimal (dates hidden with it) — the #85 minimal form is byte-for-byte
+         unchanged. Because the row's source position now matches its visual
+         position in EVERY state, no runtime DOM move is needed any more: #85's
+         placeAssigneeRow() (a real WCAG 2.4.3 focus-order fix in its day, a
+         `order`-faked position is not enough — Tab follows DOM order, not
+         paint order) is gone from the client script; the fix is now simply
+         where this div sits in the file. -->
+    <div class="row" id="row-assignee-dates">
+      <!-- card #183 (kanban.proj #191 replaced the dot with tinted text): the
+           input's own text is a live color cue, same handle-color tint the
+           board tiles show (assignee-badge.js's assigneeBadge) — kept in
+           sync with the input's current value by syncAssigneeColor(),
+           populated on open and on every keystroke, same pattern as
+           #f-blocked's live style sync. -->
+      <label>Assignee <input id="f-assignee"></label>
+      <!-- card #40 date triad: start/end form the working range ("from"/"to"),
+           due is the independent deadline; each takes a date or a local datetime.
+           card #41: every date field pairs its free-text input with a 📅 button
+           that opens the shared date-picker popover (manual typing stays legal;
+           the .date-field wrapper keeps input+button on one tidy row) -->
+      <label class="modal-extra">Start date <span class="date-field"><input id="f-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
+      <label class="modal-extra">End date <span class="date-field"><input id="f-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
+      <label class="modal-extra">Due date <span class="date-field"><input id="f-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
+    </div>
+    <!-- card #50: minimal-first create. Everything below this point down to
+         Description (the .modal-extra groups — two whole rows plus the
+         description) starts hidden for NEW cards behind this button;
+         openModal() drives it with one form-level class (#card-form.minimal),
+         one-way per open, never persisted. Edit always opens full. -->
     <button type="button" id="show-more-btn">Show more fields</button>
     <div class="row modal-extra">
       <label>Status
@@ -99,37 +131,6 @@
       <label>Waiting for (ids, comma-sep) <input id="f-waiting"></label>
       <label>Blocked (reason) <input id="f-blocked" placeholder="empty = not blocked"></label>
       <label>Review (text) <input id="f-review" placeholder="empty = not in review"></label>
-    </div>
-    <!-- card #85: Assignee joins Title in the #50 minimal form (the user's
-         "+ -> title -> @afk -> Enter" queue-it flow). Unlike the other three
-         .modal-extra groups this row does NOT hide wholesale — only the three
-         DATE labels below carry modal-extra individually, so Assignee alone
-         stays visible. This row stays put here at parse time (right before
-         Description) — placeAssigneeRow(), the client script's helper,
-         physically moves the row node next to Title only while minimal, and
-         moves it straight back to this exact slot the instant minimal lifts
-         (expand or edit), so the full form's #47 flex layout is genuinely
-         untouched, not just visually faked with `order` (that faked a WCAG
-         2.4.3 focus-order bug — see the stylesheet and client script for the
-         fix). NOTE: never mention the client script's filename literally in
-         this comment — script-load-order tests match the first occurrence of
-         that substring in the served HTML, an early false hit breaks them. -->
-    <div class="row" id="row-assignee-dates">
-      <!-- card #183 (kanban.proj #191 replaced the dot with tinted text): the
-           input's own text is a live color cue, same handle-color tint the
-           board tiles show (assignee-badge.js's assigneeBadge) — kept in
-           sync with the input's current value by syncAssigneeColor(),
-           populated on open and on every keystroke, same pattern as
-           #f-blocked's live style sync. -->
-      <label>Assignee <input id="f-assignee"></label>
-      <!-- card #40 date triad: start/end form the working range ("from"/"to"),
-           due is the independent deadline; each takes a date or a local datetime.
-           card #41: every date field pairs its free-text input with a 📅 button
-           that opens the shared date-picker popover (manual typing stays legal;
-           the .date-field wrapper keeps input+button on one tidy row) -->
-      <label class="modal-extra">Start date <span class="date-field"><input id="f-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
-      <label class="modal-extra">End date <span class="date-field"><input id="f-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
-      <label class="modal-extra">Due date <span class="date-field"><input id="f-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
     </div>
     <!-- card #47: .modal-desc marks the field that absorbs fullscreen's
          leftover height (flex-grow chain: form → this label → textarea) -->

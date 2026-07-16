@@ -1437,21 +1437,6 @@ function renderStatusOptions(current) {
   $('#f-status').innerHTML = opts.join('');
 }
 
-// card #85: physically moves the assignee+dates row instead of faking its
-// minimal-mode position with flex `order` — `order` only repaints, it does
-// not retarget Tab, so DOM/tab order stayed Title -> "Show more fields" ->
-// Assignee even though the row visually painted between them (a WCAG 2.4.3
-// focus-order bug, audit #85 defect 2). assigneeRowHome is the row's ORIGINAL
-// next sibling (the Description label), captured once before any move ever
-// happens; re-inserting before it restores the exact #47 full-form slot,
-// byte-identical, every time minimal lifts (expand or edit).
-const assigneeRow = $('#row-assignee-dates');
-const assigneeRowHome = assigneeRow.nextElementSibling;
-function placeAssigneeRow(minimal) {
-  if (minimal) $('#show-more-btn').before(assigneeRow);
-  else assigneeRowHome.before(assigneeRow);
-}
-
 // epic #137: the blocked input wears a red border exactly while its value
 // would gate (passes the shared predicate) — colorless otherwise, so
 // `false` / whitespace / junk visibly read as "not a sticker" while typing.
@@ -1516,7 +1501,6 @@ function openModal(card, presetStatus, presetStart) {
   // so the snapshot and the save payload are the same as a full form's.
   const minimal = isMinimalCreate(Boolean(card), false);
   $('#card-form').classList.toggle('minimal', minimal);
-  placeAssigneeRow(minimal); // card #85: re-place on EVERY open, so edit never inherits a prior create's move
   $('#modal').classList.remove('hidden');
   applyModalFullscreen('edit'); // re-apply the persisted per-modal-type preference on every open
   if (!card) $('#f-title').focus(); // card #50: quick capture — cursor lands ready to type (after unhide; focus is a no-op on display:none)
@@ -1595,7 +1579,6 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#show-more-btn').addEventListener('click', () => {
     const minimal = isMinimalCreate(false, true); // always false — expanding lifts minimal for the rest of the open
     $('#card-form').classList.toggle('minimal', minimal);
-    placeAssigneeRow(minimal); // card #85: restore the row to its full-form #47 slot before Description
   });
   $('#card-form').addEventListener('submit', submitModal);
   $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback

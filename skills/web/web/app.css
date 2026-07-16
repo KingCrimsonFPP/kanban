@@ -230,19 +230,22 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 #card-form.minimal .modal-extra { display: none; }
 #show-more-btn { display: none; align-self: flex-start; }
 #card-form.minimal #show-more-btn { display: block; }
-/* card #85: Assignee joins Title in the minimal form. The #47 assignee+dates
-   row no longer hides wholesale (its three date labels each carry
-   .modal-extra individually instead — see app.html), so the row itself, now
-   showing just Assignee, stays in the flex flow.
+/* card #85: Assignee joins Title in the minimal form; kanban.proj #199 made
+   that pairing permanent, so Title -> Assignee is the tab order in the
+   expanded/edit form too (see app.html: the #47 assignee+dates row now sits
+   right after Title always, its own static position). The row no longer
+   hides wholesale like the other .modal-extra groups (its three date labels
+   each carry .modal-extra individually instead — see app.html), so the row
+   itself — showing just Assignee while minimal, all four fields once
+   expanded — stays in the flex flow.
    A prior version faked the Title -> Assignee -> "Show more fields" visual
    sequence with flex `order` instead of moving anything in the DOM — but
    `order` only repaints, it does not retarget Tab: DOM/tab order stayed
    Title -> button -> row, a WCAG 2.4.3 focus-order bug (audit #85 defect 2).
-   Fixed by having app.js physically move the row (placeAssigneeRow(),
-   called from openModal() and the "Show more fields" handler) right before
-   #show-more-btn while minimal, and back to this original slot — right here,
-   before Description — the instant minimal lifts. So the full/edit form's
-   #47 layout stays byte-identical, and no `order` rule is needed at all. */
+   A later version fixed it by having app.js physically move the row between
+   two slots at runtime (before #show-more-btn while minimal, back before
+   Description once expanded) — #199 removed even that: one static slot now
+   serves both states, so there is nothing left for script to move. */
 /* card #85 defect 1 (audit): the assignee combobox menu opens with the FULL
    registry list positioned absolutely under a modal that, in minimal mode, is
    only Title+Assignee+button tall — it clipped past the modal's overflow:auto
