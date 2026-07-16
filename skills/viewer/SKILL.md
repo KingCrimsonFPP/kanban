@@ -37,7 +37,11 @@ conflict guard when the payload comes back.
 A search box under the header filters every view at once (card #143 — same
 query grammar as kanban-web: terms AND together, `#id`/`id:` exact,
 `title:`/`body:`/`status:`/`priority:`/`tags:`/`file:` scoped substrings,
-bare terms hit title+body+tags). Cards #74/#153 add `tree:<id>`/`path:<id>`
+bare terms hit title+body+tags). `review:`/`blocked:` (ADR 0009, card #181)
+are their own family: UNLIKE every scope above, a bare `review:`/`blocked:`
+(no value) is itself a complete term — "the sticker is present" (the shared
+predicate) — never dropped as mid-typing; `review:PR`/`blocked:vendor` is a
+case-insensitive substring match on the sticker's own text. Cards #74/#153 add `tree:<id>`/`path:<id>`
 (`#`-tolerant, e.g. `tree:#153`): tree is the card's whole dependency
 component (undirected flood-fill over `waiting_for` + `parent:` epic
 membership — the same edges the Map view draws); path is the narrower
@@ -55,6 +59,19 @@ Every view carries a status-pill row (card #129): statuses default on,
 location, not a status) as a muted trailing board section, a muted gantt
 group, dimmed map nodes, and gray calendar chips. The "N pending" header
 indicator is tappable and jumps to the tray (card #130).
+
+A card wears a gold "review" badge (card tile head, or a "review: `<text>`"
+line on the detail sheet) whenever its `review` field passes the shared
+sticker predicate — blocked's sibling (ADR 0009, card #181): "finished,
+approve me" rather than blocked's "stuck, act so I can proceed", and unlike
+blocked it never gates `doing` entry. Both stickers are set/cleared the same
+way, through the "All fields" grid (`fm-review`/`fm-blocked`, live
+gold/red border feedback while the value passes the predicate) — there's no
+dedicated form field for either. **Deliberate gap:** unlike kanban-web's
+card #189 (clicking an assignee cue or tag appends a scoped search term),
+neither badge is tap-to-filter here — this editor has no additive
+query-append affordance for any badge yet (the tree:/path: buttons overwrite
+the whole query box instead), so it isn't mirrored for review/blocked either.
 
 The create form's assignee suggestions come from the board registry
 (`config.yaml` `assignees`); with no registry it suggests the

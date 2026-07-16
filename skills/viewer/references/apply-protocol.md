@@ -54,7 +54,9 @@ write them as-is. Refresh `updated:` on any fm write.
      `true`; `false`/`no` → not blocked). The skip reason names which:
      "waiting on #34" / "blocked: <reason>". Entry-only — no eviction: a card
      already in `doing` is never moved out by the gate. Agents never grab a
-     blocked card, in any column.
+     blocked card, in any column. `review` (ADR 0009, card #181) is `blocked`'s
+     sibling sticker — set/read via the same `fm.review` shape — but does NOT
+     gate this check; a card can enter or stay in `doing` while wearing one.
    - Unknown id → skip and report.
 3. **Build new file contents** — preserve all other frontmatter fields, the
    body, and the file's existing line endings (check for CRLF):
