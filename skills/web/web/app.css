@@ -554,8 +554,23 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
    for the all-day band, where chips are grid-overlay SIBLINGS of the drop
    cells (not children like the month grid's) — without this, releasing over a
    chip fires no cell dragover, preventDefault never runs, and the browser
-   refuses the drop with the not-allowed cursor. */
-#calendar-view.cal-dragging .cal-chip { pointer-events: none; }
+   refuses the drop with the not-allowed cursor.
+   card #195/#197 defect fix: `:not(.dragging)` excludes the chip actually
+   being dragged — Chromium cancels an in-flight native HTML5 drag outright
+   (dragstart fires, dragend follows immediately, no dragover/drop ever
+   reaches any target) the instant the DRAG SOURCE itself becomes
+   pointer-events:none, even via an ancestor selector — confirmed with a
+   real synthetic-input drive (CDP Input.dispatchMouseEvent, headless Edge;
+   NOT a JS DragEvent dispatch, which bypasses native drag-initiation and
+   would have hidden this) both against an isolated repro and against this
+   view. Every OTHER chip still yields hit-testing as before; only the one
+   node the OS is actively tracking as the drag source keeps pointer-events
+   so the browser doesn't lose it. This silently broke EVERY native-drag
+   chip (month grid + all-day band, date-only/timed/range alike) — timed
+   cards read as fine only because a datetime value moves them into the
+   separate pointer-drag time grid (wireCalendarTimeDrag), which this rule
+   never touches. */
+#calendar-view.cal-dragging .cal-chip:not(.dragging) { pointer-events: none; }
 /* Timed blocks: absolutely positioned by minutes (app.js), side-by-side within
    an overlap cluster via lane math. white-space wraps here (unlike the month
    chips) — a tall block has room for two lines of title. */
