@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
+  BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorClass, statusColorSoft, epicColorSoft, statusBadge, archivedBadge,
 } = require('../web/status-colors');
 
 // --- card #31: deterministic status coloring for dynamic columns -------------
@@ -126,28 +126,33 @@ test('EPIC_COLOR is orange and no built-in status (or archive) wears it (card #5
   assert.notStrictEqual(ARCHIVE_COLOR, EPIC_COLOR);
 });
 
-// --- card #91: the epic border REPLACED by one shared dot glyph --------------
+// --- card #91: the epic border REPLACED by one shared dot glyph; card #45
+// then retired the dot too — circles are reserved for status alone now, so
+// an epic instead washes its whole surface in a faint background tint. -----
 
-test('epicBadge is the one shared HTML glyph — an orange dot with an "Epic" tooltip (card #91)', () => {
-  const html = epicBadge();
-  assert.match(html, /class="epic-dot"/);
-  assert.match(html, /title="Epic"/);
+test('epicColorSoft is EPIC_COLOR at 12% alpha — the faint wash every surface\'s .epic rule carries (card #45)', () => {
+  assert.strictEqual(epicColorSoft(), 'rgba(240, 136, 62, 0.12)');
 });
 
-test('app.css paints ONE shared epic-dot glyph (card #91) — #59\'s four per-view borders are gone', () => {
+test('app.css washes every surface\'s .epic class in epicColorSoft() — no epic dot/circle left anywhere (card #45 retires card #91\'s epic-dot)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
-  assert.match(css, /\.epic-dot\s*\{[^}]*background:\s*#f0883e/, 'the shared HTML dot carries EPIC_COLOR');
-  assert.ok(css.includes(`.map-epic-dot { fill: ${EPIC_COLOR};`), 'the map node has its own SVG twin, same color');
-  // card #151: the membership edge + its arrowhead wear the same orange
+  const soft = epicColorSoft();
+  // Board tile, calendar chip, and gantt gutter label share one background rule.
+  assert.ok(css.includes(`.card.epic, .cal-chip.epic, .gantt-label.epic { background: ${soft}; }`), 'tile/chip/gutter-label share one faint background rule');
+  // The gantt BAR can't reuse `background` (the per-status fill already owns
+  // it), so it layers the same wash via box-shadow instead.
+  assert.ok(css.includes(`.gantt-bar.epic { box-shadow: inset 0 0 0 9999px ${soft}; }`), 'gantt bar epic wash is a box-shadow overlay, not background');
+  // The map node tints its SVG rect fill instead of drawing a circle.
+  assert.ok(css.includes(`.map-node.epic rect { fill: ${soft}; }`), 'map node epic wash tints the rect fill, not a circle');
+  // card #151: the membership edge + its arrowhead are LINES, not circles —
+  // untouched by #45, still wearing solid EPIC_COLOR.
   assert.ok(css.includes(`.map-edge.epic-edge { stroke: ${EPIC_COLOR};`), 'membership edge carries EPIC_COLOR');
   assert.ok(css.includes(`.map-edge.epic-chain { stroke: ${EPIC_COLOR}; }`), 'v3: the intra-epic chain edge carries EPIC_COLOR solid');
   assert.ok(css.includes(`.map-arrow-epic-head { fill: ${EPIC_COLOR}; }`), 'its arrowhead too');
-  // #59's orange BORDER rules are gone from all four surfaces — nothing left
-  // to layer or to gate priority/blocked/due around.
-  assert.ok(!css.includes('.card.epic'), 'board tile border rule removed');
-  assert.ok(!css.includes('.map-node.epic'), 'map node stroke rule removed');
-  assert.ok(!css.includes('.gantt-bar.epic'), 'gantt bar border rule removed');
-  assert.ok(!css.includes('.cal-chip.epic'), 'calendar chip border rule removed');
+  // #91's shared dot glyph and its SVG twin are BOTH gone now — no circle
+  // anywhere draws an epic; circles are status-only.
+  assert.ok(!css.includes('.epic-dot'), 'the shared HTML epic-dot glyph is gone');
+  assert.ok(!css.includes('.map-epic-dot'), 'the map SVG epic-dot circle is gone');
 });
 
 test('the map node border is one neutral weight for every status (card #91) — status moved to its own dot', () => {
@@ -299,7 +304,7 @@ test('statusBadge tolerates a missing/null status without throwing (card #97)', 
 test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* color rule per statusColorClass() outcome — no inline style (card #97, revised card #49 verify finding)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.status-dot\s*\{[^}]*width:\s*8px;[^}]*height:\s*8px;[^}]*border-radius:\s*50%/,
-    'same 8px dot shape as .epic-dot');
+    'same 8px dot shape .archived-dot carries');
   for (const [status, hex] of Object.entries(BUILTIN_STATUS_COLORS)) {
     assert.ok(css.includes(`.status-dot--${status} { background: ${hex};`), `status-dot color class present: ${status}`);
   }
@@ -309,15 +314,18 @@ test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* colo
   });
 });
 
-test('an epic dot immediately followed by a status dot gets a gap — the two 8px circles must not render fused (verify finding)', () => {
-  // On the two dense surfaces without .card-head's flex gap (calendar chips,
-  // gantt gutter labels), epicBadge()+statusBadge() are emitted with zero
-  // whitespace between them and neither .epic-dot nor .status-dot carries a
-  // margin — an epic card whose status is also circular (e.g. 'doing')
-  // renders as one fused two-color blob with no visual separator.
+test('no fused-dot gap rule survives for epic+status — card #45 retired the epic dot that rule existed for (verify finding, superseded)', () => {
+  // Card #97's original problem: on the two dense surfaces without
+  // .card-head's flex gap (calendar chips, gantt gutter labels),
+  // epicBadge()+statusBadge() emitted with zero whitespace between them and
+  // neither .epic-dot nor .status-dot carried a margin, fusing into one
+  // two-color blob. Card #45 removes the epic dot entirely (an epic is a
+  // background wash now, not a circle standing next to the status circle),
+  // so the adjacent-sibling fix for that specific pair no longer applies —
+  // pin its absence so a future edit doesn't reintroduce a rule for a glyph
+  // that no longer exists.
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
-  assert.match(css, /\.epic-dot \+ \.status-dot\s*\{[^}]*margin-left:\s*4px/,
-    'an adjacent-sibling rule restores a gap between the two dots wherever they land back-to-back, board tile\'s flex gap included');
+  assert.doesNotMatch(css, /\.epic-dot \+ \.status-dot/, 'no leftover epic-dot adjacent-sibling rule');
 });
 
 // --- card #102 final design: "show the status color as shown in the
@@ -344,7 +352,7 @@ test('app.css paints the archived-dot glyph in ARCHIVE_COLOR, same 8px shape, pl
 test('a status dot immediately followed by an archived dot gets a gap — same fused-dot fix card #97 gave epic+status (card #102 final design)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.status-dot \+ \.archived-dot\s*\{[^}]*margin-left:\s*4px/,
-    'archived always follows statusBadge() directly (epic, status, archived order) — needs the same adjacent-sibling gap');
+    'archived always follows statusBadge() directly (status, archived order — epic dropped out of this sequence, card #45) — needs the same adjacent-sibling gap');
 });
 
 test('SKILL.md documents the archived ball as its own bullet, citing card #102\'s final design (card #102 final design)', () => {
@@ -357,7 +365,10 @@ test('SKILL.md documents the archived ball as its own bullet, citing card #102\'
   // are opt-in there since #108) — only cardEl (live board tiles) structurally
   // never can, so that's the absence rule left to state explicitly.
   assert.match(bullet[0], /`cardEl` never renders it/, 'states the absence rule for live board tiles explicitly');
-  assert.match(bullet[0], /epic, status,\s*\n?\s*archived/, 'states the one glyph order used everywhere');
+  // card #45 retired the epic dot that used to lead this order — only
+  // status+archived remain as glyphs that can land adjacent.
+  assert.match(bullet[0], /status,\s*\n?\s*archived/, 'states the one dot order used everywhere');
+  assert.match(bullet[0], /card #45 retired the\s+epic dot/, 'notes the epic dot is gone from the order, not silently dropped');
   assert.match(bullet[0], /46 to 58/, 'documents the map node height change that made room for the third dot');
 });
 
