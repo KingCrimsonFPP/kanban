@@ -69,7 +69,10 @@ function isBuiltinStatus(status) {
 }
 
 // djb2-xor over the normalized name — tiny, dependency-free, stable across
-// Node and every browser (no reliance on String hashing or crypto).
+// Node and every browser (no reliance on String hashing or crypto). Exported
+// (card #183) so assignee-colors.js can hash handles into this SAME
+// STATUS_PALETTE instead of forking the algorithm — one shared hash+palette
+// pool, not two systems that happen to look alike.
 function statusHash(s) {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
@@ -180,7 +183,7 @@ function archivedBadge() {
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
+    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusHash, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
   };
 } else {
   window.BUILTIN_STATUS_COLORS = BUILTIN_STATUS_COLORS;
@@ -188,6 +191,7 @@ if (typeof module !== 'undefined' && module.exports) {
   window.ARCHIVE_COLOR = ARCHIVE_COLOR;
   window.EPIC_COLOR = EPIC_COLOR;
   window.isBuiltinStatus = isBuiltinStatus;
+  window.statusHash = statusHash;
   window.statusColor = statusColor;
   window.statusColorClass = statusColorClass;
   window.statusColorSoft = statusColorSoft;

@@ -488,7 +488,7 @@ test('card #85: Assignee joins Title in the minimal create form; the #47 assigne
     // minimal mode) — only the three DATE labels inside it hide individually
     const row = html.match(/<div class="row" id="row-assignee-dates">([\s\S]*?)<\/div>/);
     assert.ok(row, 'assignee+dates row present, un-hidden as a whole');
-    assert.match(row[1], /<label>Assignee <input id="f-assignee">/, 'Assignee itself carries no modal-extra — visible in minimal mode');
+    assert.match(row[1], /<label>Assignee <span id="f-assignee-dot" class="assignee-dot" hidden><\/span><input id="f-assignee">/, 'Assignee itself carries no modal-extra — visible in minimal mode');
     assert.strictEqual((row[1].match(/<label class="modal-extra">/g) || []).length, 3,
       'Start/End/Due each hide individually now instead of the row hiding as a block');
     for (const id of ['f-start', 'f-end', 'f-due']) {

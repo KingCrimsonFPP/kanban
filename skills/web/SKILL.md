@@ -225,6 +225,28 @@ bound to `127.0.0.1` only.
   proven clear of the truncated title text) with no overlap. The gantt bar itself
   and the board tile's existing dim/grey-border cues are all untouched — this is
   one more glyph on top of them, not a replacement.
+- **Assignee dot (card #183)** — `assigneeBadge()` (assignee-badge.js) grew a
+  small colored dot in front of the handle, same glyph contract as the status
+  dot above: a config.yaml `assignees[].color` reservation wins; absent, the
+  handle hashes into the same 8-color `STATUS_PALETTE` custom statuses use
+  (assignee-colors.js's `assigneeColor`/`assigneeColorClass`). The hashed case
+  reuses the exact `.status-dot--palette-N` CSS classes statusBadge() already
+  defines — zero new color CSS, and a hashed assignee CAN land on the same
+  hex a hashed status does (one shared pool, determinism not uniqueness is
+  still the whole contract). A RESERVED color is an open value space with no
+  class to reuse, so it rides a `data-assignee-color` attribute instead;
+  `paintAssigneeDots()` (app.js) paints it with one small CSSOM assignment
+  after the tile's `innerHTML` lands — never a string style attribute (same
+  CSP `style-src 'self'` reasoning as the #49 verify finding above). Renders
+  on every card-carrying-an-assignee surface `assigneeBadge()` already had:
+  board tiles (live and archived, via `cardEl`/`archiveCardEl`) and the map's
+  isolated-row tiles. The edit/create modal gets its own live copy of the cue
+  next to the Assignee label (`#f-assignee-dot`, `syncAssigneeDot()` in
+  app.js) — populated on open and re-synced on every keystroke/combobox pick,
+  same "reflect the live typed value" pattern epic #137's `syncBlockedInputStyle`
+  already established for `#f-blocked`. The viewer (`skills/viewer`) carries
+  the same rule in its own vanilla-JS reimplementation — see that skill's
+  write-up.
 - **Last modified (card #35)** — the detail popup shows a "Last modified" line: the
   card's `updated` frontmatter timestamp when present, else the file's on-disk mtime
   labeled `(file mtime)` as a fallback for cards written before the field existed.
@@ -678,6 +700,7 @@ assignees:                # who can own cards; feeds the form's assignee combobo
     name: "Human"
     kind: human           # suggested: human | ai-hitl | ai-afk (free string)
     description: "A human can grab it. Final say on trusted and destructive calls."
+    color: "#58a6ff"       # card #183: OPTIONAL — reserves this handle's dot color; absent = hashed
   - handle: "@hitl"
     name: "AI (HITL)"
     kind: ai-hitl
@@ -702,6 +725,13 @@ here (card #100) — this app is config-driven and doesn't enforce them.
   muted, middle/unknown = neutral). Absent = built-in `[High, Normal, Low]`.
 - **`tags`** feeds the form's tag suggestions. Both lists are HITL-curated —
   the human edits them; the app only reads.
+- **`assignees[].color`** (card #183, OPTIONAL) reserves a fixed dot color for
+  that handle, mirroring `statuses`' own color rule exactly: reserved wins;
+  absent, the handle hashes into the SAME 8-color `STATUS_PALETTE` custom
+  statuses use (assignee-colors.js's `assigneeColor`/`assigneeColorClass`,
+  reusing status-colors.js's hash — not a forked one), so every assignee gets
+  a stable color with zero state to store. See the **Assignee dot** bullet
+  below for where it renders.
 - **`statuses`** (card #31, inline or block form) IS the live column set, in
   order — board columns, drag targets, per-column sort/collapse defaults
   (priority-desc / expanded for live columns, id-asc / collapsed for Archive),

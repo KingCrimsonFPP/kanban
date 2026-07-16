@@ -6,14 +6,34 @@
 // escapeHtml/assigneeBadge as bare globals) AND required directly by
 // node --test, without needing a DOM/jsdom shim.
 
+const ACOL = (typeof module !== 'undefined' && module.exports)
+  ? require('./assignee-colors')
+  : window;
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // Empty string when unset (server sends null) so no "undefined"/blank badge
 // ever renders; escaped like every other card-derived string.
-function assigneeBadge(card) {
-  return card.assignee ? `<span class="card-assignee">${escapeHtml(card.assignee)}</span>` : '';
+//
+// card #183: a small colored dot joins the handle, same glyph contract as
+// statusBadge()'s dot (status-colors.js). `assignees` is the board's config
+// registry (state.assignees) — optional so old call sites/tests that don't
+// pass one still render (no registry = every handle hashes, same as
+// statusColor with no custom statuses configured). The hashed case reuses
+// the exact `.status-dot--palette-N` CSS classes statusBadge() already
+// defines — zero new color CSS. A RESERVED config.yaml color has no fixed
+// class (open value space), so it rides a `data-assignee-color` attribute
+// instead; app.js paints it via one CSSOM assignment after insertion — never
+// a string style="" attribute (CSP style-src 'self', no unsafe-inline).
+function assigneeBadge(card, assignees) {
+  if (!card.assignee) return '';
+  const handle = card.assignee;
+  const cls = ACOL.assigneeColorClass(handle, assignees);
+  const dotClass = cls ? `assignee-dot status-dot--${cls}` : 'assignee-dot';
+  const reserved = cls ? '' : ` data-assignee-color="${escapeHtml(ACOL.assigneeColor(handle, assignees) || '')}"`;
+  return `<span class="card-assignee" title="${escapeHtml(handle)}"><span class="${dotClass}"${reserved}></span>${escapeHtml(handle)}</span>`;
 }
 
 // Card #132: the @human/@hitl/@afk role trio is THE canonical default — a

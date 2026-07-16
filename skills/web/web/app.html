@@ -109,7 +109,11 @@
          this comment — script-load-order tests match the first occurrence of
          that substring in the served HTML, an early false hit breaks them. -->
     <div class="row" id="row-assignee-dates">
-      <label>Assignee <input id="f-assignee"></label>
+      <!-- card #183: a small live color cue, same glyph the board tiles show
+           (assignee-badge.js's assigneeBadge dot) — kept in sync with the
+           input's current value by syncAssigneeDot(), populated on open and
+           on every keystroke, same pattern as #f-blocked's live style sync. -->
+      <label>Assignee <span id="f-assignee-dot" class="assignee-dot" hidden></span><input id="f-assignee"></label>
       <!-- card #40 date triad: start/end form the working range ("from"/"to"),
            due is the independent deadline; each takes a date or a local datetime.
            card #41: every date field pairs its free-text input with a 📅 button
@@ -281,6 +285,7 @@
 <script src="/form-guard.js"></script>
 <script src="/selection.js"></script>
 <script src="/status-colors.js"></script>
+<script src="/assignee-colors.js"></script>
 <script src="/save-hotkey.js"></script>
 <script src="/app.js"></script>
 </body>
