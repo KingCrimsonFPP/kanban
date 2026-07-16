@@ -54,6 +54,10 @@ def parse_card(path):
         "tags": lst(fm.get("tags", "")),
         "w": lst(fm.get("waiting_for", "")),
         "bl": fm.get("blocked", ""),
+        # ADR 0009 (card #181): review is blocked's sibling sticker —
+        # "finished, approve me" rather than "stuck, act so I can proceed" —
+        # same raw-verbatim contract, never gates the doing entry check.
+        "rv": fm.get("review", ""),
         # card #151/#153: strict parent parse (digits only -> int, else null),
         # same contract as kanban-web's card-store.js parent field — used to
         # build epic-membership edges for the map + tree:/path: traversal.
@@ -224,10 +228,10 @@ TEMPLATE = """<!DOCTYPE html>
 <style>
 :root{--surface:#fcfcfb;--page:#f9f9f7;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
 --grid:#e1e0d9;--ring:rgba(11,11,11,.12);--accent:#2a78d6;--high:#d03b3b;--warn:#9a6700;
---bgd:#fbe9e7;--bgw:#f7edd3}
+--bgd:#fbe9e7;--bgw:#f7edd3;--rev:#8a6d00;--bgr:#faf3d0}
 @media(prefers-color-scheme:dark){:root{--surface:#1a1a19;--page:#0d0d0d;--ink:#fff;
 --ink2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--ring:rgba(255,255,255,.14);--accent:#3987e5;
---high:#f85149;--warn:#d29922;--bgd:#3a1512;--bgw:#332608}}
+--high:#f85149;--warn:#d29922;--bgd:#3a1512;--bgw:#332608;--rev:#eac54f;--bgr:#332e08}}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--page);color:var(--ink);font-size:15px;line-height:1.5;overflow:hidden}
@@ -263,10 +267,14 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .cid{font-size:12px;color:var(--muted)}
 .badge{display:inline-block;font-size:11px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;background:var(--bgd);color:var(--high)}
 .wbadge{background:var(--bgw);color:var(--warn)}
+/* ADR 0009 (card #181): review is blocked's sibling sticker — its own gold
+   family, distinct from --warn (waiting) and the red --high (blocked). */
+.rbadge{background:var(--bgr);color:var(--rev)}
 .ttl{font-size:14.5px;margin:3px 0 0;overflow-wrap:break-word}
 .meta{font-size:12px;color:var(--ink2);margin-top:4px}
 .wline{color:var(--warn)}
 .bline{color:var(--high)}
+.rline{color:var(--rev)}
 .tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
 .tag{border:1px solid var(--grid);border-radius:10px;padding:0 8px;font-size:11px;color:var(--ink2)}
 .bodytxt{white-space:pre-wrap;font-size:13px;color:var(--ink2);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px;overflow-wrap:break-word}
@@ -449,13 +457,18 @@ const SFIELDS=["title","body","status","priority","tags","file"];
 // id semantics, not a lowercased substring) — mirrors kanban-web's search.js
 // GRAPH_FIELDS split from KNOWN_FIELDS.
 const GFIELDS=["tree","path"];
+// ADR 0009 (card #181): review:/blocked: sticker scopes — a bare value is
+// itself a complete "sticker present" term, UNLIKE every SFIELDS scope
+// above (mirrors kanban-web's search.js STICKER_FIELDS split).
+const STFIELDS=["review","blocked"];
 function parseTerm(tok){
 const m1=/^#(\\d+)$/.exec(tok);if(m1)return{f:"id",v:m1[1]};
 const m2=/^([A-Za-z]+):(.*)$/.exec(tok);
 if(m2){const k=m2[1].toLowerCase();
 if(k==="id"){const v=m2[2].trim();return v?{f:"id",v:v}:null}
 if(GFIELDS.indexOf(k)!==-1){const v=m2[2].trim().replace(/^#/,"");return v?{f:k,v:v}:null}
-if(SFIELDS.indexOf(k)!==-1){const v=m2[2].trim().toLowerCase();return v?{f:k,v:v}:null}}
+if(SFIELDS.indexOf(k)!==-1){const v=m2[2].trim().toLowerCase();return v?{f:k,v:v}:null}
+if(STFIELDS.indexOf(k)!==-1)return{f:k,v:m2[2].trim().toLowerCase()}}
 return{f:null,v:tok.toLowerCase()}}
 // card #74: tree:/path: terms need the full board's graph to resolve
 // (connected component / directed cone), which a single (term, card) pair
@@ -476,17 +489,24 @@ case "status":return String(c.s||"").toLowerCase().indexOf(t.v)!==-1;
 case "priority":return String(c.p||"").toLowerCase().indexOf(t.v)!==-1;
 case "tags":return tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1);
 case "file":return String(c.fn||"").toLowerCase().indexOf(t.v)!==-1;
+// ADR 0009: bare (no value) = the shared presence predicate; a value =
+// case-insensitive substring on the sticker's own text.
+case "review":return t.v?String(rvReason(c)||"").toLowerCase().indexOf(t.v)!==-1:rvReason(c)!==null;
+case "blocked":return t.v?String(blkReason(c)||"").toLowerCase().indexOf(t.v)!==-1:blkReason(c)!==null;
 case "ids":return t.ids.has(Number(c.id));
 case "tree":case "path":return false;
 default:return title.indexOf(t.v)!==-1||body.indexOf(t.v)!==-1||tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1)}})}
-// Waiting vs blocked (epic #137, card #140): waiting is DERIVED — a waiting_for
-// id whose card isn't done (archived deps count as their status field; dangling
-// ids are non-blocking). blocked is the manual sticker: text with >=1
-// alphanumeric char; false/no -> clear, true -> blocked with no stated reason.
+// Waiting vs blocked/review (epic #137, card #140; review is ADR 0009, card
+// #181): waiting is DERIVED — a waiting_for id whose card isn't done
+// (archived deps count as their status field; dangling ids are
+// non-blocking). blocked and review are the manual sticker fields, ONE
+// shared presence rule: text with >=1 alphanumeric char; false/no -> clear,
+// true -> present with no stated text. review never gates doing entry.
 const depOf=id=>find(id)||DATA.find(x=>String(x.id)===String(id));
 const unresolved=c=>(c.w||[]).filter(id=>{const d=depOf(id);return d&&d.s!=="done"});
 const blkTxt=v=>{v=String(v==null?"":v).trim();if(!v)return null;const lv=v.toLowerCase();if(lv==="false"||lv==="no")return null;if(!/[a-z0-9]/i.test(v))return null;return lv==="true"?"":v};
 const blkReason=c=>blkTxt(c.bl);
+const rvReason=c=>blkTxt(c.rv);
 // Status visibility pills (card #129): statuses default ON, archive default
 // OFF (parity with kanban-web's opt-in archive pills). Unlisted statuses have
 // no pill: they follow the catch-all column (board renders them in the first
@@ -525,19 +545,24 @@ if(o.title!==undefined)c.t=o.title;if(o.priority)c.p=o.priority;if(o.assignee!==
 if(o.fm&&!isProv(o.id)){c.fm=c.fm||{};for(const k in o.fm){const v=o.fm[k];
 if(v)c.fm[k]=v;else delete c.fm[k];
 if(k==="start_date")c.start=v;else if(k==="end_date")c.end=v;else if(k==="due_date")c.due=v;
-else if(k==="tags")c.tags=lstJS(v);else if(k==="waiting_for")c.w=lstJS(v);else if(k==="blocked")c.bl=v}}
+else if(k==="tags")c.tags=lstJS(v);else if(k==="waiting_for")c.w=lstJS(v);else if(k==="blocked")c.bl=v;else if(k==="review")c.rv=v}}
 return}
-if(o.op==="create"){nseq++;const pid="n"+nseq;const cr={op:"create",title:o.title,priority:o.priority||"Normal",status:o.status||"backlog",_pid:pid};if(o.assignee)cr.assignee=o.assignee;if(o.body)cr.body=o.body;ops.push(cr);view.push({id:pid,t:o.title,s:cr.status,p:cr.priority,a:o.assignee||"",due:"",start:"",upd:"",tags:[],w:[],bl:"",body:o.body||"",fm:{}});return}}
+if(o.op==="create"){nseq++;const pid="n"+nseq;const cr={op:"create",title:o.title,priority:o.priority||"Normal",status:o.status||"backlog",_pid:pid};if(o.assignee)cr.assignee=o.assignee;if(o.body)cr.body=o.body;ops.push(cr);view.push({id:pid,t:o.title,s:cr.status,p:cr.priority,a:o.assignee||"",due:"",start:"",upd:"",tags:[],w:[],bl:"",rv:"",body:o.body||"",fm:{}});return}}
 function cardNode(c,detail){
 const selc=String(sel)===String(c.id)||(focusRoot!=null&&String(focusRoot)===String(c.id));
 const ro=detail&&!!c.arch;
-const un=unresolved(c),br=blkReason(c);
+const un=unresolved(c),br=blkReason(c),rr=rvReason(c);
 const d=el("div","card"+(selc&&!detail?" sel":"")+(isProv(c.id)?" prov":""));
 d.dataset.card=c.id;
 d.appendChild(el("span","cid",isProv(c.id)?"#new":"#"+c.id));
 if(c.p==="High")d.appendChild(el("span","badge","HIGH"));
 if(un.length){const wb=el("span","badge wbadge","waiting");wb.title="waiting on "+un.map(x=>"#"+x).join(", ");d.appendChild(wb)}
 if(br!==null){const bb=el("span","badge","blocked");bb.title="blocked"+(br?": "+br:"");d.appendChild(bb)}
+// ADR 0009: the gold review badge, blocked's sibling — no click-to-filter
+// (this viewer has no additive query-append affordance for any badge yet;
+// "Dependency tree/path" replaces the whole query box instead — deliberate
+// gap, not mirrored here).
+if(rr!==null){const rb=el("span","badge rbadge","review");rb.title="review"+(rr?": "+rr:"");d.appendChild(rb)}
 const tEl=el("div","ttl",c.t);if(detail&&!ro){tEl.dataset.tap="ren";tEl.title="Tap to rename"}d.appendChild(tEl);
 const mp=[];if(c.a){const s=el("span",null);s.style.color=acol(c.a);s.title=c.a;s.appendChild(document.createTextNode(c.a));mp.push(s)}
 if(c.due)mp.push(document.createTextNode("due "+c.due));
@@ -591,6 +616,7 @@ if(slot.children.length)d.insertBefore(slot,d.children[1])}
 if(detail){
 if(un.length)d.appendChild(el("div","meta wline","waiting on "+un.map(x=>"#"+x).join(", ")));
 if(br!==null)d.appendChild(el("div","meta bline","blocked: "+(br||"reason unspecified")));
+if(rr!==null)d.appendChild(el("div","meta rline","review: "+(rr||"text unspecified")));
 if(c.tags&&c.tags.length){const tg=el("div","tags");c.tags.forEach(t=>tg.appendChild(el("span","tag",t)));d.appendChild(tg)}
 const det=[];if(c.start)det.push("start "+c.start);if(c.upd)det.push("updated "+c.upd);
 if(det.length)d.appendChild(el("div","meta",det.join(" \\u00b7 ")));
@@ -610,13 +636,14 @@ const fr=el("div","acts");fr.style.borderTop="none";fr.style.paddingTop="4px";
 fr.appendChild(btn((fmOpen?"\\u25be":"\\u25b8")+" All fields","fmtoggle"));
 d.appendChild(fr);
 if(fmOpen){
-const staples=["start_date","end_date","due_date","tags","waiting_for","blocked"];
+const staples=["start_date","end_date","due_date","tags","waiting_for","blocked","review"];
 const keys=[...new Set(staples.concat(Object.keys(c.fm||{})))].filter(k=>["status","priority","assignee","updated"].indexOf(k)===-1);
 keys.forEach(k=>{
 const row=el("div","fmrow");
 row.appendChild(el("label",null,k));
 const inp=el("input");inp.type="text";inp.id="fm-"+k;inp.dataset.stop="1";inp.value=(c.fm&&c.fm[k])||"";
 if(k==="blocked"&&blkTxt(inp.value)!==null)inp.style.borderColor="var(--high)";
+if(k==="review"&&blkTxt(inp.value)!==null)inp.style.borderColor="var(--rev)";
 row.appendChild(inp);
 row.appendChild(btn("Save","fmsave",{key:k}));
 d.appendChild(row)})}}
@@ -1245,7 +1272,8 @@ const t=e.target;
 if(t.dataset&&t.dataset.act==="asg"){const card=t.closest("[data-card]");if(card){queue({op:"edit",id:card.dataset.card,assignee:t.value});pillEd=null;render()}}});
 document.body.addEventListener("input",e=>{
 const t=e.target;
-if(t.id==="fm-blocked")t.style.borderColor=blkTxt(t.value)!==null?"var(--high)":""});
+if(t.id==="fm-blocked")t.style.borderColor=blkTxt(t.value)!==null?"var(--high)":"";
+if(t.id==="fm-review")t.style.borderColor=blkTxt(t.value)!==null?"var(--rev)":""});
 document.body.addEventListener("click",e=>{
 const t=e.target.closest("button,select,input,textarea,[data-card],[data-mapnode],[data-coltoggle],[data-tap],[data-caldaytoggle],[data-calhrtoggle]");
 if(!t)return;

@@ -42,6 +42,18 @@ test('a valueless A:/a: prefix (mid-typing) is dropped, same as the other scoped
   assert.deepStrictEqual(parseSearchQuery('a:'), []);
 });
 
+// --- ADR 0009 (card #181): review:/blocked: sticker scopes ------------------
+
+test('review: and blocked: parse as their own scoped term, value lowercased like the other substring scopes', () => {
+  assert.deepStrictEqual(parseSearchQuery('review:PR'), [{ field: 'review', value: 'pr' }]);
+  assert.deepStrictEqual(parseSearchQuery('blocked:Vendor'), [{ field: 'blocked', value: 'vendor' }]);
+});
+
+test('UNLIKE every other scoped prefix, a bare review:/blocked: (no value) is a COMPLETE term, not dropped', () => {
+  assert.deepStrictEqual(parseSearchQuery('review:'), [{ field: 'review', value: '' }]);
+  assert.deepStrictEqual(parseSearchQuery('blocked:'), [{ field: 'blocked', value: '' }]);
+});
+
 test('bare text (no prefix) parses as a null-field term', () => {
   assert.deepStrictEqual(parseSearchQuery('foo'), [{ field: null, value: 'foo' }]);
 });
@@ -154,6 +166,38 @@ test('assignee: substring-matches the handle, case-insensitively; A:/a: match id
   assert.deepStrictEqual(idsFor2('A:afk'), [1]);
   assert.deepStrictEqual(idsFor2('a:afk'), [1]);
   assert.deepStrictEqual(idsFor2('assignee:hitl'), [2]);
+});
+
+test('review:/blocked: bare term matches exactly the cards passing the sticker predicate (ADR 0009)', () => {
+  const cards = [
+    { id: 1, title: 'a', body: '', status: 'todo', priority: 'Normal', tags: [], review: 'PR #6' },
+    { id: 2, title: 'b', body: '', status: 'todo', priority: 'Normal', tags: [], blocked: 'vendor outage' },
+    { id: 3, title: 'c', body: '', status: 'todo', priority: 'Normal', tags: [], review: 'false', blocked: 'no' }, // both clear (YAML special-case)
+    { id: 4, title: 'd', body: '', status: 'todo', priority: 'Normal', tags: [] }, // neither field present
+  ];
+  const idsFor3 = (q) => filterCards(cards, parseSearchQuery(q)).map((c) => c.id);
+  assert.deepStrictEqual(idsFor3('review:'), [1]);
+  assert.deepStrictEqual(idsFor3('blocked:'), [2]);
+});
+
+test('review:<text> / blocked:<text> substring-match the sticker text, case-insensitively — a card missing the field never matches', () => {
+  const cards = [
+    { id: 1, title: 'a', body: '', status: 'todo', priority: 'Normal', tags: [], review: 'PR #6' },
+    { id: 2, title: 'b', body: '', status: 'todo', priority: 'Normal', tags: [], review: 'read the design doc' },
+    { id: 3, title: 'c', body: '', status: 'todo', priority: 'Normal', tags: [], blocked: 'vendor outage' },
+  ];
+  const idsFor3 = (q) => filterCards(cards, parseSearchQuery(q)).map((c) => c.id);
+  assert.deepStrictEqual(idsFor3('review:PR'), [1]);
+  assert.deepStrictEqual(idsFor3('review:pr'), [1]);
+  assert.deepStrictEqual(idsFor3('blocked:vendor'), [3]);
+  assert.deepStrictEqual(idsFor3('review:nope'), []);
+});
+
+test('a bare `review: true`/`blocked: true` sticker (text unspecified) is present but matches no substring term', () => {
+  const cards = [{ id: 1, title: 'a', body: '', status: 'todo', priority: 'Normal', tags: [], review: true }];
+  const idsFor3 = (q) => filterCards(cards, parseSearchQuery(q)).map((c) => c.id);
+  assert.deepStrictEqual(idsFor3('review:'), [1], 'bare presence still matches');
+  assert.deepStrictEqual(idsFor3('review:x'), [], 'no text to substring-match against');
 });
 
 test('bare text hits title + body + tags, not status/priority', () => {

@@ -520,6 +520,16 @@ function cardEl(card) {
     pill.title = blockedLabel(card.blocked);
     el.querySelector('.card-head').appendChild(pill);
   }
+  // ADR 0009 (card #181): the gold review pill — blocked's sibling sticker,
+  // "finished, approve me" rather than a stop sign, so its own color family.
+  // Same USER-DATA-in-tooltip discipline: textContent/title property only.
+  if (isReviewValue(card.review)) {
+    const pill = document.createElement('span');
+    pill.className = 'review-pill';
+    pill.textContent = 'review';
+    pill.title = reviewLabel(card.review);
+    el.querySelector('.card-head').appendChild(pill);
+  }
   return el;
 }
 
@@ -1449,6 +1459,11 @@ function syncBlockedInputStyle() {
   $('#f-blocked').classList.toggle('blocked-active', isBlockedValue($('#f-blocked').value));
 }
 
+// ADR 0009 (card #181): review's own live-feedback twin of syncBlockedInputStyle.
+function syncReviewInputStyle() {
+  $('#f-review').classList.toggle('review-active', isReviewValue($('#f-review').value));
+}
+
 // card #183 (kanban.proj #191 replaced the dot with tinted text): the
 // modal's own live color cue for the field currently being typed — same
 // handle-color contract the board tiles wear (assigneeBadge's text tint),
@@ -1480,6 +1495,8 @@ function openModal(card, presetStatus) {
   $('#f-waiting').value = card ? card.waiting_for.join(', ') : '';
   $('#f-blocked').value = card && card.blocked ? card.blocked : '';
   syncBlockedInputStyle(); // epic #137: red border iff the value passes the predicate
+  $('#f-review').value = card && card.review ? card.review : '';
+  syncReviewInputStyle(); // ADR 0009: gold border iff the value passes the predicate
   $('#f-assignee').value = card && card.assignee ? card.assignee : '';
   syncAssigneeColor(); // card #183: live color cue matches whatever the field now holds
   $('#f-start').value = card && card.start_date ? card.start_date : ''; // card #36
@@ -1511,7 +1528,7 @@ let formSnapshot = null;
 function snapshotFormFields() {
   return {
     title: $('#f-title').value, status: $('#f-status').value, priority: $('#f-priority').value,
-    tags: $('#f-tags').value, waiting: $('#f-waiting').value, blocked: $('#f-blocked').value, assignee: $('#f-assignee').value,
+    tags: $('#f-tags').value, waiting: $('#f-waiting').value, blocked: $('#f-blocked').value, review: $('#f-review').value, assignee: $('#f-assignee').value,
     start: $('#f-start').value, end: $('#f-end').value, due: $('#f-due').value, body: $('#f-body').value, // card #36/#40: the whole date triad joins the dirty baseline
     epic: $('#f-epic').checked, // card #59: a toggled checkbox is typed work too (isDirty compares booleans fine)
   };
@@ -1542,6 +1559,7 @@ async function submitModal(e) {
     // The sticker's raw text — the store's predicate-judged lean rule strips
     // an invalid/clear value (so a blank simply removes the line).
     blocked: $('#f-blocked').value.trim(),
+    review: $('#f-review').value.trim(), // ADR 0009: same lean-rule contract as blocked
     assignee: $('#f-assignee').value.trim(),
     start_date: $('#f-start').value.trim(), // card #36: empty string clears, same as due
     end_date: $('#f-end').value.trim(), // card #40: same clear contract
@@ -1576,6 +1594,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#card-form').addEventListener('submit', submitModal);
   $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback
+  $('#f-review').addEventListener('input', syncReviewInputStyle); // ADR 0009: live gold-border feedback
   $('#f-assignee').addEventListener('input', syncAssigneeColor); // card #183: live color-text feedback
   $('#modal-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('edit'));
   // Single delegated listener on #board covers all five columns (renderBoard()
@@ -3677,13 +3696,17 @@ window.addEventListener('DOMContentLoaded', () => {
     // select/open logic below, additive guard only (no restructuring of
     // either element; #183 is concurrently touching .card-assignee's inner
     // markup on its own branch). See addSearchTerm for the additive/no-op
-    // contract.
-    const cue = e.target.closest('.card-assignee, .tag');
+    // contract. ADR 0009 (card #181): the blocked/review pills join the same
+    // shortcut — always the bare presence term, read from state, never the
+    // pill's own text (the reason itself isn't a search key).
+    const cue = e.target.closest('.card-assignee, .tag, .blocked-pill, .review-pill');
     if (cue) {
       const card = state.active.concat(state.archived).find((c) => c.id === id);
       if (card) {
         if (cue.classList.contains('card-assignee') && card.assignee) addSearchTerm(`assignee:${card.assignee}`);
         else if (cue.classList.contains('tag')) addSearchTerm(`tags:${cue.textContent}`);
+        else if (cue.classList.contains('blocked-pill')) addSearchTerm('blocked:');
+        else if (cue.classList.contains('review-pill')) addSearchTerm('review:');
       }
       return;
     }

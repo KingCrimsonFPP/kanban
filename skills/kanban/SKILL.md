@@ -31,6 +31,7 @@ Each card's frontmatter supports the following fields:
 - `priority` — one of the board's official `priorities` list in `config.yaml` (built-in default: `High`, `Normal`, `Low` — ordered highest first). Free text is allowed but sorts after all official values. Defaults to `Normal` if omitted.
 - `waiting_for` — List of card IDs this card depends on (dependency edges). Example: `[3, 7]`. Replaces `blocked_by` (hard cutover, card #137 — no reader honors the old name). **Waiting is derived at read time, never stored:** the card is *waiting* while any listed card is not `done`; when every dep lands, the waiting state disappears on its own. A listed id with no matching card (dangling) is **non-blocking** — it never makes the card waiting. A dependency is sequencing, not an impediment; don't call it "blocked". Omit if empty — an empty `[]` stays legal on read, but it's no-data boilerplate the `kanban-web` app strips on its next managed write (card #51), so don't write it.
 - `blocked` — (optional) Manual impediment sticker, human stop sign; the value is the **reason** as free text. Example: `blocked: legal sign-off pending`. The card is *blocked* iff the trimmed value contains ≥ 1 alphanumeric character; YAML boolean special-case: `false`/`no` → not blocked, `true` → blocked with reason unspecified. Lean rule (card #51): omit the field entirely when the card is clear — never write `blocked: false`. **No eviction:** blocking a card already in `doing` leaves it there; the gate below is entry-only. **Agents never grab a blocked card, in any column** — clearing the sticker is the human's call.
+- `review` — (optional) "Finished — approve me" sticker, `blocked`'s sibling (ADR 0009, card #181): the value is the **text** describing what to check, free text. Example: `review: PR #6`. Same predicate as `blocked` (trimmed value ≥ 1 alphanumeric character; YAML `false`/`no` → not present, `true` → present, text unspecified) and the same lean rule (card #51) — omit the field entirely when clear, never write `review: false`. Where `blocked` is "stuck, act so I can proceed," `review` is "done, approve me" — it overlays any status exactly like `blocked` and does **NOT** gate `doing` entry (the gate below stays `waiting` + `blocked` only). A PR-shaped value (`review: PR #6`) is polled by the AFK dispatcher each tick; free text is cleared by the human on approval. **Agents never grab a review-stickered card, in any column** — it awaits human approval; clearing the sticker is the human's (or, for a merged PR, the dispatcher's) call. See `docs/adr/0009-review-and-attention-are-stickers.md`.
 - `assignee` — (optional) Owner of the card. If the board's `config.yaml` has an `assignees` registry, prefer those handles (it suggests, never validates — free text is fine).
 - `start_date` — (optional) The working range's **from**: a date (`YYYY-MM-DD`) or a local datetime (`YYYY-MM-DDTHH:MM`). Pairs with `end_date` as the from–to working range; alone = a 1-day range at start. The `kanban-web` app auto-stamps it with today's local date when a card lands in the literal status `todo` and the field is empty (card #52) — mirror that stamp when moving a card into `todo` by hand (see Moving a Card below); never overwrite an existing value.
 - `end_date` — (optional) The working range's **to**: same date/datetime forms. Alone = a 1-day range at end. Nothing validates ordering — a reversed range (start after end) is tolerated (date-aware views treat it as a 1-day event at the range end). **Compat fallback:** when `end_date` is absent but `start_date` AND `due_date` are both present, the range is start→due, so pre-triad cards keep reading as ranges. The `kanban-web` app auto-stamps it with today's local date when a card lands in the literal status `done` and the field is empty (card #52) — mirror that stamp when moving a card into `done` by hand; never overwrite an existing value.
@@ -74,7 +75,7 @@ Update the `status` field in frontmatter.
 
 Landing in the literal status `todo` stamps `start_date`; landing in `done` stamps `end_date` — today's local date (`YYYY-MM-DD`), only when the field is empty, never overwriting an existing value (card #52). The `kanban-web` app stamps this on every status-changing path; when moving a card by hand, stamp it the same way (same reason as the `updated` bump — the working range stays meaningful regardless of which tool made the move).
 
-**Entry gate to the literal status `doing` (card #137):** before moving a card to `doing`, verify it is neither **waiting** (some `waiting_for` id names a card not `done`; dangling ids don't count) nor **blocked** (`blocked` holds a valid reason — trimmed value with ≥ 1 alphanumeric character, or YAML `true`). If either holds, refuse and name which: "waiting on #34" / "blocked: <reason>". No eviction — the gate applies on entry only; a card already in `doing` that gets blocked stays there. And regardless of column, agents never grab a blocked card.
+**Entry gate to the literal status `doing` (card #137):** before moving a card to `doing`, verify it is neither **waiting** (some `waiting_for` id names a card not `done`; dangling ids don't count) nor **blocked** (`blocked` holds a valid reason — trimmed value with ≥ 1 alphanumeric character, or YAML `true`). If either holds, refuse and name which: "waiting on #34" / "blocked: <reason>". No eviction — the gate applies on entry only; a card already in `doing` that gets blocked stays there. And regardless of column, agents never grab a blocked card. **`review` (ADR 0009) does NOT gate `doing` entry** — the gate stays `waiting` + `blocked`, exactly as above; a card can be moved into (or stay in) `doing` while wearing a `review` sticker. Regardless of column, agents never grab a review-stickered card either — same "not yours to touch" stance as blocked, just for a different reason (finished, not stuck).
 
 Cards with `status: done` may be moved into `kanban/archived/` to keep the main board tidy. This is a file-location move only; the card should remain a normal card with `status: done` unless explicitly changed.
 If `kanban/archived/` does not exist, create it under the active cards folder (`kanban/`) before moving the card.
@@ -178,7 +179,7 @@ Run the board view script:
 bash <SCRIPTS_DIR>/view_board.sh kanban/
 ```
 
-Outputs cards grouped by status column, with priority, waiting (unresolved `waiting_for` ids only), and blocked (reason) flags inline.
+Outputs cards grouped by status column, with priority, waiting (unresolved `waiting_for` ids only), blocked (reason), and review (text) flags inline.
 
 ## Searching and Filtering
 
@@ -199,6 +200,12 @@ Output: Cards matching the search term with context lines
 bash <SCRIPTS_DIR>/show_blocked.sh kanban/
 ```
 Output: Cards whose `blocked` sticker passes the predicate, reason inline.
+
+### Show Review Cards (manual/dispatcher sticker)
+```bash
+bash <SCRIPTS_DIR>/show_review.sh kanban/
+```
+Output: Cards whose `review` sticker passes the predicate (`blocked`'s sibling, ADR 0009), text inline. Does not affect the `doing` entry gate.
 
 ### Show Waiting Cards (unresolved dependencies)
 ```bash
@@ -222,6 +229,6 @@ Output: All cards in pipe-delimited format (id|status|waiting_for|blocked|title)
 ```bash
 bash <SCRIPTS_DIR>/eligible_cards.sh kanban/ [assignee]
 ```
-Output: `todo` cards (literal status) that are doing-gate clear — not waiting (`show_waiting.sh` semantics: dangling `waiting_for` ids and all-`done` deps don't count) and not blocked (`show_blocked.sh` predicate) — as `id|priority|assignee|title`, sorted by ID. The optional `assignee` arg filters the result and is quote-normalized, so `@afk` and `"@afk"` both match the on-disk `assignee: "@afk"`; omitted returns every assignee. The one-call answer to "what can an agent pick up right now" — no re-deriving the gate from raw card files.
+Output: `todo` cards (literal status) that are doing-gate clear — not waiting (`show_waiting.sh` semantics: dangling `waiting_for` ids and all-`done` deps don't count), not blocked (`show_blocked.sh` predicate), and not review-stickered (`show_review.sh` predicate — ADR 0009: agents skip a card awaiting human approval, same as blocked, even though `review` doesn't gate `doing`) — as `id|priority|assignee|title`, sorted by ID. The optional `assignee` arg filters the result and is quote-normalized, so `@afk` and `"@afk"` both match the on-disk `assignee: "@afk"`; omitted returns every assignee. The one-call answer to "what can an agent pick up right now" — no re-deriving the gate from raw card files.
 
 **Note:** `<SCRIPTS_DIR>` refers to the `scripts/` directory next to this SKILL.md file. All scripts take the kanban directory as the first argument. If omitted, they default to the current directory.

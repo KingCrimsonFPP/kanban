@@ -1,6 +1,10 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { isBlockedValue, blockedReason, blockedLabel, unresolvedWaits } = require('../web/waiting-blocked');
+const {
+  isBlockedValue, blockedReason, blockedLabel,
+  isReviewValue, reviewReason, reviewLabel,
+  unresolvedWaits,
+} = require('../web/waiting-blocked');
 
 // epic #137 / card #139: the ONE shared home of both doing-gate predicates.
 // card-store.js (the store) and app.js/dependency-graph.js (the UI) all call
@@ -57,6 +61,34 @@ test('blockedLabel: the epic-fixed refusal wording — "blocked: <reason>" or th
   assert.strictEqual(blockedLabel('vendor outage'), 'blocked: vendor outage');
   assert.strictEqual(blockedLabel('true'), 'blocked');
   assert.strictEqual(blockedLabel('false'), 'blocked', 'label for a clear value is never shown — callers gate on isBlockedValue first');
+});
+
+// --- ADR 0009: review is blocked's sibling sticker, same predicate ----------
+
+test('isReviewValue: exact same predicate as isBlockedValue (ADR 0009 — one presence rule, two stickers)', () => {
+  assert.strictEqual(isReviewValue('PR #6'), true);
+  assert.strictEqual(isReviewValue('  '), false);
+  assert.strictEqual(isReviewValue('false'), false);
+  assert.strictEqual(isReviewValue('no'), false);
+  assert.strictEqual(isReviewValue('true'), true);
+  assert.strictEqual(isReviewValue(true), true);
+  assert.strictEqual(isReviewValue(false), false);
+  assert.strictEqual(isReviewValue(null), false);
+  assert.strictEqual(isReviewValue(undefined), false);
+});
+
+test('reviewReason: the trimmed text for a valid sticker; empty for true (unspecified) and for any clear value', () => {
+  assert.strictEqual(reviewReason(' PR #6 '), 'PR #6');
+  assert.strictEqual(reviewReason('true'), '');
+  assert.strictEqual(reviewReason(true), '');
+  assert.strictEqual(reviewReason('false'), '');
+  assert.strictEqual(reviewReason(null), '');
+});
+
+test('reviewLabel: "review: <text>" or the bare "review" — never "blocked"', () => {
+  assert.strictEqual(reviewLabel('PR #6'), 'review: PR #6');
+  assert.strictEqual(reviewLabel('true'), 'review');
+  assert.strictEqual(reviewLabel('false'), 'review', 'label for a clear value is never shown — callers gate on isReviewValue first');
 });
 
 // --- the waiting predicate -----------------------------------------------------

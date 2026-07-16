@@ -18,6 +18,12 @@
 //                 lowercasing logic runs, so it shares every rule below with
 //                 the long form (case-insensitive substring, dropped when
 //                 valueless mid-typing).
+//   review: / blocked:   sticker scopes (ADR 0009, card #181) — UNLIKE every
+//                 KNOWN_FIELDS scope above, a bare `review:`/`blocked:` (no
+//                 value) is a COMPLETE term meaning "the sticker is present"
+//                 (the shared isReviewValue/isBlockedValue predicate), never
+//                 dropped as mid-typing. `review:PR` / `blocked:vendor` is a
+//                 case-insensitive substring match on the sticker's text.
 //   tree:74 / tree:#74   card #74's dependency tree — the connected component
 //                 (undirected) reachable from card 74 over the SAME edges the
 //                 map draws (waiting_for + #151 parent: membership).
@@ -42,11 +48,18 @@
 // tree:/path: resolution needs the full card graph, which a single (term,
 // card) pair doesn't have — see filterCards below for where that happens.
 const DG = (typeof module !== 'undefined' && module.exports) ? require('./dependency-graph') : window;
+// Named WBS (not WB) — dependency-graph.js already claims WB in this shared
+// page scope (card #60: every web/*.js top-level name must be unique).
+const WBS = (typeof module !== 'undefined' && module.exports) ? require('./waiting-blocked') : window;
 
 const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file', 'assignee'];
 // tree:/path: are deliberately NOT in KNOWN_FIELDS — that array drives the
 // lowercased-substring value semantics, which don't apply to a numeric id.
 const GRAPH_FIELDS = ['tree', 'path'];
+// ADR 0009 / card #181: review:/blocked: are their own field family — a
+// bare value is a valid presence term (unlike KNOWN_FIELDS, where a bare
+// scope is dropped as mid-typing), so they're parsed separately below.
+const STICKER_FIELDS = ['review', 'blocked'];
 // kanban.proj #186: `A:`/`a:` is a thin alias for `assignee:` — resolved here,
 // before the KNOWN_FIELDS check, so the alias falls through the exact same
 // value/lowercasing path as the long form rather than duplicating it.
@@ -73,6 +86,11 @@ function parseTerm(token) {
       const value = prefixed[2].trim().toLowerCase();
       return value ? { field: key, value } : null;
     }
+    // ADR 0009: bare review:/blocked: is itself a complete "sticker present"
+    // term — always returned, even with an empty value (never dropped).
+    if (STICKER_FIELDS.includes(key)) {
+      return { field: key, value: prefixed[2].trim().toLowerCase() };
+    }
   }
 
   return { field: null, value: token.toLowerCase() };
@@ -95,6 +113,12 @@ function termMatchesCard(term, card) {
     case 'tags': return tags.some((t) => t.toLowerCase().includes(term.value));
     case 'file': return (card.file || '').toLowerCase().includes(term.value);
     case 'assignee': return (card.assignee || '').toLowerCase().includes(term.value);
+    // ADR 0009: bare (no value) = the shared presence predicate; a value =
+    // case-insensitive substring on the sticker's own text (never the raw
+    // field — a bare `true` sticker's text is '', which no non-empty
+    // substring term matches, exactly mirroring the pill's own label).
+    case 'review': return term.value ? WBS.reviewReason(card.review).toLowerCase().includes(term.value) : WBS.isReviewValue(card.review);
+    case 'blocked': return term.value ? WBS.blockedReason(card.blocked).toLowerCase().includes(term.value) : WBS.isBlockedValue(card.blocked);
     // card #74: pre-resolved by filterCards (below) into an id Set — a raw,
     // unresolved 'tree'/'path' term has no graph to resolve against here (a
     // single (term, card) pair isn't enough), so it matches nothing rather

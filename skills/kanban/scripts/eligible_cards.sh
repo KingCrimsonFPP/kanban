@@ -2,7 +2,10 @@
 # Doing-gate-clear todo cards, ready for pickup (card #156): status EXACTLY
 # `todo` (literal, case-sensitive) AND not waiting (show_waiting.sh semantics:
 # some waiting_for id names a card, live or archived, whose status != done;
-# dangling ids don't count) AND not blocked (show_blocked.sh predicate).
+# dangling ids don't count) AND not blocked (show_blocked.sh predicate) AND
+# not review-stickered (show_review.sh predicate — ADR 0009, card #181:
+# agents skip a card awaiting human approval, same stance as blocked, even
+# though `review` doesn't gate the literal `doing` entry check).
 # Optional assignee arg filters the result, quote-normalized so `@afk` and
 # `"@afk"` both match the on-disk `assignee: "@afk"`; omitted = all assignees.
 # Output: id|priority|assignee|title, sorted by id. Main kanban/ only —
@@ -27,6 +30,27 @@ blocked_reason() {
     case "$lower" in
         false|no) return 1 ;;
         true) printf 'reason unspecified'; return 0 ;;
+    esac
+    case "$v" in
+        *[[:alnum:]]*) printf '%s' "$v"; return 0 ;;
+    esac
+    return 1
+}
+
+# review's sibling of blocked_reason — same predicate, applied to the
+# `review` field (ADR 0009, card #181).
+review_text() {
+    local v="$1"
+    v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
+    case "$v" in
+        \"*\") v="${v#\"}"; v="${v%\"}" ;;
+        \'*\') v="${v#\'}"; v="${v%\'}" ;;
+    esac
+    local lower
+    lower=$(printf '%s' "$v" | tr '[:upper:]' '[:lower:]')
+    case "$lower" in
+        false|no) return 1 ;;
+        true) printf 'text unspecified'; return 0 ;;
     esac
     case "$v" in
         *[[:alnum:]]*) printf '%s' "$v"; return 0 ;;
@@ -85,6 +109,7 @@ for file in "$KANBAN_DIR"/*.card.md; do
     fi
 
     blocked_reason "$(field "$file" blocked)" >/dev/null && continue
+    review_text "$(field "$file" review)" >/dev/null && continue
 
     assignee=$(dequote "$(field "$file" assignee)")
     if [ -n "$ASSIGNEE_FILTER" ]; then

@@ -3,10 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const { allocateId } = require('./config-store');
 // The ONE home of both `doing`-gate predicates (epic #137): waiting (derived
-// from waiting_for) and blocked (the manual sticker). Dual-environment — the
-// browser loads the same file as a plain <script>, so store and UI can never
-// drift on what "waiting" or "blocked" means.
-const { isBlockedValue, blockedReason, unresolvedWaits } = require('../web/waiting-blocked');
+// from waiting_for) and blocked (the manual sticker) — plus review (ADR
+// 0009, card #181), blocked's sibling sticker that does NOT gate `doing`.
+// Dual-environment — the browser loads the same file as a plain <script>, so
+// store and UI can never drift on what "waiting"/"blocked"/"review" means.
+const { isBlockedValue, blockedReason, isReviewValue, unresolvedWaits } = require('../web/waiting-blocked');
 
 // values[k] = substring after the FIRST ':' (including its leading space), kept verbatim.
 function parseFrontmatter(raw) {
@@ -150,6 +151,10 @@ function readCardFile(file, archived = false) {
     // shared predicate decides blockedness at read time, so `blocked: false`
     // round-trips for display without ever gating.
     blocked: stripQuotes(get('blocked')) || null,
+    // review sticker (ADR 0009): same raw-verbatim contract as blocked, but
+    // it never gates `doing` entry — see the entry-gate check in updateCard/
+    // createCard below, which reads only waiting_for/blocked.
+    review: stripQuotes(get('review')) || null,
     tags: parseList(get('tags')),
     assignee: stripQuotes(get('assignee')) || null,
     start_date: get('start_date') || null, // card #36: range start ("from"), date or local datetime, never validated
@@ -292,6 +297,13 @@ function updateCard(dir, id, changes) {
     if (isBlockedValue(changes.blocked)) setField(order, values, 'blocked', String(changes.blocked).trim());
     else removeField(order, values, 'blocked');
   }
+  // Review sticker (ADR 0009, card #181): blocked's sibling — same predicate-
+  // judged lean rule, but no `doing`-gate check (review overlays any status,
+  // including doing, without refusing entry).
+  if (changes.review !== undefined) {
+    if (isReviewValue(changes.review)) setField(order, values, 'review', String(changes.review).trim());
+    else removeField(order, values, 'review');
+  }
   // Optional fields: non-empty sets, empty string CLEARS (removes the line —
   // bulk unassign, card #32; also makes the edit form's blank actually clear),
   // undefined leaves the card alone. A blank never injects an empty line —
@@ -398,6 +410,9 @@ function createCard(dir, input) {
   // Blocked sticker: same predicate-judged lean rule as updateCard — an
   // invalid value writes no line at all.
   if (isBlockedValue(input.blocked)) { order.push('blocked'); values.blocked = ` ${String(input.blocked).trim()}`; }
+  // Review sticker (ADR 0009): same lean rule; birth into `doing` is never
+  // refused by it (only waiting_for/blocked gate entry, above).
+  if (isReviewValue(input.review)) { order.push('review'); values.review = ` ${String(input.review).trim()}`; }
   // card #51: trimmed guard — a whitespace-only assignee is no data (quoteAssignee trims it to '')
   if (String(input.assignee || '').trim()) { order.push('assignee'); values.assignee = ` ${quoteAssignee(input.assignee)}`; }
   // card #52: a card born directly in literal 'todo'/'done' counts as a
@@ -454,8 +469,8 @@ function cardDetail(dir, id) {
 // the board (`0011.foo.card.md`), not a filesystem path that would leak the
 // board's on-disk location to every client of this JSON.
 function toJSON(card) {
-  const { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file } = card;
-  return { id, status, priority, waiting_for, blocked, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
+  const { id, status, priority, waiting_for, blocked, review, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file } = card;
+  return { id, status, priority, waiting_for, blocked, review, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
 }
 
 function archiveCard(dir, id) {
