@@ -12,6 +12,12 @@
 //   priority:high substring on priority
 //   tags:ui       substring on any one tag
 //   file:0011     substring on the card's filename (basename)
+//   assignee:@afk substring on the card's assignee handle. `A:`/`a:` (kanban.proj
+//                 #186) is a thin alias for this same scope — resolved to
+//                 'assignee' at parse time, before the KNOWN_FIELDS value/
+//                 lowercasing logic runs, so it shares every rule below with
+//                 the long form (case-insensitive substring, dropped when
+//                 valueless mid-typing).
 //   tree:74 / tree:#74   card #74's dependency tree — the connected component
 //                 (undirected) reachable from card 74 over the SAME edges the
 //                 map draws (waiting_for + #151 parent: membership).
@@ -37,10 +43,14 @@
 // card) pair doesn't have — see filterCards below for where that happens.
 const DG = (typeof module !== 'undefined' && module.exports) ? require('./dependency-graph') : window;
 
-const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file'];
+const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file', 'assignee'];
 // tree:/path: are deliberately NOT in KNOWN_FIELDS — that array drives the
 // lowercased-substring value semantics, which don't apply to a numeric id.
 const GRAPH_FIELDS = ['tree', 'path'];
+// kanban.proj #186: `A:`/`a:` is a thin alias for `assignee:` — resolved here,
+// before the KNOWN_FIELDS check, so the alias falls through the exact same
+// value/lowercasing path as the long form rather than duplicating it.
+const FIELD_ALIASES = { a: 'assignee' };
 
 function parseTerm(token) {
   const idShorthand = token.match(/^#(\d+)$/);
@@ -48,7 +58,7 @@ function parseTerm(token) {
 
   const prefixed = token.match(/^([A-Za-z]+):(.*)$/);
   if (prefixed) {
-    const key = prefixed[1].toLowerCase();
+    const key = FIELD_ALIASES[prefixed[1].toLowerCase()] || prefixed[1].toLowerCase();
     if (key === 'id') {
       const value = prefixed[2].trim();
       return value ? { field: 'id', value } : null;
@@ -84,6 +94,7 @@ function termMatchesCard(term, card) {
     case 'priority': return (card.priority || '').toLowerCase().includes(term.value);
     case 'tags': return tags.some((t) => t.toLowerCase().includes(term.value));
     case 'file': return (card.file || '').toLowerCase().includes(term.value);
+    case 'assignee': return (card.assignee || '').toLowerCase().includes(term.value);
     // card #74: pre-resolved by filterCards (below) into an id Set — a raw,
     // unresolved 'tree'/'path' term has no graph to resolve against here (a
     // single (term, card) pair isn't enough), so it matches nothing rather
@@ -132,10 +143,55 @@ function filterCards(cards, terms) {
   return cards.filter((card) => cardMatchesQuery(card, resolved));
 }
 
+// kanban.proj #187: the search box's autocomplete dropdown. Pure candidate
+// generation — no DOM, mirrors every other module here. Only the LAST
+// whitespace-separated segment of the query is ever completed (the terms
+// before it are query grammar the parser already accepted; re-suggesting
+// scopes for them would be noise), same "complete what's currently being
+// typed" contract as combobox.js's tagMode, just space- instead of
+// comma-delimited.
+//
+// Given that segment, offers the bare term plus every KNOWN_FIELDS scoped
+// form (title:/body:/status:/priority:/tags:/file:/assignee: — literally
+// "the grammar", so a future new scope shows up here for free with no
+// second list to maintain). tree:/path: are excluded: they take a numeric
+// card id, not free text, so completing e.g. "tree:@afk" would never match
+// anything.
+//
+// No suggestions (empty array, dropdown stays closed) when:
+// - the segment is empty (nothing typed yet, or trailing whitespace —
+//   same "not-yet-a-term" contract parseTerm uses for a bare "status:")
+// - the segment already carries a recognized OR unrecognized `foo:` prefix
+//   (a colon anywhere in it) — it's already scoped, or already a bare
+//   fallback term; re-offering scopes on top of that reads as broken, not
+//   helpful
+//
+// `value` is the FULL replacement text for the input (prior terms preserved
+// verbatim, segment replaced) — so picking a suggestion is a plain whole-
+// value swap, no special-cased "insert at cursor" logic needed. `label` is
+// just the new term, undecorated by the terms before it, so the menu reads
+// as "here's what this word could become" rather than repeating the whole
+// query back on every row.
+function searchSuggestionItems(raw) {
+  const text = String(raw || '');
+  if (/\s$/.test(text)) return []; // trailing space: no segment is being typed right now
+  const parts = text.split(/\s+/).filter(Boolean);
+  const segment = parts.pop() || '';
+  if (!segment || segment.includes(':')) return [];
+  const prefix = parts.length ? `${parts.join(' ')} ` : '';
+  const items = [{ value: prefix + segment, label: segment }];
+  KNOWN_FIELDS.forEach((field) => {
+    const label = `${field}:${segment}`;
+    items.push({ value: prefix + label, label });
+  });
+  return items;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseSearchQuery, cardMatchesQuery, filterCards };
+  module.exports = { parseSearchQuery, cardMatchesQuery, filterCards, searchSuggestionItems };
 } else {
   window.parseSearchQuery = parseSearchQuery;
   window.cardMatchesQuery = cardMatchesQuery;
   window.filterCards = filterCards;
+  window.searchSuggestionItems = searchSuggestionItems;
 }
