@@ -474,17 +474,17 @@ function paintAssigneeColors(root) {
 function cardEl(card) {
   const el = document.createElement('div');
   const pb = priorityBadge(card, state.priorities); // card #30: emphasis by rank in the configured list, label pre-escaped
-  // card #91: epic is a shared dot glyph (epicBadge(), status-colors.js), not
-  // a border class anymore — #59's border-recoloring is gone, so priority/
-  // blocked/column membership need no gating around it. Archived tiles never
-  // call cardEl at all (archiveCardEl is a separate function that never grew
-  // this markup), so an archived epic still shows no epic cue on the board —
-  // unchanged from #59's behavior, just no longer border-shaped.
+  // card #45: epic is a class now (`.card.epic`, app.css), not a dot glyph
+  // (card #91's epicBadge()) — circles are reserved for status alone, so
+  // priority/blocked/column membership need no gating around it, same as
+  // before. Archived tiles never call cardEl at all (archiveCardEl is a
+  // separate function that never grew this class), so an archived epic still
+  // shows no epic cue on the board — unchanged from #91's behavior.
   // card #97: statusBadge() joins it unconditionally (every card has a
   // status; unlike epic there's no absent case) — status is already implied
   // by column placement here, but the card asks for the dot on every surface
   // regardless, so board tiles get it too, same helper as everywhere else.
-  el.className = 'card card-el' + (pb.className ? ` ${pb.className}` : '') + (isWaiting(card) ? ' waiting' : '') + (selectedIds.has(card.id) ? ' selected' : '');
+  el.className = 'card card-el' + (pb.className ? ` ${pb.className}` : '') + (isWaiting(card) ? ' waiting' : '') + (card.epic ? ' epic' : '') + (selectedIds.has(card.id) ? ' selected' : '');
   el.draggable = true;
   el.dataset.id = card.id;
   const tags = card.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
@@ -505,7 +505,7 @@ function cardEl(card) {
   // escaped: date fields are free text by contract, never trust them in HTML.
   const sched = scheduleLabel(card, localTodayStr());
   el.innerHTML =
-    `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${card.epic ? epicBadge() : ''}${statusBadge(card)}${statusChip}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
+    `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${statusBadge(card)}${statusChip}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
     `<div class="card-title">${escapeHtml(card.title)}</div>` +
     (tags ? `<div class="card-tags">${tags}</div>` : '') + waiting;
   paintAssigneeColors(el); // card #183: reserved custom colors need a CSSOM pass, see helper
@@ -529,32 +529,33 @@ function cardEl(card) {
 // guard on the server exists for, but there's no reason to invite it from the
 // UI) — Restore/Delete stay reachable as tile buttons, same as the drawer had.
 // card #91 fix: the board's Archive column has never carried the epic cue
-// (before or after #91) and still doesn't — its call site below passes no
-// second argument. But this same function also renders archived tiles in the
-// map's isolated row (buildIsolatedRow), and there epic is a durable identity
-// that must keep showing even off the layered graph (same as the SVG node's
-// epic dot) — so `opts.epicDot` is an explicit opt-in for that one caller,
-// rather than a blanket change that would put the cue back on the Archive
-// column too.
-// card #97: statusBadge(card), unlike epicBadge, needs no opts gate here — it
-// colors straight off the card's true status regardless of card.archived
-// (card #102 reopen: status dots never mute), so the SAME call is correct
-// whether this renders in the Archive column or the map's isolated row:
-// "board tiles (live AND archived)" gets the dot always, true color always.
+// (before or after #91, and still true after #45's dot-to-wash swap) — its
+// call site below passes no second argument. But this same function also
+// renders archived tiles in the map's isolated row (buildIsolatedRow), and
+// there epic is a durable identity that must keep showing even off the
+// layered graph (same as the SVG node's own epic wash) — so `opts.epicDot`
+// is an explicit opt-in for that one caller, rather than a blanket change
+// that would put the cue back on the Archive column too.
+// card #97: statusBadge(card) needs no opts gate here — it colors straight
+// off the card's true status regardless of card.archived (card #102 reopen:
+// status dots never mute), so the SAME call is correct whether this renders
+// in the Archive column or the map's isolated row: "board tiles (live AND
+// archived)" gets the dot always, true color always.
 // card #102 FINAL DESIGN: archivedBadge() joins right after statusBadge(),
 // same unconditional-no-opts-gate reasoning — archiveCardEl only ever
-// renders an archived card (both call sites below pass one), so unlike
-// epicBadge's opt-in flag, the archived ball needs no gate either. Glyph
-// order everywhere it appears: epic, status, archived.
+// renders an archived card (both call sites below pass one), so unlike the
+// epic class's opt-in flag, the archived ball needs no gate either. Glyph
+// order everywhere it appears: epic (now a background wash, card #45),
+// status, archived.
 function archiveCardEl(card, opts) {
-  const showEpicDot = !!(opts && opts.epicDot);
+  const showEpic = !!(opts && opts.epicDot);
   const el = document.createElement('div');
-  el.className = 'card card-el archived-card' + (selectedIds.has(card.id) ? ' selected' : '');
+  el.className = 'card card-el archived-card' + (showEpic && card.epic ? ' epic' : '') + (selectedIds.has(card.id) ? ' selected' : '');
   el.draggable = true; // card #34: drag out of Archive restores to the drop column
   el.dataset.id = card.id;
   const sched = scheduleLabel(card, localTodayStr());
   el.innerHTML =
-    `<div class="card-head"><span class="card-id">#${card.id}</span>${showEpicDot && card.epic ? epicBadge() : ''}${statusBadge(card)}${archivedBadge()}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
+    `<div class="card-head"><span class="card-id">#${card.id}</span>${statusBadge(card)}${archivedBadge()}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
     `<div class="card-title">${escapeHtml(card.title)}</div>` +
     `<div class="card-menu">` +
       `<button type="button" data-act="restore" data-id="${card.id}">Restore</button>` +
@@ -750,7 +751,11 @@ function renderBoardColumns() {
 const MAP_NODE_W = 176;
 // card #102 final design: grew from 46 (card #91's two-dot height) to fit a
 // third right-edge dot (the archived ball) stacked between status and epic
-// without crowding either — see buildMapSvg's statusDot/archivedDot/epicDot.
+// without crowding either — see buildMapSvg's statusDot/archivedDot. Left at
+// 58 by card #45, which retired the epic dot (a background wash now, not a
+// third dot) — status+archived alone no longer need the extra room, but
+// there's no harm in the node staying this size, and shrinking it would ripple
+// into every other pinned map-layout measurement for no visual gain.
 const MAP_NODE_H = 58;
 const MAP_GAP_X = 24;
 const MAP_GAP_Y = 60;
@@ -943,9 +948,12 @@ function buildIsolatedRow(graph, allCards, collapsed) {
     graph.isolated.forEach((id) => {
       const card = byId.get(id);
       if (!card) return;
-      // card #91 fix: opt in to the epic dot here — the map is the one place an
+      // card #91 fix: opt in to the epic cue here — the map is the one place an
       // archived card appears outside the graph proper, and epic (unlike status)
       // isn't supposed to mute or disappear just because a card has no edges.
+      // card #45: the cue is now a background wash, not a dot, but the same
+      // opt-in flag name carries it (internal option key only, no user-facing
+      // meaning to update).
       const tile = card.archived ? archiveCardEl(card, { epicDot: true }) : cardEl(card);
       tile.draggable = false; // the map isn't a drag surface
       // cardEl/archiveCardEl already stamp card-el + data-id (card #39), so the
@@ -1056,9 +1064,10 @@ function buildMapSvg(graph, layer) {
     // and are selectable (card #34). A `missing` stub has no card to act on.
     const selectable = !n.ghost && !missing;
     // card #91: the node border is one neutral weight for every node (see
-    // .map-node rect in app.css) — status and epic no longer fight over that
-    // single stroke channel with each other or with archive (card #57/#59's
-    // old contract). `archived` still rides the group class: its neutral-grey
+    // .map-node rect in app.css) — status (its own dot) and epic (its own
+    // background wash, card #45) no longer fight over that single stroke
+    // channel with each other or with archive (card #57/#59's old contract).
+    // `archived` still rides the group class: its neutral-grey
     // border mute is the one exception the card names, same as selection glow
     // / ghost dashing / the back-edge amber all keeping their own treatments.
     // card #107: priority/waiting join that same channel — same board-tile
@@ -1073,8 +1082,13 @@ function buildMapSvg(graph, layer) {
     // blocked visual slot); the manual blocked sticker is the separate red
     // pill below, not a border.
     const pb = (!missing && !n.archived) ? priorityBadge(n, state.priorities) : { className: '' };
+    // card #45: epic rides the group class too — .map-node.epic rect (app.css)
+    // tints the node's fill instead of card #91's separate <circle>. Same gate
+    // as before (n.epic alone; never true for a missing stub — dependency-
+    // graph.js's stub shape has no epic field), it keeps showing on an
+    // archived node (a durable identity, not a location).
     const cls = `map-node${n.ghost ? ' ghost' : ''}${missing ? ' missing' : ''}${n.archived ? ' archived' : ''}` +
-      `${pb.className ? ` ${pb.className}` : ''}${(!missing && !n.archived && n.waiting) ? ' waiting' : ''}` +
+      `${pb.className ? ` ${pb.className}` : ''}${(!missing && !n.archived && n.waiting) ? ' waiting' : ''}${n.epic ? ' epic' : ''}` +
       `${selectable ? ' card-el' : ''}${selectable && selectedIds.has(id) ? ' selected' : ''}`;
     const idLabel = `#${id}`;
     const titleLine = missing ? '(not found)' : truncateLabel(n.title, 22);
@@ -1099,20 +1113,13 @@ function buildMapSvg(graph, layer) {
     // only covered the custom case; the dot is a strict superset).
     const statusDot = missing ? '' :
       `<circle class="map-status-dot status-${statusColorClass(n.status)}" cx="${MAP_NODE_W - 10}" cy="10" r="4"><title>${escapeHtml(n.status)}</title></circle>`;
-    // card #91: the epic dot REPLACES #59's orange border/stroke everywhere
-    // epic showed on the map. Unlike the old single shared channel, this dot
-    // doesn't compete with the archived border mute: epic is a durable
-    // identity, not a location, so it keeps showing on an archived node —
-    // and since card #102's reopen, the status dot beside it does too.
-    const epicDot = n.epic ? `<circle class="map-epic-dot" cx="${MAP_NODE_W - 10}" cy="${MAP_NODE_H - 10}" r="4"><title>Epic</title></circle>` : '';
     // card #102 FINAL DESIGN ("an additional ball gray for archived"): the
-    // third right-edge dot, only for a truly archived node — same x column as
-    // status/epic (MAP_NODE_W - 10, already proven clear of the truncated
-    // title text), vertically centered between them (MAP_NODE_H grew from 46
-    // to 58 for exactly this — see the constant's own comment) so all three
-    // sit ~19px apart, well past the "must not render fused" minimum #97
-    // used for the HTML dots. Never set for a `missing` stub (its `archived`
-    // is always false — dependency-graph.js's own stub shape).
+    // second right-edge dot, only for a truly archived node — same x column
+    // as status (MAP_NODE_W - 10, already proven clear of the truncated
+    // title text). Never set for a `missing` stub (its `archived` is always
+    // false — dependency-graph.js's own stub shape). card #45 retired the
+    // epic dot this used to sit beside (now the node's own background wash,
+    // .map-node.epic rect above) — this is the only right-edge dot left.
     const archivedDot = n.archived ? `<circle class="map-archived-dot" cx="${MAP_NODE_W - 10}" cy="${MAP_NODE_H / 2}" r="4"><title>Archived</title></circle>` : '';
     // epic #137: the red blocked pill — the map twin of the board tile's
     // sticker glyph, bottom-left under the title where no dot column lives.
@@ -1132,7 +1139,7 @@ function buildMapSvg(graph, layer) {
         `<rect width="${MAP_NODE_W}" height="${MAP_NODE_H}" rx="6"></rect>` +
         `<text x="10" y="18" class="map-node-id">${escapeHtml(idLabel)}</text>` +
         `<text x="10" y="34" class="map-node-title">${escapeHtml(titleLine)}</text>` +
-        statusDot + epicDot + archivedDot + blockedPill +
+        statusDot + archivedDot + blockedPill +
       `</g>`;
   }
 
@@ -2128,8 +2135,9 @@ function calendarChipEl(card, pos, time, isDue) {
   // every chip of a multi-day run paints .selected together — they all read
   // the same selectedIds entry on this render. The #40 deadline chip keeps
   // its distinct class on top of the grammar.
-  // card #91: epic is the shared dot glyph now, not a border class (#59) — the
-  // priority/waiting/due rules below need no gating, nothing left to win over.
+  // card #45: epic is a background-wash class now (`.cal-chip.epic`,
+  // app.css), not a dot glyph (card #91's epicBadge()) — the priority/
+  // waiting/due rules below need no gating, nothing left to win over.
   // card #108: same for archived — priority/waiting keep applying regardless
   // (matching the gantt bar's precedent: colorStatus/mute is a SEPARATE
   // channel from the border accent, so an archived-and-high card still reads
@@ -2139,6 +2147,7 @@ function calendarChipEl(card, pos, time, isDue) {
   // only, per the card's display rules.
   el.className = `cal-chip card-el ${pos}` + (isDue ? ' cal-chip-due' : '') +
     (pb.className ? ` ${pb.className}` : '') + (isWaiting(card) ? ' waiting' : '') +
+    (card.epic ? ' epic' : '') +
     (card.archived ? ' archived' : '') +
     (selectedIds.has(card.id) ? ' selected' : '');
   // defect fix (same class as the gantt's #98 reopen): an archived card is
@@ -2156,14 +2165,15 @@ function calendarChipEl(card, pos, time, isDue) {
   // time would misread.
   const timeLabel = time && (pos === 'single' || pos === 'range-end') ? `${escapeHtml(time)} ` : '';
   const glyph = isDue ? '<span class="cal-chip-due-glyph">⚑</span> ' : ''; // ⚑ deadline flag before the text (card #40)
-  // card #97: the status dot rides right after the epic dot, both still
-  // before the title — the dense-chip width the card warns about is handled
-  // exactly like #91's epic dot: nowrap+ellipsis on .cal-chip only ever crops
-  // the TAIL (the title), never the id/dots near the front.
-  // card #108: archived joins epic+status — same "epic, status, archived"
-  // glyph order every other surface uses (Archived ball, card #102 final
-  // design), gated on the chip's own card.archived flag.
-  el.innerHTML = `${glyph}${timeLabel}<span class="cal-chip-id">#${card.id}</span>${card.epic ? epicBadge() : ''}${statusBadge(card)}${card.archived ? archivedBadge() : ''} ${escapeHtml(card.title)}`;
+  // card #97: the status dot rides right after the id, before the title — the
+  // dense-chip width the card warns about is handled the same way: nowrap+
+  // ellipsis on .cal-chip only ever crops the TAIL (the title), never the
+  // id/dot near the front.
+  // card #108: archived joins status — same "status, archived" glyph order
+  // every other surface uses (Archived ball, card #102 final design), gated
+  // on the chip's own card.archived flag. Epic no longer rides this glyph
+  // sequence at all (card #45: it's the chip's own background wash instead).
+  el.innerHTML = `${glyph}${timeLabel}<span class="cal-chip-id">#${card.id}</span>${statusBadge(card)}${card.archived ? archivedBadge() : ''} ${escapeHtml(card.title)}`;
   const readOnlyHint = 'Archived — restore the card to reschedule';
   el.title = `#${card.id} ${card.title}${isDue ? ' — due' : ''}${card.archived ? ` — ${readOnlyHint}` : ''}`; // plain-text property — full title survives the CSS truncation
   return el;
@@ -2767,8 +2777,10 @@ function ganttBarEl(bar, win) {
   const to = bar.endDay > win.endDay ? win.endDay : bar.endDay;
   const el = document.createElement('div');
   const pb = priorityBadge(bar.card, state.priorities); // card #30 emphasis, same as tiles/chips
-  // card #91: epic is the shared dot glyph now (in gantt-bar-text below), not
-  // a border class (#59) — the status border/fill stays untouched.
+  // card #45: epic is a background-wash class now (`.gantt-bar.epic`,
+  // app.css — layered via box-shadow since the status fill below already
+  // owns `background`), not a dot glyph (card #91's epicBadge()). The status
+  // border/fill stays untouched either way.
   // card #98 reopen: an archived bar mutes to the neutral archive grey
   // regardless of its parked on-disk status — the BAR keeps this mute (card
   // #102 reopen: it's a row-level archived cue, like a board tile dimming,
@@ -2781,6 +2793,7 @@ function ganttBarEl(bar, win) {
   const colorStatus = bar.card.archived ? 'archive' : bar.card.status;
   el.className = `gantt-bar card-el status-${mapStatusClass(colorStatus)}` + // card #39: bars join the shared card-el grammar
     (pb.className ? ` ${pb.className}` : '') + (isWaiting(bar.card) ? ' waiting' : '') +
+    (bar.card.epic ? ' epic' : '') +
     (selectedIds.has(bar.card.id) ? ' selected' : '') +
     (bar.card.archived ? ' archived' : '') + // defect fix: an archived bar is drag-read-only — CSS swaps the grab cursor for not-allowed
     (bar.startDay < win.startDay ? ' clip-start' : '') + (bar.endDay > win.endDay ? ' clip-end' : '');
@@ -2788,10 +2801,12 @@ function ganttBarEl(bar, win) {
   el.dataset.archived = bar.card.archived ? '1' : ''; // read by wireGanttPointerDrag's pointerdown guard, same signal used to swap the tooltips below
   // card #31: non-built-in statuses (custom columns, unlisted values) color
   // inline from the deterministic hash — the .status-unknown class beneath
-  // only supplies the shape defaults it overrides. card #91: no more .epic
-  // border rule to lose to, so this write is unconditional now. card #98
-  // reopen: 'archive' isn't built-in either, so an archived bar rides this
-  // same inline-override path straight to ARCHIVE_COLOR.
+  // only supplies the shape defaults it overrides. This write is
+  // unconditional: no `.epic` rule ever competes for `background` here
+  // (card #45's `.gantt-bar.epic` wash is a `box-shadow`, layered on top of
+  // whatever `background` resolves to, inline or class-based alike). card
+  // #98 reopen: 'archive' isn't built-in either, so an archived bar rides
+  // this same inline-override path straight to ARCHIVE_COLOR.
   if (!isBuiltinStatus(colorStatus)) {
     el.style.borderColor = statusColor(colorStatus);
     el.style.background = statusColorSoft(colorStatus);
@@ -2810,7 +2825,7 @@ function ganttBarEl(bar, win) {
     (bar.card.archived ? ` — ${readOnlyHint}` : '');
   el.innerHTML =
     `<span class="gantt-handle start" title="${startHint}"></span>` +
-    `<span class="gantt-bar-text"><span class="gantt-bar-id">#${bar.card.id}</span>${bar.card.epic ? epicBadge() : ''} ${escapeHtml(bar.card.title)}</span>` +
+    `<span class="gantt-bar-text"><span class="gantt-bar-id">#${bar.card.id}</span> ${escapeHtml(bar.card.title)}</span>` +
     `<span class="gantt-handle end" title="${endHint}"></span>`;
   return el;
 }
@@ -2947,19 +2962,21 @@ function renderGanttView() {
       // ctrl/shift-click select, right-click menus, exactly like the bar itself
       // (they were inert before; cheap parity win, and the only way to reach
       // a bar that's entirely outside the clamped window).
-      label.className = 'gantt-row gantt-label card-el' + (selectedIds.has(bar.card.id) ? ' selected' : '');
+      label.className = 'gantt-row gantt-label card-el' + (bar.card.epic ? ' epic' : '') + (selectedIds.has(bar.card.id) ? ' selected' : '');
       label.dataset.id = bar.card.id;
       label.title = `#${bar.card.id} ${bar.card.title}`;
       // card #97: the gutter row carried NEITHER dot before this card (#91 only
       // reached the bar itself) — "all components" means both join here too.
-      // The bar stays untouched: its status border/fill already reads the
-      // status, so a redundant dot there would be a per-view one-off.
+      // card #45: epic's cue is now the row's own background wash (.gantt-
+      // label.epic, app.css) rather than a second dot — a due-only row (no
+      // bar at all) would otherwise lose the epic cue entirely, since the
+      // label is the only element it has.
       // card #102 FINAL DESIGN (#98R): the Archive group's rows share this
       // exact label builder — no separate branch — so the conditional
       // archivedBadge() covers those gutter rows too, gated on the row's own
       // card.archived flag. The bar itself keeps its existing row-level mute
       // (card #98 reopen) instead of gaining a redundant second archived cue.
-      label.innerHTML = `<span class="gantt-label-id">#${bar.card.id}</span>${bar.card.epic ? epicBadge() : ''}${statusBadge(bar.card)}${bar.card.archived ? archivedBadge() : ''} ${escapeHtml(bar.card.title)}`;
+      label.innerHTML = `<span class="gantt-label-id">#${bar.card.id}</span>${statusBadge(bar.card)}${bar.card.archived ? archivedBadge() : ''} ${escapeHtml(bar.card.title)}`;
       gutter.appendChild(label);
       const row = document.createElement('div');
       row.className = 'gantt-row gantt-bar-row';

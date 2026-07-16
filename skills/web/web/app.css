@@ -62,15 +62,19 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .column.collapsed .column-header { flex-direction: column; padding: 10px 4px; gap: 6px; border-bottom: none; }
 .column-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
 .card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; cursor: grab; }
-/* card #91: the shared epic glyph — a small dot (EPIC_COLOR in
-   status-colors.js, sync pinned by status-colors.test.js) with an "Epic"
-   tooltip, REPLACING #59's orange border on every surface (this rule is the
-   one definition; the calendar chip and gantt bar reuse it verbatim, and the
-   map node's SVG twin is .map-epic-dot near the map view rules below). No
-   border to fight over anymore, so priority/blocked/status are untouched. */
-.epic-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f0883e; vertical-align: middle; flex-shrink: 0; }
-/* card #97: the shared status dot — same 8px shape as .epic-dot. card #49
-   (verify finding): color used to be an inline `style="background:..."`
+/* card #45: epic reads as a faint background wash instead of #91's small
+   orange dot — circles are reserved for STATUS alone now (the status dot
+   below keeps its own untouched channel). EPIC_COLOR at 12% alpha
+   (epicColorSoft() in status-colors.js, sync-pinned by
+   status-colors.test.js), the same wash-language the gantt bar's per-status
+   fill already used. The calendar chip and gantt gutter label share this
+   exact rule (identical value, no conflict there); the gantt BAR and map
+   node each need their own twin below since their backgrounds are already
+   spoken for (.gantt-bar.epic near the status fill rules, .map-node.epic
+   rect near the map view rules). */
+.card.epic, .cal-chip.epic, .gantt-label.epic { background: rgba(240, 136, 62, 0.12); }
+/* card #97: the shared status dot — same 8px shape as .archived-dot below.
+   card #49 (verify finding): color used to be an inline `style="background:..."`
    written by statusBadge() (status-colors.js), but a strict `style-src 'self'`
    CSP blocks the browser from applying HTML-attribute inline styles at all,
    silently rendering every dot colorless. Color now comes from one of the
@@ -92,17 +96,14 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .status-dot--palette-6 { background: #f0883e; }
 .status-dot--palette-7 { background: #ff7b72; }
 /* card #102 final design: the third shared dot — the archived LOCATION ball.
-   Fixed ARCHIVE_COLOR (never varies per-card, like .epic-dot), so it's a
-   plain class rule, same as every .status-dot--* rule above now. */
+   Fixed ARCHIVE_COLOR (never varies per-card), so it's a plain class rule,
+   same as every .status-dot--* rule above now. */
 .archived-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #6e7681; vertical-align: middle; flex-shrink: 0; }
-/* verify finding: epicBadge()+statusBadge() are emitted back-to-back with no
-   whitespace between them; the board tile gets its separation for free from
-   .card-head's flex gap, but .cal-chip/.gantt-label (no flex/gap) rendered
-   the two dots fused into one two-color blob. One adjacent-sibling rule
-   covers every surface where the pair lands next to each other. */
-.epic-dot + .status-dot { margin-left: 4px; }
 /* card #102 final design: archivedBadge() always follows statusBadge()
-   directly (epic, status, archived order) — same fused-dot risk, same fix. */
+   directly with no whitespace between them on .cal-chip/.gantt-label (no
+   flex/gap there) — this adjacent-sibling rule keeps the two dots from
+   fusing into one blob, same fix card #91 originally gave epic+status (card
+   #45 retired the epic dot, so status+archived is the one pair left to fuse). */
 .status-dot + .archived-dot { margin-left: 4px; }
 .card.high { border-left: 3px solid #f85149; }
 .card.low { border-left: 3px solid #6e7681; opacity: 0.85; } /* card #30: muted last-tier priority */
@@ -405,17 +406,18 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .map-status-dot.status-palette-5 { fill: #39c5cf; }
 .map-status-dot.status-palette-6 { fill: #f0883e; }
 .map-status-dot.status-palette-7 { fill: #ff7b72; }
-/* card #91: the epic dot — REPLACES #59's orange stroke on the map, same
-   EPIC_COLOR and "Epic" tooltip as the shared .epic-dot glyph above (SVG
-   can't host that span, hence its own rule). No archived-mutes rule: epic is
-   a durable identity, not a location, so it keeps showing on an archived
-   node — since card #102's reopen, the status dot beside it no longer mutes
-   either; only the node's border mutes now. */
-.map-epic-dot { fill: #f0883e; }
+/* card #45: the map's SVG twin of .card.epic — same faint EPIC_COLOR wash,
+   tinting the node's rect fill instead of drawing a circle (circles are
+   status-only now; this REPLACES card #91's small orange SVG circle
+   entirely). Higher specificity than the plain `.map-node rect` fill above wins outright, but a ghost
+   stub's dimmed-transparent fill below is declared AFTER this rule (same
+   specificity, source order breaks the tie) so a ghosted epic still reads as
+   a ghost first. No archived-mutes rule: epic is a durable identity, not a
+   location, so the wash keeps showing on an archived node same as before. */
+.map-node.epic rect { fill: rgba(240, 136, 62, 0.12); }
 /* card #102 final design: the archived LOCATION ball's SVG twin — same fixed
-   ARCHIVE_COLOR as .archived-dot, a third dot in the node's right-edge
-   column (buildMapSvg, app.js) between status and epic, MAP_NODE_H grown to
-   fit all three without crowding text or each other. */
+   ARCHIVE_COLOR as .archived-dot, a dot in the node's right-edge column
+   (buildMapSvg, app.js) beside the status dot, vertically centered. */
 .map-archived-dot { fill: #6e7681; }
 /* Ghost stub: a hidden card that a visible one waits on / is waited on by,
    kept on the map (never silently dropped) but visually dimmed and dashed so
@@ -476,9 +478,10 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .cal-day.today .cal-day-num { color: #58a6ff; font-weight: 700; }
 .cal-chip { background: #161b22; border: 1px solid #30363d; border-left: 3px solid #30363d; border-radius: 5px; padding: 2px 6px; font-size: 0.72em; color: #c9d1d9; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-chip-id { color: #8b949e; }
-/* card #91: the epic dot (.epic-dot, defined near .card above) sits right
-   after the id instead of #59's all-sides border — the priority/waiting left
-   accents and the due rule below need no gating anymore, nothing to win over. */
+/* card #45: epic washes the whole chip background (.cal-chip.epic, defined
+   near .card.epic above — identical value, no conflict, so one shared rule
+   covers both) instead of #91's dot — the priority/waiting left accents and
+   the due rule below need no gating, nothing to win over. */
 .cal-chip.high { border-left-color: #f85149; }
 .cal-chip.low { border-left-color: #6e7681; opacity: 0.85; }
 .cal-chip.waiting { border-left-color: #d29922; }
@@ -614,10 +617,18 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .gantt-bar.status-doing { border-color: #3fb950; background: rgba(63, 185, 80, 0.12); }
 .gantt-bar.status-done { border-color: #a371f7; background: rgba(163, 113, 247, 0.12); }
 .gantt-bar.status-unknown { border-color: #6e7681; background: rgba(110, 118, 129, 0.12); }
-/* card #91: the epic dot (.epic-dot, defined near .card above) sits in
-   .gantt-bar-text instead of #59's border-over-status-wash — the status
-   border/fill above is untouched, and ganttBarEl no longer needs to gate its
-   custom-status inline borderColor off epics (nothing left to lose to). */
+/* card #45: epic's wash can't reuse `background` here — the per-status fill
+   above already owns that property (and ganttBarEl's inline style for a
+   non-built-in status would beat a class rule on it anyway). box-shadow
+   paints the same EPIC_COLOR wash on top of whatever's already there
+   instead, so it composes with either. A spread this large collapses the
+   shadow's "hole" against the bar's 20px height regardless of its (often
+   much larger) width, so it always fully covers the bar — the standard
+   inset-box-shadow-as-overlay trick. Declared before .dragging below so the
+   live-drag preview's own box-shadow wins during that transient gesture —
+   losing the epic wash for the one bar mid-drag is an acceptable trade, not
+   a requirement. */
+.gantt-bar.epic { box-shadow: inset 0 0 0 9999px rgba(240, 136, 62, 0.12); }
 .gantt-bar.high { border-left-color: #f85149; }
 .gantt-bar.low { border-left-color: #6e7681; opacity: 0.85; }
 .gantt-bar.waiting { border-left-color: #d29922; }

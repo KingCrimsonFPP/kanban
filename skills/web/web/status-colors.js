@@ -34,12 +34,14 @@ const ARCHIVE_COLOR = '#6e7681';
 // colors (no built-in status or archive ever wears it — card #57 ceded
 // orange to epics). Same hex as STATUS_PALETTE's orange slot on purpose: a
 // custom status can still hash there (determinism, not uniqueness, is the
-// hash contract). card #91: the accent no longer LAYERS onto a shared border
-// channel (board tile/map node/gantt bar/calendar chip all fought over one
-// stroke with status and priority/blocked) — it's now a small dot glyph
-// (epicBadge() below, plus the map's own SVG circle) that reads independent
-// of status. This constant still pins the hex via status-colors.test.js so
-// CSS and JS can't drift.
+// hash contract). card #91 turned the old per-view border (card #59) into a
+// small shared dot glyph; card #45 retired the dot too — circles are
+// reserved for STATUS alone now, so an epic instead paints a faint
+// background wash on whatever surface it's on (epicColorSoft() below; each
+// surface's `.epic` CSS rule in app.css carries the actual paint). EPIC_COLOR
+// itself lives on unchanged: the map's epic-membership edges + arrowhead
+// (lines, not circles) still wear it solid. This constant still pins the hex
+// via status-colors.test.js so CSS and JS can't drift.
 const EPIC_COLOR = '#f0883e';
 
 // GitHub-dark accent scale — visually distinct from each other and legible on
@@ -112,16 +114,22 @@ function statusColorSoft(status) {
   return `rgba(${r}, ${g}, ${b}, 0.12)`;
 }
 
-// card #91: the ONE shared epic glyph — a small orange dot with an "Epic"
-// tooltip, reused verbatim by every HTML surface (board tile, gantt bar,
-// calendar chip) instead of each view recoloring its own border the way #59
-// did. No DOM access needed (a plain HTML string, same contract as
-// assignee-badge.js's assigneeBadge), so it's a pure function here alongside
-// the color it wears. The map node's SVG twin can't reuse this markup (SVG
-// has no <span>) — it's inlined in buildMapSvg's own circle, same EPIC_COLOR
-// and the same "Epic" tooltip text, pinned together by status-colors.test.js.
-function epicBadge() {
-  return '<span class="epic-dot" title="Epic"></span>';
+// card #45: epic's cue used to be epicBadge() — a shared HTML dot glyph
+// (card #91) reused verbatim by every surface, plus the map's own SVG circle
+// twin. Both are gone: circles are reserved for STATUS alone now, so an epic
+// instead washes its whole surface in a faint EPIC_COLOR tint. Same 12%-alpha
+// convention statusColorSoft above already uses for the gantt bar's
+// per-status fill, so the two read as one consistent "soft wash" language.
+// Every consuming surface just adds an `epic` class (app.js) — app.css
+// carries the actual rgba() per surface (`.card.epic`/`.cal-chip.epic`
+// share one rule; `.gantt-bar.epic`/`.map-node.epic rect` are their own
+// twins, since the bar's `background` is already spoken for by its
+// per-status fill and the map node paints via SVG `fill`, not CSS
+// `background`) — this function exists only so CSS and JS can't drift on the
+// exact value (pinned by status-colors.test.js).
+function epicColorSoft() {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(EPIC_COLOR.slice(i, i + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, 0.12)`;
 }
 
 // Tiny local HTML-attribute escape, same duplication call priority-badge.js's
@@ -133,9 +141,9 @@ function statusEscape(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-// card #97: the shared status dot — joins epicBadge() on every card rendering
-// (board tiles live+archived, the map's isolated-row tiles, calendar chips,
-// gantt gutter rows — see app.js's cardEl/archiveCardEl/calendarChipEl and the
+// card #97: the shared status dot — renders on every card rendering (board
+// tiles live+archived, the map's isolated-row tiles, calendar chips, gantt
+// gutter rows — see app.js's cardEl/archiveCardEl/calendarChipEl and the
 // gantt gutter label). Colored exactly like the map SVG's own status dot
 // (buildMapSvg's <circle>, card #91).
 //
@@ -164,26 +172,27 @@ function statusBadge(card) {
 }
 
 // card #102 FINAL DESIGN ("show the status color as shown in the frontmatter
-// and an additional ball gray for archived"): the third shared dot glyph — a
+// and an additional ball gray for archived"): the second shared dot glyph — a
 // small ARCHIVE_COLOR grey ball with an "Archived" tooltip, joining
-// epicBadge()/statusBadge() on every surface that renders an ARCHIVED card
-// (board Archive-column tiles, the map's isolated-row archived tiles, the
-// gantt Archive-group gutter rows). Live cards NEVER render this — cardEl and
+// statusBadge() on every surface that renders an ARCHIVED card (board
+// Archive-column tiles, the map's isolated-row archived tiles, the gantt
+// Archive-group gutter rows). Live cards NEVER render this — cardEl and
 // calendarChipEl never call it, pinned as served-asset ABSENCE tests in
 // server.test.js, same discipline as every other locked contract here.
-// Unlike statusBadge, ARCHIVE_COLOR never varies per-card, so — like
-// epicBadge — this needs no inline style at all; a plain CSS class
-// (.archived-dot, app.css) carries the fixed color. The map SVG node's own
-// twin lives in buildMapSvg (app.js): SVG has no <span>, same pattern as the
-// epic dot's .map-epic-dot circle. Glyph order, applied identically on every
-// surface that carries more than one dot: epic, status, archived.
+// ARCHIVE_COLOR never varies per-card, so this needs no inline style at all;
+// a plain CSS class (.archived-dot, app.css) carries the fixed color. The map
+// SVG node's own twin lives in buildMapSvg (app.js): SVG has no <span>, same
+// pattern as card #91's old epic-dot circle (retired by card #45 — an epic is
+// a background wash now, no longer a glyph in this sequence). Glyph order,
+// applied identically on every surface that carries more than one dot:
+// status, archived.
 function archivedBadge() {
   return '<span class="archived-dot" title="Archived"></span>';
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusHash, statusColor, statusColorClass, statusColorSoft, epicBadge, statusBadge, archivedBadge,
+    BUILTIN_STATUS_COLORS, STATUS_PALETTE, ARCHIVE_COLOR, EPIC_COLOR, isBuiltinStatus, statusHash, statusColor, statusColorClass, statusColorSoft, epicColorSoft, statusBadge, archivedBadge,
   };
 } else {
   window.BUILTIN_STATUS_COLORS = BUILTIN_STATUS_COLORS;
@@ -195,7 +204,7 @@ if (typeof module !== 'undefined' && module.exports) {
   window.statusColor = statusColor;
   window.statusColorClass = statusColorClass;
   window.statusColorSoft = statusColorSoft;
-  window.epicBadge = epicBadge;
+  window.epicColorSoft = epicColorSoft;
   window.statusBadge = statusBadge;
   window.archivedBadge = archivedBadge;
 }

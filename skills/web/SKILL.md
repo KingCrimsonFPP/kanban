@@ -156,40 +156,52 @@ bound to `127.0.0.1` only.
   default a missing priority to Normal), and each date field's 📅
   picker works here too (manual entry stays; time tails survive a picked day).
   `updated` is machine-managed (card #35, see below) and never shown as a form field.
-- **Epic/wayfinder (card #59; glyph redesigned by card #91)** — the form's Epic
-  checkbox (inside the #50 "Show more fields" section) writes the optional
-  `epic: true` frontmatter field — a MANAGED boolean: unchecked (or a blank/false
-  API value) removes the line entirely per the #51 lean rule, so `epic: false` is
-  never written; never validated (the reader takes any-case `true`). A hand-typed
-  non-`true` value (e.g. `epic: yes`) reads as **not**-epic, so the checkbox opens
+- **Epic/wayfinder (card #59; glyph redesigned by card #91; dot retired for a
+  background wash by card #45)** — the form's Epic checkbox (inside the #50
+  "Show more fields" section) writes the optional `epic: true` frontmatter
+  field — a MANAGED boolean: unchecked (or a blank/false API value) removes
+  the line entirely per the #51 lean rule, so `epic: false` is never written;
+  never validated (the reader takes any-case `true`). A hand-typed non-`true`
+  value (e.g. `epic: yes`) reads as **not**-epic, so the checkbox opens
   unchecked and the next form save — however unrelated — removes that line:
-  deliberate (unlike the free-text priority/date inputs, a checkbox has no way to
-  re-emit junk verbatim), and pinned by a card-store test. Epics wear ONE shared
-  glyph — a small orange dot (`#f0883e`, `EPIC_COLOR` in status-colors.js) with an
-  "Epic" tooltip — on every surface it shows: board tile, gantt bar, gantt gutter
-  row (card #97), calendar chip (all four via the shared `epicBadge()` helper),
-  and the map node (its own SVG circle, same color, same tooltip text). Card #91 replaced the four per-view
-  orange BORDER treatments card #59 originally shipped (board tile border, map
-  node stroke, gantt bar border, calendar chip border) — those fought priority,
-  the amber waiting cue (pre-#137 still labeled "blocked"), due, and status
-  for the same border channel; a presence-based dot
-  doesn't compete with any of them, so nothing needs to win or lose anymore, and
-  archive no longer needs to mute it either. The map always shows archived cards;
-  the gantt and calendar can too, each opt-in via its own Archive pill (card #98's
-  2026 reopen for the gantt, card #108 for the calendar). Every
-  archived card on the map keeps its epic dot — whether laid out in the graph proper
-  (the SVG circle) or, having no `waiting_for` edge in either direction, in the
-  isolated row below the graph (`archiveCardEl`'s HTML `epicBadge()`, the same
-  glyph a live board tile wears, opted in via an `epicDot` flag that only that
-  one map caller sets): epic is a durable identity, not a location, unlike the
-  old border-sharing arrangement that let card #57's archive-mutes rule suppress
-  it. The board's own Archive column is a separate matter — it renders through
-  that same `archiveCardEl` function but never sets the flag, so it still shows
-  no epic cue at all, before or after #91 (that column isn't the map, and #91
-  never touched it).
+  deliberate (unlike the free-text priority/date inputs, a checkbox has no way
+  to re-emit junk verbatim), and pinned by a card-store test. Card #91 gave
+  epics ONE shared glyph — a small orange dot (`#f0883e`, `EPIC_COLOR` in
+  status-colors.js) — replacing the four per-view orange BORDER treatments
+  card #59 originally shipped (board tile border, map node stroke, gantt bar
+  border, calendar chip border), since those fought priority, the amber
+  waiting cue (pre-#137 still labeled "blocked"), due, and status for the same
+  border channel. **Card #45 retired the dot too**: the rule now is circles
+  are reserved for STATUS alone, so an epic instead washes its whole surface
+  in a faint EPIC_COLOR background (12% alpha, `epicColorSoft()` in
+  status-colors.js, sync-pinned by status-colors.test.js). Board tile,
+  calendar chip, and gantt gutter row share one `background` rule
+  (`.card.epic`/`.cal-chip.epic`/`.gantt-label.epic` — identical value, no
+  conflict between them); the gantt BAR layers its wash via `box-shadow`
+  instead of `background`, since that property there is already the
+  per-status fill's channel (a built-in status colors it via CSS class, a
+  custom/archived one via inline style — the box-shadow composes with
+  either); the map node tints its SVG `<rect>` fill (`.map-node.epic rect`)
+  instead of drawing a circle. A presence-based class doesn't compete with
+  priority/waiting/due/status on any surface, so nothing needs to win or lose,
+  and archive no longer needs to mute it either. The map always shows
+  archived cards; the gantt and calendar can too, each opt-in via its own
+  Archive pill (card #98's 2026 reopen for the gantt, card #108 for the
+  calendar). Every archived card on the map keeps its epic wash — whether
+  laid out in the graph proper (the SVG rect fill) or, having no
+  `waiting_for` edge in either direction, in the isolated row below the graph
+  (`archiveCardEl`'s `epic` class, the same `.card.epic` rule a live board
+  tile wears, opted in via an `epicDot` flag — name unchanged by #45, an
+  internal option key only — that only that one map caller sets): epic is a
+  durable identity, not a location, unlike the old border-sharing arrangement
+  that let card #57's archive-mutes rule suppress it. The board's own Archive
+  column is a separate matter — it renders through that same `archiveCardEl`
+  function but never sets the flag, so it still shows no epic cue at all,
+  before or after #91/#45 (that column isn't the map, and neither card
+  touched it).
 - **Status dot (card #97; NEVER mutes for archive, card #102 reopen)** — `statusBadge()`
-  (status-colors.js) joins `epicBadge()` on every card rendering: board tiles (live
-  AND archived, unlike the epic dot the Archive column gets this one too), the map's
+  (status-colors.js) renders on every card rendering: board tiles (live
+  AND archived, unlike the epic wash the Archive column gets this one too), the map's
   isolated-row tiles, calendar chips, and gantt gutter rows. A small dot colored via
   `statusColor()` off the card's RAW on-disk status — **the `archived` flag never
   touches this color** (card #102's 2026 reopen locked this: "status dots never
@@ -203,8 +215,8 @@ bound to `127.0.0.1` only.
   reopen narrative below (Dependency map section) for why the old mute was wrong.
 - **Archived ball (card #102's FINAL design)** — the reopen above fixed the status
   dot's color; this closes the card's other half, "an additional ball gray for
-  archived": a THIRD shared dot, `archivedBadge()` (status-colors.js) — a fixed
-  `ARCHIVE_COLOR` grey circle, tooltipped "Archived" — joining `epicBadge()`/
+  archived": a second shared dot, `archivedBadge()` (status-colors.js) — a fixed
+  `ARCHIVE_COLOR` grey circle, tooltipped "Archived" — joining
   `statusBadge()` on every surface that renders an **archived** card, and *only*
   those: the board's Archive-column tiles, the map's isolated-row archived tiles
   (both through `archiveCardEl`, which unconditionally calls it — like `statusBadge`,
@@ -217,14 +229,20 @@ bound to `127.0.0.1` only.
   own `card.archived`. **`cardEl` never renders it** — a live board tile is the
   one surface that structurally can't show an archived card, so there is nothing
   archived for it to ever mark there. Glyph order, applied
-  identically everywhere more than one dot lands together: **epic, status,
+  identically everywhere more than one dot lands together (card #45 retired the
+  epic dot that used to lead this order — an epic is a background wash now, not
+  a glyph in the sequence): **status,
   archived** — `.status-dot + .archived-dot { margin-left: 4px; }` gives the pair
-  the same anti-fuse gap card #97 gave epic+status. On the map SVG, the node grew
-  from `MAP_NODE_H` 46 to 58 (card #91's two-dot height) to fit a third dot
-  vertically stacked in the same right-edge x column as status/epic (already
-  proven clear of the truncated title text) with no overlap. The gantt bar itself
-  and the board tile's existing dim/grey-border cues are all untouched — this is
-  one more glyph on top of them, not a replacement.
+  the same anti-fuse gap card #97 originally gave epic+status (now retired along
+  with the epic dot). On the map SVG, the node grew from `MAP_NODE_H` 46 to 58
+  (card #91's two-dot height) to fit a third dot — the epic dot that used to sit
+  in the same right-edge x column as status/archived. Card #45 retired that
+  third dot (an epic tints the whole node's `<rect>` fill instead), but the
+  node stayed at 58: shrinking it back would ripple into every other pinned
+  map-layout measurement for no visual gain, and the extra room is harmless
+  with only two dots in the column now. The gantt bar itself and the board
+  tile's existing dim/grey-border cues are all untouched — this is one more
+  glyph on top of them, not a replacement.
 - **Assignee text color (card #183, kanban.proj #191)** — `assigneeBadge()`
   (assignee-badge.js) tints the handle text itself: a config.yaml
   `assignees[].color` reservation wins; absent, the handle hashes into the
@@ -275,7 +293,9 @@ bound to `127.0.0.1` only.
   (every chip of a multi-day run highlights together — selection is by card id), and
   gantt bars **and their gutter labels** alike. Each view paints its own selected
   marker (board/calendar/gantt: blue outline + dark wash; map: dark wash + blue glow —
-  the node's neutral border and its status/epic dots, card #91, are unaffected).
+  the node's neutral border, its status dot (card #91), and its epic wash
+  (card #45 — `.map-node.selected` only adds a `filter: drop-shadow`, it never
+  touches `fill`) are all unaffected).
   Right-click: an unselected card becomes the selection in
   the same gesture; an already-selected one keeps the whole batch as the target. The
   menu — **Assign…**, **Set priority…**, **Edit tags…**, **Schedule…**, **Dependency
@@ -396,7 +416,9 @@ bound to `127.0.0.1` only.
   original contract). Instead, a small dot in the node's corner carries the status
   color (same palette as the column headers and that Mermaid printout), with its own
   tooltip naming the **raw on-disk status** (SVG `<title>`, not the bucketed class);
-  an epic card gets a second dot, orange, tooltipped "Epic" (see Epic/wayfinder above).
+  an epic card used to get a second dot, orange, tooltipped "Epic" — card #45
+  retired it, tinting the whole node's `<rect>` fill with a faint EPIC_COLOR
+  wash instead (see Epic/wayfinder above).
   Nodes come from both live and archived cards (blocking is location-independent).
   **Card #102 REOPEN — STATUS DOTS NEVER MUTE:** card #102 first reported "wrong
   colors for done status" on the map; the first pass called it working-as-designed
