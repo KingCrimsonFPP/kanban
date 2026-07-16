@@ -140,6 +140,11 @@ bound to `127.0.0.1` only.
   while the form is minimal, and "Show more fields" reveals the dropdown with it
   selected; Archive never shows the + (you can't create an archived card) and
   collapsed strips don't either. The global button keeps the first-column default.
+  Right next to it (kanban.proj #202), same gate, sits a small **AI-sparkle
+  quick-create button** (`.column-add-ai`) — the same pre-aimed modal, opened with
+  the AI prompt row already revealed (`enableAiPrompt()`, same helper the modal's
+  own sparkle toggle uses), so "queue an AI-prompt card in this column" is one
+  click instead of "+, then click the sparkle."
   The modal opens **minimal-first**
   (card #50): just Title (autofocused) plus a "Show more fields" button that reveals the
   rest — one-way per open, nothing persisted, and hidden fields still submit their
@@ -184,7 +189,13 @@ bound to `127.0.0.1` only.
   act on, the **opposite polarity** of `blocked`/`review` just above (those
   signal FROM the card TO a human; this signals FROM a human TO whichever
   agent next processes the card — including as a way to answer a `blocked`
-  or `review` sticker without touching those fields directly). It is NOT a
+  or `review` sticker without touching those fields directly). **kanban.proj
+  #202:** turning the toggle ON (not off) also sets Assignee straight to
+  `@afk`, but only while creating a NEW card (`enableAiPrompt()`, `!f-id`) —
+  flipping it on while editing an existing card leaves that card's assignee
+  untouched. The same helper backs the column header's AI-sparkle
+  quick-create button above, so both entry points land on the identical
+  "prompt row open, assignee @afk" state for a new card. It is NOT a
   third sticker: no presence predicate, no `doing`-gate involvement, and
   `eligible_cards.sh` (the `/kanban` dispatcher's picker) does not exclude on
   it. **How a dispatcher discovers, consumes, and clears a queued prompt is
@@ -226,6 +237,14 @@ bound to `127.0.0.1` only.
   escaped, the instant card-store.js writes it, so the value is never
   actually hidden — only not glanceable from the board. Revisit once the
   dispatcher follow-up defines what "presence" means operationally.
+  **One narrow exception (kanban.proj #202):** a card with an EMPTY title but
+  a prompt — e.g. one dispatched by an external process before it's been
+  given a title of its own — shows the sparkle + the prompt text itself in
+  the tile's title spot (`cardTitleDisplay()`, card-title.js;
+  `.card-title--prompt-fallback`, italic/muted). This is not the general
+  presence glyph ruled out above — it never appears once the card has a real
+  title, prompt or no — it exists solely so the tile isn't blank while a
+  title is still pending.
 - **Epic/wayfinder (card #59; glyph redesigned by card #91; dot retired for a
   background wash by card #45)** — the form's Epic checkbox (inside the #50
   "Show more fields" section) writes the optional `epic: true` frontmatter

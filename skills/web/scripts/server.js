@@ -111,7 +111,7 @@ function createServer(dir) {
         });
       }
       if (req.method === 'GET' && p === '/') return serveStatic(res, path.join(WEB, 'app.html'));
-      if (req.method === 'GET' && (p === '/app.css' || p === '/app.js' || p === '/refresh-policy.js' || p === '/column-state.js' || p === '/column-sort.js' || p === '/search.js' || p === '/waiting-blocked.js' || p === '/dependency-graph.js' || p === '/modal-fullscreen.js' || p === '/assignee-badge.js' || p === '/priority-badge.js' || p === '/combobox.js' || p === '/bulk-edit.js' || p === '/notifications.js' || p === '/form-guard.js' || p === '/selection.js' || p === '/calendar-model.js' || p === '/gantt-model.js' || p === '/date-picker.js' || p === '/status-colors.js' || p === '/save-hotkey.js' || p === '/search-hotkey.js' || p === '/assignee-colors.js')) {
+      if (req.method === 'GET' && (p === '/app.css' || p === '/app.js' || p === '/refresh-policy.js' || p === '/column-state.js' || p === '/column-sort.js' || p === '/search.js' || p === '/waiting-blocked.js' || p === '/dependency-graph.js' || p === '/modal-fullscreen.js' || p === '/assignee-badge.js' || p === '/priority-badge.js' || p === '/card-title.js' || p === '/combobox.js' || p === '/bulk-edit.js' || p === '/notifications.js' || p === '/form-guard.js' || p === '/selection.js' || p === '/calendar-model.js' || p === '/gantt-model.js' || p === '/date-picker.js' || p === '/status-colors.js' || p === '/save-hotkey.js' || p === '/search-hotkey.js' || p === '/assignee-colors.js')) {
         return serveStatic(res, path.join(WEB, path.basename(p)));
       }
 
