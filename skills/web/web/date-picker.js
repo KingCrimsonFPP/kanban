@@ -37,9 +37,44 @@ function initialMonth(currentValue, todayStr) {
   return { year: y, monthIndex: m - 1 };
 }
 
+// --- Time toggle (card #197): the popover's clock icon adds/removes a time
+// tail on the field's value. Both funnel through calendar-model's
+// dayPart/timePart so they agree with pickDay/shiftValue's day+time split —
+// one place owns what a "day" or "time" substring looks like.
+
+// Sensible default when toggling time ON with no prior tail: a fixed
+// constant, not the wall clock — reading Date.now() here would make
+// withTime impure and this file's node --test coverage non-deterministic.
+// 09:00 (start of a typical workday) was picked over midnight so the first
+// toggle lands on a time worth looking at rather than 00:00.
+const DEFAULT_TIME = '09:00';
+
+function hasTime(value) {
+  return DP_CAL.timePart(value) !== '';
+}
+
+// Attaches `hhmm` as the value's time tail, replacing whatever was there.
+// No-op (value unchanged) when there's no parseable day to attach it to —
+// the popover disables the clock button in that state, so glue code never
+// calls this against garbage/empty values.
+function withTime(value, hhmm) {
+  const day = DP_CAL.dayPart(value);
+  return day ? `${day}T${hhmm}` : value;
+}
+
+// Strips the time tail back to a bare day. Same no-op guard as withTime.
+function withoutTime(value) {
+  const day = DP_CAL.dayPart(value);
+  return day || value;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { pickDay, initialMonth };
+  module.exports = { pickDay, initialMonth, hasTime, withTime, withoutTime, DEFAULT_TIME };
 } else {
   window.pickDay = pickDay;
   window.initialMonth = initialMonth;
+  window.hasTime = hasTime;
+  window.withTime = withTime;
+  window.withoutTime = withoutTime;
+  window.DEFAULT_TIME = DEFAULT_TIME;
 }

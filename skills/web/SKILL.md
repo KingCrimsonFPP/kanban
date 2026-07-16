@@ -151,6 +151,10 @@ bound to `127.0.0.1` only.
   each takes a date (`YYYY-MM-DD`) or local datetime (`YYYY-MM-DDTHH:MM`), never
   validated. Every date field also has a 📅 calendar-picker button (card #41) —
   manual entry stays fully legal, and picking a day preserves a typed time tail.
+  The popover also carries a 🕒 clock toggle (card #197): ON reveals a
+  hand-rolled HH:MM control and appends it to the value (defaulting to 09:00),
+  OFF strips it back to a bare date; disabled until a date exists to attach a
+  time to.
   Compat: a card with start + due but no end still ranges start→due.
   The server assigns the next id and writes a new
   `<0000-id>.<slug>.card.md` (id zero-padded to 4 digits, e.g. `0009.new-thing.card.md`).
@@ -618,7 +622,16 @@ bound to `127.0.0.1` only.
   active view's span; ONE anchor day drives all four sub-views, so the displayed
   window carries across switches and survives the poll. Chips keep the shared #39
   grammar. The all-day band and month grid keep the native day-granular drag
-  (date moves, time-of-day preserved).
+  (date moves, time-of-day preserved) — **including date-only cards** (card
+  #195/#197: a `pointer-events` defect made every native-drag chip
+  undraggable in practice; fixed, see the pill-row entry's sibling note
+  below and app.css). Dropping a date-only all-day chip onto the hour grid
+  (rather than another all-day cell) still only moves its DATE — the drop
+  target there is day-granular, same as the all-day band, so no time is
+  ever invented; it lands back in the all-day band on the new day. Assigning
+  a time via a drag is out of scope (matches card #109's existing "no
+  crossing between the all-day band and the timed grid" boundary) — add a
+  time by editing the card.
   **Time-grid drag/resize (card #109)** — the hour-grid timed blocks (week/3day
   /day) get minute-granular retiming, superseding #58's deferral. They use a
   custom pointer-drag (like the gantt's, but in MINUTES within a day — native

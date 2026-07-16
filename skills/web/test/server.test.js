@@ -2202,8 +2202,50 @@ test('sub-month all-day chips are not drop-dead zones: a live drag lets pointer 
     assert.ok((wire[0].match(/classList\.remove\('cal-dragging'\)/g) || []).length >= 2,
       'both drop and dragend clear the flag');
     const css = await (await fetch(`${base}/app.css`)).text();
-    assert.match(css, /#calendar-view\.cal-dragging \.cal-chip \{ pointer-events: none; \}/,
+    assert.match(css, /#calendar-view\.cal-dragging \.cal-chip:not\(\.dragging\) \{ pointer-events: none; \}/,
       'chips yield hit-testing to the drop cells only while a drag is live');
+  });
+});
+
+// defect fix (kanban.proj #195/#197): a date-only card's month/all-day chip
+// carried draggable=true and was wired into wireCalendarDrag same as any
+// other chip — the browser-visible symptom ("date-only cards can't be
+// dragged anywhere in the calendar") wasn't a missing attribute/handler at
+// all. Confirmed by driving a REAL browser (headless Edge over CDP, genuine
+// Input.dispatchMouseEvent — NOT a synthetic DragEvent, which bypasses the
+// native drag-initiation layer entirely and would have hidden this): the
+// #58 pointer-events:none rule above applied to EVERY .cal-chip during a
+// live drag, including the chip the OS was actively tracking AS the drag
+// source, because that chip still matches the bare `.cal-chip` selector.
+// Chromium cancels an in-flight native HTML5 drag outright the instant its
+// own source element goes pointer-events:none — dragstart fires, dragend
+// follows immediately, with no dragenter/dragover/drop ever reaching any
+// target — reproduced in an isolated two-line repro before touching this
+// codebase. This broke EVERY month/all-day chip (date-only, timed-but-still-
+// single-day, and multi-day range alike, since none are excluded from the
+// selector); it read as "date-only" only because a card carrying a
+// datetime value renders in the hour grid instead, which drags through the
+// entirely separate pointer-based wireCalendarTimeDrag (card #109) that
+// never touches this CSS class at all.
+test('the #58 drag-hides-chips rule excludes the DRAGGED chip itself, not just other chips (kanban.proj #195/#197 — pointer-events:none on the drag source cancels native HTML5 drag in Chromium)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const wire = js.match(/function wireCalendarDrag\([\s\S]*?\n\}/);
+    assert.ok(wire, 'wireCalendarDrag found in app.js');
+    // The dragged chip gets .dragging BEFORE the container gets .cal-dragging
+    // — the CSS exclusion below only works because this ordering holds.
+    const dragstart = wire[0].match(/addEventListener\('dragstart', \(e\) => \{[\s\S]*?\}\);/);
+    assert.ok(dragstart, 'dragstart handler found');
+    const draggingIdx = dragstart[0].indexOf("classList.add('dragging')");
+    const calDraggingIdx = dragstart[0].indexOf("classList.add('cal-dragging')");
+    assert.ok(draggingIdx > -1 && calDraggingIdx > -1 && draggingIdx < calDraggingIdx,
+      'the chip is marked .dragging before the container is marked .cal-dragging');
+    const css = await (await fetch(`${base}/app.css`)).text();
+    assert.match(css, /#calendar-view\.cal-dragging \.cal-chip:not\(\.dragging\) \{ pointer-events: none; \}/,
+      'the pointer-events:none rule must exclude the actively-dragged chip — without :not(.dragging) the drag source itself goes pointer-events:none and Chromium cancels the native drag before any dragover/drop ever fires, no matter how correct draggable/dragstart/dragover/drop wiring is elsewhere');
+    assert.doesNotMatch(css, /#calendar-view\.cal-dragging \.cal-chip \{ pointer-events: none; \}/,
+      'the old unqualified selector (every .cal-chip, drag source included) must not still be present');
   });
 });
 
