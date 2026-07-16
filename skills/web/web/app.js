@@ -1437,21 +1437,6 @@ function renderStatusOptions(current) {
   $('#f-status').innerHTML = opts.join('');
 }
 
-// card #85: physically moves the assignee+dates row instead of faking its
-// minimal-mode position with flex `order` — `order` only repaints, it does
-// not retarget Tab, so DOM/tab order stayed Title -> "Show more fields" ->
-// Assignee even though the row visually painted between them (a WCAG 2.4.3
-// focus-order bug, audit #85 defect 2). assigneeRowHome is the row's ORIGINAL
-// next sibling (the Description label), captured once before any move ever
-// happens; re-inserting before it restores the exact #47 full-form slot,
-// byte-identical, every time minimal lifts (expand or edit).
-const assigneeRow = $('#row-assignee-dates');
-const assigneeRowHome = assigneeRow.nextElementSibling;
-function placeAssigneeRow(minimal) {
-  if (minimal) $('#show-more-btn').before(assigneeRow);
-  else assigneeRowHome.before(assigneeRow);
-}
-
 // epic #137: the blocked input wears a red border exactly while its value
 // would gate (passes the shared predicate) — colorless otherwise, so
 // `false` / whitespace / junk visibly read as "not a sticker" while typing.
@@ -1516,7 +1501,6 @@ function openModal(card, presetStatus, presetStart) {
   // so the snapshot and the save payload are the same as a full form's.
   const minimal = isMinimalCreate(Boolean(card), false);
   $('#card-form').classList.toggle('minimal', minimal);
-  placeAssigneeRow(minimal); // card #85: re-place on EVERY open, so edit never inherits a prior create's move
   $('#modal').classList.remove('hidden');
   applyModalFullscreen('edit'); // re-apply the persisted per-modal-type preference on every open
   if (!card) $('#f-title').focus(); // card #50: quick capture — cursor lands ready to type (after unhide; focus is a no-op on display:none)
@@ -1595,7 +1579,6 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#show-more-btn').addEventListener('click', () => {
     const minimal = isMinimalCreate(false, true); // always false — expanding lifts minimal for the rest of the open
     $('#card-form').classList.toggle('minimal', minimal);
-    placeAssigneeRow(minimal); // card #85: restore the row to its full-form #47 slot before Description
   });
   $('#card-form').addEventListener('submit', submitModal);
   $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback
@@ -1985,7 +1968,9 @@ window.addEventListener('DOMContentLoaded', () => {
 // --- Search box wiring (card #17): live filter-as-you-type, clear button,
 // `/` focuses the box (skipped while any input/textarea/select/contentEditable
 // already has focus, so it doesn't hijack typing elsewhere — including inside
-// either modal, whose fields are all one of those tag names).
+// either modal, whose fields are all one of those tag names). Ctrl+F/Cmd+F
+// (kanban.proj #198) also focuses it, with its own `#`-prefill/select-all
+// logic — see the keydown listener below.
 function clearSearch() {
   const input = $('#search-input');
   if (!input || !input.value) return;
@@ -2019,6 +2004,30 @@ window.addEventListener('DOMContentLoaded', () => {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (active && active.isContentEditable)) return;
     e.preventDefault();
     input.focus();
+  });
+  // Ctrl+F / Cmd+F (kanban.proj #198): focus the search box, preventDefault
+  // on the browser's own find bar. search-hotkey.js owns the chord + value
+  // decision — an empty box gets "#" prefilled with the caret right after it
+  // (typing digits immediately forms the #<id> exact-match term), a box that
+  // already holds a query gets select-all instead, so the chord never
+  // silently clobbers a query someone already typed (typing overwrites the
+  // selection, same as any focused input). Suppressed while any modal/popup
+  // is open (anyModalOpen(), the same guard the 5s poll uses) — every
+  // popup's .modal-backdrop covers the whole viewport, so the search bar
+  // sits hidden behind it; browser's native find stands in that case
+  // instead — mirror of card #172's Ctrl+S, which only fires INSIDE a popup,
+  // this one only fires OUTSIDE one. Unlike the "/" hotkey above, no
+  // active-element check is needed: Ctrl+F never inserts a literal
+  // character into whatever's focused, so there's nothing for it to hijack.
+  document.addEventListener('keydown', (e) => {
+    const result = searchHotkeyPrefill(e, { modalOpen: anyModalOpen(), currentValue: input.value });
+    if (!result) return;
+    e.preventDefault();
+    const changed = result.value !== input.value;
+    input.value = result.value;
+    if (changed) renderBoard();
+    input.focus();
+    input.setSelectionRange(result.selectionStart, result.selectionEnd);
   });
   // card #187: autocomplete dropdown, same hand-rolled combobox (native
   // <datalist> misrenders in VSCode's Simple Browser — see attachCombobox's
