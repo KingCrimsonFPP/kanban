@@ -97,10 +97,16 @@
     <!-- kanban.proj #200: the `prompt` field's own input, revealed/hidden by
          the header's AI sparkle button — NOT by #50's "Show more fields"
          (no .modal-extra class here), so it works from the minimal 3-click
-         quick-capture flow too (title, click AI, type prompt, Enter). Placed
-         after the Assignee+dates row so Assignee stays the DOM/tab order's
-         fixed 2nd focusable field (kanban.proj #199) in every state — this
-         row only ever becomes reachable 3rd, never inserted ahead of it.
+         quick-capture flow too (title, click AI, type prompt, Enter). This
+         markup position (after the Assignee+dates row) is only the row's
+         HIDDEN/resting slot — setPromptRowVisible(), the client script's own
+         toggle helper, physically relocates the node to be the form's
+         first field, ahead of Title, the instant it's shown (kanban.proj
+         #204: the prompt IS the thing you're about to type when you reach
+         for the sparkle), and puts it right back here the instant it's
+         hidden again. Assignee still stays the fixed 2nd focusable field
+         (kanban.proj #199) whenever the prompt row is hidden — #204 only
+         ever displaces the prompt row itself.
          openModal() auto-reveals it on edit when the card already carries a
          prompt (never hides existing data behind an unclicked toggle); a new
          card starts collapsed, same "don't show empty fields uninvited"

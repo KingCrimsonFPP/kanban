@@ -656,6 +656,20 @@ test('kanban.proj #200: app.js wires the prompt field through open/snapshot/subm
   });
 });
 
+test('kanban.proj #204: setPromptRowVisible relocates #row-prompt to be the form\'s first field when shown, and back to its resting slot when hidden', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function setPromptRowVisible\(show\) \{[\s\S]*?\n\}/)[0];
+    // Real DOM move, not a CSS `order` fake-out (Tab follows DOM order, not
+    // paint order — see the #85 assignee-row precedent this mirrors): shown
+    // goes ahead of the Title label, hidden goes back before "Show more
+    // fields" (#row-prompt's static markup slot, card #200).
+    assert.match(fn, /insertBefore\(row, show \? \$\('#f-title'\)\.closest\('label'\) : \$\('#show-more-btn'\)\)/,
+      'one insertBefore call drives both directions off the same `show` flag');
+  });
+});
+
 test('index html has a "Last modified" line element in the detail popup header (card #35)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
