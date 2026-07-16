@@ -279,6 +279,11 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
 .modal.fullscreen .modal-desc textarea { flex: 1 1 auto; }
 
 .detail-modal { width: min(680px, 92vw); }
+/* kanban.proj #196: the detail popup's own twin of card #45's tile wash
+   (.card.epic above) — same epicColorSoft() 12% alpha, same override-the-base
+   `background` pattern (.modal's solid #161b22 loses to this on specificity,
+   three classes vs. one, same mechanism as .card.epic over .card). */
+.modal.detail-modal.epic { background: rgba(240, 136, 62, 0.12); }
 /* card #87/#90: row layout moved to .popup-header (below) — see there. */
 .detail-header h2 { color: #58a6ff; font-size: 1.1em; }
 .detail-path-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }

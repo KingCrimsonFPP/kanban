@@ -162,6 +162,13 @@ test('cardDetail flags archived: false for an active card, true for an archived 
   assert.strictEqual(cs.cardDetail(dir, 1).archived, true);
 });
 
+test('cardDetail carries epic: false for a plain card, true for one flagged epic (kanban.proj #196: the detail popup wash)', () => {
+  const dir = tmpBoard();
+  assert.strictEqual(cs.cardDetail(dir, 1).epic, false);
+  const wayfinder = cs.createCard(dir, { title: 'Wayfinder', status: 'todo', epic: true });
+  assert.strictEqual(cs.cardDetail(dir, wayfinder.id).epic, true);
+});
+
 test('readCardFile flags a malformed card (no closing fence) as unparseable', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'broken.card.md'), `---\nid: 5\nstatus: todo\n# no closing fence\n`);

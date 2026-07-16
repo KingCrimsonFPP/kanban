@@ -1869,6 +1869,9 @@ async function openDetailModal(id) {
   $('#detail-modified').innerHTML = formatDetailModified(data);
   $('#detail-frontmatter').innerHTML = renderFrontmatterTable(parseFrontmatter(data.frontmatter));
   $('#detail-body').innerHTML = mdToHtml(data.body || '');
+  // card #45's tile wash (`.card.epic`), same class on the popup's own panel —
+  // cardDetail (card-store.js) carries the tolerant any-case read tiles use.
+  $('#detail-modal').querySelector('.modal').classList.toggle('epic', !!data.epic);
   // Archived cards: Edit only knows about state.active, and Archive on an already-archived
   // card would rename the file again (never clobbers, but pointless/confusing) — hide both.
   // visibility, not .hidden: with the icons leading the header (card #61,

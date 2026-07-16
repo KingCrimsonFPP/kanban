@@ -496,6 +496,17 @@ test('detail popup title never hops between opens: archived cards RESERVE the hi
   });
 });
 
+test('openDetailModal washes the popup panel for an epic card — card #45\'s tile treatment mirrored on the detail modal (kanban.proj #196)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/async function openDetailModal\([\s\S]*?\n\}/);
+    assert.ok(fn, 'openDetailModal found in app.js');
+    assert.match(fn[0], /\$\('#detail-modal'\)\.querySelector\('\.modal'\)\.classList\.toggle\('epic', !!data\.epic\)/,
+      'toggles .epic on the popup panel from the fetched detail\'s own epic flag');
+  });
+});
+
 test('create form ships the minimal-first pieces: show-more button, .modal-extra groups, and the .minimal hide rule (card #50)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
@@ -920,6 +931,15 @@ test('GET /api/cards/1/detail returns raw frontmatter, absolute path, and body',
     assert.match(r.json.frontmatter, /^status: done$/m);
     assert.ok(path.isAbsolute(r.json.path));
     assert.ok(r.json.body.includes('body'));
+  });
+});
+
+test('GET /api/cards/:id/detail carries the parsed epic boolean — false for a plain card, true once flagged (kanban.proj #196: the detail popup wash)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    assert.strictEqual((await req(base, 'GET', '/api/cards/1/detail')).json.epic, false);
+    const created = await req(base, 'POST', '/api/cards', { title: 'Wayfinder', status: 'todo', epic: true });
+    assert.strictEqual((await req(base, 'GET', `/api/cards/${created.json.id}/detail`)).json.epic, true);
   });
 });
 

@@ -126,7 +126,10 @@ function statusColorSoft(status) {
 // twins, since the bar's `background` is already spoken for by its
 // per-status fill and the map node paints via SVG `fill`, not CSS
 // `background`) — this function exists only so CSS and JS can't drift on the
-// exact value (pinned by status-colors.test.js).
+// exact value (pinned by status-colors.test.js). kanban.proj #196 added the
+// card detail popup as a surface too (`.modal.detail-modal.epic`) — same
+// class-toggle-on-open pattern, its own rule since `.modal`'s solid
+// background is spoken for like the gantt bar/map node above.
 function epicColorSoft() {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(EPIC_COLOR.slice(i, i + 2), 16));
   return `rgba(${r}, ${g}, ${b}, 0.12)`;

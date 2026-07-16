@@ -461,6 +461,7 @@ function cardDetail(dir, id) {
   return {
     id: card.id, title: card.title, path: path.resolve(file), frontmatter, body: card.body,
     archived: card.archived, updated: card.updated, // card #35
+    epic: card.epic, // kanban.proj #196: the detail popup's own epic wash, same tolerant read as the tiles'
   };
 }
 
