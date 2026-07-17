@@ -670,8 +670,44 @@ function renderBoard() {
   applyViewMode();
 }
 
+// kanban.proj #207: publishes the sticky page header's real rendered height as
+// a CSS var so each column-header's `top: var(--board-header-h)` (app.css)
+// parks it directly under the page header instead of a guessed fixed px
+// offset — the header wraps to a second row on a narrow viewport, a long
+// project name, or the notif badge appearing, so a hardcoded value would
+// drift out of sync with the header it's supposed to sit below. Wired at
+// DOMContentLoaded (header markup is static HTML, already parsed — no need
+// to wait on the board fetch) plus a ResizeObserver on the header itself, so
+// a live wrap change (window resize, content change) keeps the var current.
+function syncBoardHeaderHeight() {
+  const header = document.querySelector('header');
+  if (!header) return;
+  document.documentElement.style.setProperty('--board-header-h', `${header.offsetHeight}px`);
+}
+
 function renderBoardColumns() {
   const board = $('#board');
+  // Verify finding fix (kanban.proj #207): each column now scrolls its own
+  // card list independently (.column-cards, see app.css's comment on the
+  // rule) instead of the whole board sharing one scroll — but every
+  // renderBoard() call (poll, drag, search keystroke, ...; the auto-refresh
+  // poll alone fires every 5s, AUTO_REFRESH_MS below) wipes and rebuilds
+  // #board's children, and clearing a scrolled container's content resets
+  // its scrollTop to 0. Without this, a column scrolled mid-read would jump
+  // back to its top every few seconds during normal use. Same fix class as
+  // renderMapView's keepLeft/keepTop above: read each column's position
+  // before the wipe (keyed by column id — a column can be removed/reordered
+  // by a config change between renders, so index position isn't safe to
+  // reuse), restore it once that column's card list is rebuilt.
+  // main#board itself keeps its own pre-existing horizontal scroll
+  // (overflow-x: auto, unrelated to this card) — scrollLeft is preserved
+  // the same way for the same reason.
+  const keepBoardLeft = board.scrollLeft;
+  const keepColumnTops = new Map();
+  board.querySelectorAll('.column-cards').forEach((el) => {
+    const colEl = el.closest('.column');
+    if (colEl && colEl.dataset.col) keepColumnTops.set(colEl.dataset.col, el.scrollTop);
+  });
   board.innerHTML = '';
   const collapsed = loadCollapsedColumns();
   const colSort = loadColumnSort();
@@ -767,7 +803,15 @@ function renderBoardColumns() {
       colEl.appendChild(list);
     }
     board.appendChild(colEl);
+    // Restoring scrollTop only works once colEl is attached to the live
+    // document — an unattached node has no layout, so scrollHeight/
+    // clientHeight both read 0 and the browser silently clamps any assigned
+    // scrollTop back to 0. Must happen after board.appendChild(colEl) above.
+    if (!isCollapsed && keepColumnTops.has(col)) {
+      colEl.querySelector('.column-cards').scrollTop = keepColumnTops.get(col);
+    }
   }
+  board.scrollLeft = keepBoardLeft;
   wireDrag();
 }
 
@@ -1444,6 +1488,16 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') autoRefreshTick();
   });
+  // kanban.proj #207: sticky column headers park below the sticky page
+  // header via --board-header-h — sync it now (static markup, already
+  // parsed) and keep it current across wraps/resizes.
+  syncBoardHeaderHeight();
+  const headerEl = document.querySelector('header');
+  if (headerEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncBoardHeaderHeight).observe(headerEl);
+  } else {
+    window.addEventListener('resize', syncBoardHeaderHeight);
+  }
 });
 
 // card #31: the status <select>'s options come from the board's statuses

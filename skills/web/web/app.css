@@ -1,6 +1,53 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; }
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+/* kanban.proj #207: the top bar (title, search, view-switch/refresh/notif
+   buttons) stays visible above the board — position: sticky against the
+   document's own scroll. Needs an opaque background (matches <body>'s) so
+   content scrolling underneath doesn't show through, and a z-index above
+   ordinary content but below the popups/toast (20-70, see below) so a modal
+   still overlays it. --board-header-h (set by app.js's
+   syncBoardHeaderHeight, DOMContentLoaded + ResizeObserver) is this
+   element's OWN rendered height, consumed by main#board below to size the
+   board area under it, instead of guessing a fixed px offset that would
+   drift the moment the header wraps to a second line (narrow viewport, a
+   long project name, the notif badge appearing).
+   Verify finding (adversarial review, kanban.proj #207): the original cut of
+   this card gave EACH `.column-header` `position: sticky` against a
+   `height: auto` main#board, banking on the page/document doing the
+   scrolling. That never worked: main#board also carries `overflow-x: auto`
+   (pre-existing, unrelated to this card — the row of columns scrolls
+   sideways on a narrow viewport without dragging the page header with it),
+   and the CSS Overflow spec forces overflow-y to compute to auto too
+   whenever overflow-x is non-visible and overflow-y isn't set — so
+   main#board silently became the scroll container .column-header's sticky
+   resolved against, not the document, yet had no bounded height to ever
+   scroll on its own axis. The "sticky" headers behaved exactly like
+   `position: static` and scrolled off-screen with the rest of the page
+   (confirmed via computed-style + getBoundingClientRect before/after a
+   scroll). Bounding main#board's height and adding `overflow-y: auto`
+   sounds like the fix, but empirically it isn't ENOUGH on its own: with
+   align-items: stretch and a single nowrap flex line, a definite main#board
+   height caps every `.column` at exactly that height — a column's own card
+   list, if taller, just overflows the column's box unclipped (visually
+   broken), and the sticky header's containing block (.column) exhausts its
+   own bounds long before the user has scrolled through all the cards, so it
+   still un-sticks partway through (reproduced against a real 25-card
+   column, not just a short synthetic one — see the doubled-back CDP
+   verification in the PR notes).
+   The actual fix drops per-column `position: sticky` entirely and scrolls
+   PER COLUMN instead of scrolling main#board as one shared unit (Trello-
+   style): main#board is bounded to the viewport under the page header, each
+   `.column` stretches to fill that exact height and is a column flexbox
+   itself (header, then cards), and `.column-cards` — not `.column` or
+   main#board — is the one with `overflow-y: auto`. The header is simply the
+   first flex child, outside the scrolling region, so it never needs sticky
+   positioning: it can't scroll away because it was never inside the thing
+   that scrolls. Bonus: columns no longer need to match "the tallest
+   sibling's content height" (impossible to do AND have a bounded, working
+   scroll container at the same time) — every column now fills the same
+   fixed height and scrolls its own overflow independently, same as real
+   kanban boards. */
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 15; background: #0d1117; }
 h1 { color: #58a6ff; font-size: 1.4em; }
 .project-name { color: #8b949e; font-size: 0.65em; font-weight: 400; margin-left: 4px; }
 /* card #55: copy-board-path button — lives inside the h1, so size back down
@@ -21,10 +68,27 @@ button:hover { background: #30363d; }
 /* Signals a collapsed column that still has hits (card #17) — the count itself
    already reads matching/total, this just adds a visual nudge to notice it. */
 .column.search-match .column-count { color: #58a6ff; font-weight: 700; }
-main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; }
-.column { background: #161b22; border: 1px solid #30363d; border-radius: 8px; min-width: 260px; flex: 1; transition: min-width 0.15s, width 0.15s, flex 0.15s; }
+/* kanban.proj #207: align-items: stretch makes every live column (Archive
+   included) fill the row's shared height, so column length no longer
+   depends on how many cards it holds — a short column no longer stops short
+   of a tall neighbor with a ragged bottom edge. main#board is bounded to
+   the viewport under the fixed page header (--board-header-h, see above) so
+   that shared height is a real, definite one; 48px is body's own top+bottom
+   padding (16+16) plus header's margin-bottom (16). Horizontal scroll
+   (overflow-x, pre-existing, unrelated to this card) still applies when the
+   columns overflow the viewport width — vertical overflow is each column's
+   own concern now (.column-cards below), not main#board's, so overflow-y
+   here stays at its default (nothing to scroll vertically at this level). */
+main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; height: calc(100vh - var(--board-header-h, 64px) - 48px); }
+.column { background: #161b22; border: 1px solid #30363d; border-radius: 8px; min-width: 260px; flex: 1; display: flex; flex-direction: column; overflow: hidden; transition: min-width 0.15s, width 0.15s, flex 0.15s; }
 .column.drag-over { border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff inset; }
-.column-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* kanban.proj #207: the header is the column's first flex child, ABOVE the
+   independently-scrolling .column-cards below — it stays visible for free
+   while a long card list scrolls past, with no position: sticky needed (see
+   main#board's comment above for why sticky-against-a-shared-scroll doesn't
+   actually work here). flex-shrink: 0 keeps it its natural height even if
+   sort controls or a long column name make the row wrap. */
+.column-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; background: #161b22; border-radius: 8px 8px 0 0; }
 /* card #57: backlog is cyan, not its old grey #8b949e — one shade from the
    archive header below, the two columns read alike at a glance. Grey now means
    archived (a location, not a status) and nothing else; hexes mirror
@@ -65,7 +129,13 @@ main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto
    attribute (set in JS) carries the hover tooltip naming the column. */
 .column.collapsed { min-width: 44px; width: 44px; flex: 0 0 44px; }
 .column.collapsed .column-header { flex-direction: column; padding: 10px 4px; gap: 6px; border-bottom: none; }
-.column-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+/* kanban.proj #207: flex: 1 (fills whatever height .column-header didn't
+   use) + min-height: 0 (flex items default to their content's min size,
+   which would otherwise refuse to shrink below it and defeat the scroll)
+   + overflow-y: auto together make each column's OWN card list scroll
+   independently, the header staying visible above it for free (see
+   .column-header's comment). */
+.column-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; overflow-y: auto; }
 .card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; cursor: grab; }
 /* card #45: epic reads as a faint background wash instead of #91's small
    orange dot — circles are reserved for STATUS alone now (the status dot

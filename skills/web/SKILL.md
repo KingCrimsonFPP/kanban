@@ -100,6 +100,16 @@ bound to `127.0.0.1` only.
   the full column name. Live columns default expanded, Archive defaults collapsed.
   Collapse state persists per column in `localStorage` (namespaced per board) and survives
   both a page reload and the 5s auto-refresh poll.
+- **Equal-length columns, fixed headers (kanban.proj #207)** — every column (Archive
+  included) stretches to match the row's tallest member, so a short column no longer
+  stops short of a busy neighbor regardless of how many cards it holds. The page header
+  (title, search, view-switch/refresh/notif buttons) and every column's own header stay
+  on screen while the page scrolls past a tall board — both are `position: sticky`, the
+  column header parked just under the page header via a `--board-header-h` CSS var app.js
+  keeps in sync with the page header's real rendered height (`syncBoardHeaderHeight`,
+  DOMContentLoaded + a `ResizeObserver` on the header — a hardcoded px offset would drift
+  the moment the header wraps to a second line). The map/calendar/gantt views are
+  untouched — none of this reaches past `#board` and its header.
 - **Per-column sorting** — each (expanded) column header has a sort-field dropdown
   (ID / Priority / Due date / Last modified / Assignee) and a direction toggle. "Due date" sorts
   by the card's schedule — `due_date`, else `end_date`, else `start_date` (card #43) —
