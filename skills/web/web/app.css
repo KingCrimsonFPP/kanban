@@ -1,6 +1,18 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; }
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+/* kanban.proj #207: the top bar (title, search, view-switch/refresh/notif
+   buttons) stays visible while the page scrolls past a tall board — position:
+   sticky against the document's own scroll (there is no separate board-scroll
+   container; the page scrolls, same as before this card). Needs an opaque
+   background (matches <body>'s) so cards scrolling underneath don't show
+   through, and a z-index above ordinary content but below the popups/toast
+   (20-70, see below) so a modal still overlays it. --board-header-h (set by
+   app.js's syncBoardHeaderHeight, DOMContentLoaded + ResizeObserver) is this
+   element's OWN rendered height, consumed by .column-header below so a
+   column's sticky header parks itself just under this bar instead of guessing
+   a fixed px offset that would drift the moment the header wraps to a second
+   line (narrow viewport, a long project name, the notif badge appearing). */
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 15; background: #0d1117; }
 h1 { color: #58a6ff; font-size: 1.4em; }
 .project-name { color: #8b949e; font-size: 0.65em; font-weight: 400; margin-left: 4px; }
 /* card #55: copy-board-path button — lives inside the h1, so size back down
@@ -21,10 +33,25 @@ button:hover { background: #30363d; }
 /* Signals a collapsed column that still has hits (card #17) — the count itself
    already reads matching/total, this just adds a visual nudge to notice it. */
 .column.search-match .column-count { color: #58a6ff; font-weight: 700; }
-main#board { display: flex; gap: 12px; align-items: flex-start; overflow-x: auto; }
+/* kanban.proj #207: align-items was flex-start, so each column sized to its
+   OWN card count and a short column stopped short of a tall neighbor — a
+   ragged bottom edge. stretch makes every live column (Archive included)
+   match the row's tallest member, so column length no longer depends on how
+   many cards it holds; only the horizontal scroll (unchanged) still applies
+   when the columns overflow the viewport width. */
+main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; }
 .column { background: #161b22; border: 1px solid #30363d; border-radius: 8px; min-width: 260px; flex: 1; transition: min-width 0.15s, width 0.15s, flex 0.15s; }
 .column.drag-over { border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff inset; }
-.column-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* kanban.proj #207: sticky, parked just under the page header (the CSS var
+   header sets on itself, above) — visible the whole time a long card list in
+   THIS column scrolls past, same reasoning as the page header. .column has no
+   overflow of its own (the page still scrolls as a whole, unchanged), so the
+   sticky offset is against the document's scroll, capped at this column's own
+   bottom edge (standard sticky behavior) — it never floats over a shorter
+   neighbor once its own column runs out of content. z-index below the page
+   header (15) so the two never fight, above ordinary card content (auto/
+   static) so it stays legible over cards scrolling underneath. */
+.column-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: sticky; top: var(--board-header-h, 64px); z-index: 5; background: #161b22; border-radius: 8px 8px 0 0; }
 /* card #57: backlog is cyan, not its old grey #8b949e — one shade from the
    archive header below, the two columns read alike at a glance. Grey now means
    archived (a location, not a status) and nothing else; hexes mirror

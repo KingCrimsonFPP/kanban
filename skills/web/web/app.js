@@ -655,6 +655,21 @@ function renderBoard() {
   applyViewMode();
 }
 
+// kanban.proj #207: publishes the sticky page header's real rendered height as
+// a CSS var so each column-header's `top: var(--board-header-h)` (app.css)
+// parks it directly under the page header instead of a guessed fixed px
+// offset — the header wraps to a second row on a narrow viewport, a long
+// project name, or the notif badge appearing, so a hardcoded value would
+// drift out of sync with the header it's supposed to sit below. Wired at
+// DOMContentLoaded (header markup is static HTML, already parsed — no need
+// to wait on the board fetch) plus a ResizeObserver on the header itself, so
+// a live wrap change (window resize, content change) keeps the var current.
+function syncBoardHeaderHeight() {
+  const header = document.querySelector('header');
+  if (!header) return;
+  document.documentElement.style.setProperty('--board-header-h', `${header.offsetHeight}px`);
+}
+
 function renderBoardColumns() {
   const board = $('#board');
   board.innerHTML = '';
@@ -1422,6 +1437,16 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') autoRefreshTick();
   });
+  // kanban.proj #207: sticky column headers park below the sticky page
+  // header via --board-header-h — sync it now (static markup, already
+  // parsed) and keep it current across wraps/resizes.
+  syncBoardHeaderHeight();
+  const headerEl = document.querySelector('header');
+  if (headerEl && typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncBoardHeaderHeight).observe(headerEl);
+  } else {
+    window.addEventListener('resize', syncBoardHeaderHeight);
+  }
 });
 
 // card #31: the status <select>'s options come from the board's statuses
