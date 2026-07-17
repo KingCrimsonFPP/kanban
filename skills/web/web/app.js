@@ -292,6 +292,11 @@ function toggleMapSection(key) {
 
 const CHEVRON_LEFT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
 const CHEVRON_RIGHT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+// kanban.proj #202: same sparkle glyph as #modal-ai-btn (app.html) — reused
+// here (not re-fetched from the DOM) for the column header's AI quick-create
+// button and the board tile's empty-title prompt-fallback, so both read as
+// the same "AI prompt" cue the modal's own toggle already established.
+const AI_PROMPT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"></path><path d="M19 15l0.8 2.2L22 18l-2.2 0.8L19 21l-0.8-2.2L16 18l2.2-0.8L19 15z"></path></svg>';
 
 // modal-fullscreen.js provides MODAL_TYPES / DEFAULT_FULLSCREEN /
 // mergeFullscreenState as bare globals (card #20, same dual-environment
@@ -504,9 +509,19 @@ function cardEl(card) {
   // card #44: the schedule key (same precedence the Due date sort uses) top-right —
   // escaped: date fields are free text by contract, never trust them in HTML.
   const sched = scheduleLabel(card, localTodayStr());
+  // kanban.proj #202: a card with no title yet but a queued prompt (an
+  // AI-dispatched card waiting on kanban-afk to name it) shows the sparkle +
+  // prompt text in the title's own spot — a temporary stand-in, never a
+  // permanent glyph, gone the moment a real title lands. card-title.js's
+  // cardTitleDisplay is the pure decision; the prompt text is user data like
+  // any other card field, so it's escaped exactly like card.title would be.
+  const titleDisplay = cardTitleDisplay(card);
+  const titleHtml = titleDisplay.isPromptFallback
+    ? `${AI_PROMPT_ICON}${escapeHtml(titleDisplay.text)}`
+    : escapeHtml(card.title);
   el.innerHTML =
     `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${statusBadge(card)}${statusChip}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
-    `<div class="card-title">${escapeHtml(card.title)}</div>` +
+    `<div class="card-title${titleDisplay.isPromptFallback ? ' card-title--prompt-fallback' : ''}">${titleHtml}</div>` +
     (tags ? `<div class="card-tags">${tags}</div>` : '') + waiting;
   paintAssigneeColors(el); // card #183: reserved custom colors need a CSSOM pass, see helper
   // epic #137: the red blocked pill — the sticker is a human stop sign, so
@@ -731,9 +746,15 @@ function renderBoardColumns() {
         // headers only (showsColumnAdd: archive never — you can't create an
         // archived card — and a collapsed strip has no room). Wired through
         // the delegated #board click listener, same as every header control.
+        // kanban.proj #202: the sparkle twin sits right after it, same gate —
+        // opens the same modal pre-aimed at this column, with the AI prompt
+        // row already revealed (see enableAiPrompt(), wired in the delegated
+        // click listener below).
         (showsColumnAdd(col, isCollapsed) ?
           `<button type="button" class="column-add" data-col="${escapeHtml(col)}" ` +
-            `aria-label="New card in ${escapeHtml(label)}" title="New card in ${escapeHtml(label)}">+</button>` : '') +
+            `aria-label="New card in ${escapeHtml(label)}" title="New card in ${escapeHtml(label)}">+</button>` +
+          `<button type="button" class="column-add-ai" data-col="${escapeHtml(col)}" ` +
+            `aria-label="New AI-prompt card in ${escapeHtml(label)}" title="New card in ${escapeHtml(label)} with AI prompt enabled">${AI_PROMPT_ICON}</button>` : '') +
       `</div>`;
     // card #31: custom columns get their deterministic hashed color inline
     // (there is no CSS rule for them); the built-in four keep their exact
@@ -1263,12 +1284,13 @@ function anyModalOpen() {
 function boardControlFocused() {
   const el = document.activeElement;
   // .cal-nav: calendar nav (card #37/#58); .column-add: the #54 header +;
-  // .map-filter-toggle/.map-section-toggle: the #56/#97 map pills; .gantt-
-  // filter-toggle: the #98 gantt pills; .calendar-filter-toggle: the #99
+  // .column-add-ai: its kanban.proj #202 sparkle twin; .map-filter-toggle/
+  // .map-section-toggle: the #56/#97 map pills; .gantt-filter-toggle: the
+  // #98 gantt pills; .calendar-filter-toggle: the #99
   // calendar pills (their views are wiped by every render). All focusable,
   // all rebuilt per render — a poll landing while one is focused would
   // silently dump keyboard focus to <body>.
-  return !!(el && el.closest && el.closest('.column-sort-field, .column-sort-dir, .cal-nav, .column-add, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle'));
+  return !!(el && el.closest && el.closest('.column-sort-field, .column-sort-dir, .cal-nav, .column-add, .column-add-ai, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle'));
 }
 
 function setStale(stale) {
@@ -1457,6 +1479,21 @@ function setPromptRowVisible(show) {
   $('#modal-ai-btn').setAttribute('aria-pressed', String(show));
 }
 
+// kanban.proj #202: turning the AI prompt row ON — from the modal's own
+// sparkle button or a column header's sparkle quick-create (below) — reveals
+// it, focuses it (same "two-step gesture" as #200), and, for a NEW card only
+// (an edit keeps whatever assignee the card already has), sets the assignee
+// straight to @afk: turning the toggle on IS the queue-it-for-AI decision,
+// so the assignee shouldn't need a second, separate edit to match.
+function enableAiPrompt() {
+  setPromptRowVisible(true);
+  $('#f-prompt').focus();
+  if (!$('#f-id').value) {
+    $('#f-assignee').value = '@afk';
+    syncAssigneeColor();
+  }
+}
+
 // card #183 (kanban.proj #191 replaced the dot with tinted text): the
 // modal's own live color cue for the field currently being typed — same
 // handle-color contract the board tiles wear (assigneeBadge's text tint),
@@ -1599,10 +1636,13 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#f-review').addEventListener('input', syncReviewInputStyle); // ADR 0009: live gold-border feedback
   // kanban.proj #200: toggles #row-prompt; focuses the input on reveal so
   // clicking the sparkle and typing is a two-step gesture, not three.
+  // kanban.proj #202: turning it ON goes through enableAiPrompt() (also sets
+  // assignee to @afk for a new card); turning it back OFF is still a plain
+  // hide — the assignee nudge is one-way, never undone by re-hiding the row.
   $('#modal-ai-btn').addEventListener('click', () => {
     const show = $('#row-prompt').classList.contains('hidden');
-    setPromptRowVisible(show);
-    if (show) $('#f-prompt').focus();
+    if (show) enableAiPrompt();
+    else setPromptRowVisible(false);
   });
   $('#f-assignee').addEventListener('input', syncAssigneeColor); // card #183: live color-text feedback
   $('#modal-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('edit'));
@@ -1622,6 +1662,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (sortDirBtn) { toggleColumnSortDirection(sortDirBtn.dataset.col); return; }
     const addBtn = e.target.closest('.column-add');
     if (addBtn) { openModal(null, addBtn.dataset.col); return; } // card #54: create pre-aimed at this column
+    const addAiBtn = e.target.closest('.column-add-ai');
+    // kanban.proj #202: same pre-aimed create, with the AI prompt row already
+    // revealed (and, per enableAiPrompt, the assignee already set to @afk).
+    if (addAiBtn) { openModal(null, addAiBtn.dataset.col); enableAiPrompt(); return; }
 
     const actBtn = e.target.closest('button[data-act]');
     if (actBtn) {
