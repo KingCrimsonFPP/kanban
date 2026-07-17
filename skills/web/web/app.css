@@ -863,3 +863,95 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .context-menu button:hover { background: #30363d; }
 .context-menu button.danger:hover { background: #3d1d20; color: #f85149; }
 body.shift-held .card-el { user-select: none; } /* shift+click selects cards, not their text — only while shift is down, so text stays copyable otherwise (card #25; covers every view's card-el since #39) */
+
+/* kanban.proj #209: theme every visible scrollbar to match the dark palette
+   instead of default OS chrome — follow-up to #207's per-column scroll
+   containers. Covers: html (the page itself), main#board (#207's horizontal
+   column strip), .column-cards (#207's per-column vertical lists), .modal +
+   .modal textarea + .detail-body pre (popup/modal scroll areas), .map-view
+   (dependency map) and .gantt-scroll (gantt horizontal scroller),
+   .cal-tg-scroll (calendar hour grid), and the small popovers
+   .combobox-menu / .notif-list. Firefox reads scrollbar-width/-color;
+   Chromium/Edge (incl. VSCode Simple Browser, the primary target per the
+   card) only obeys the ::-webkit-scrollbar* pseudo-elements, so both are
+   set. No new hex family: the thumb reuses the existing border tone
+   (#30363d, same as every panel/input border in this file) so it reads as a
+   quiet extension of the UI rather than a foreign control, brightening to
+   the existing muted-text tone (#6e7681) on hover for a clear but subtle
+   affordance. The track is transparent rather than a hardcoded fill — these
+   containers sit on different surfaces (page #0d1117, column/modal/map/gantt
+   #161b22), and transparent blends into whichever one it's over instead of
+   pinning a second color per container. 8px is slim next to the ~17px OS
+   default; border-radius keeps the thumb a soft capsule instead of a hard
+   bar. */
+html,
+main#board,
+.column-cards,
+.modal,
+.modal textarea,
+.detail-body pre,
+.map-view,
+.gantt-scroll,
+.cal-tg-scroll,
+.combobox-menu,
+.notif-list {
+  scrollbar-width: thin;
+  scrollbar-color: #30363d transparent;
+}
+html::-webkit-scrollbar,
+main#board::-webkit-scrollbar,
+.column-cards::-webkit-scrollbar,
+.modal::-webkit-scrollbar,
+.modal textarea::-webkit-scrollbar,
+.detail-body pre::-webkit-scrollbar,
+.map-view::-webkit-scrollbar,
+.gantt-scroll::-webkit-scrollbar,
+.cal-tg-scroll::-webkit-scrollbar,
+.combobox-menu::-webkit-scrollbar,
+.notif-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html::-webkit-scrollbar-track,
+main#board::-webkit-scrollbar-track,
+.column-cards::-webkit-scrollbar-track,
+.modal::-webkit-scrollbar-track,
+.modal textarea::-webkit-scrollbar-track,
+.detail-body pre::-webkit-scrollbar-track,
+.map-view::-webkit-scrollbar-track,
+.gantt-scroll::-webkit-scrollbar-track,
+.cal-tg-scroll::-webkit-scrollbar-track,
+.combobox-menu::-webkit-scrollbar-track,
+.notif-list::-webkit-scrollbar-track,
+html::-webkit-scrollbar-corner,
+.modal::-webkit-scrollbar-corner,
+.map-view::-webkit-scrollbar-corner {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb,
+main#board::-webkit-scrollbar-thumb,
+.column-cards::-webkit-scrollbar-thumb,
+.modal::-webkit-scrollbar-thumb,
+.modal textarea::-webkit-scrollbar-thumb,
+.detail-body pre::-webkit-scrollbar-thumb,
+.map-view::-webkit-scrollbar-thumb,
+.gantt-scroll::-webkit-scrollbar-thumb,
+.cal-tg-scroll::-webkit-scrollbar-thumb,
+.combobox-menu::-webkit-scrollbar-thumb,
+.notif-list::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 4px;
+}
+html::-webkit-scrollbar-thumb:hover,
+main#board::-webkit-scrollbar-thumb:hover,
+.column-cards::-webkit-scrollbar-thumb:hover,
+.modal::-webkit-scrollbar-thumb:hover,
+.modal textarea::-webkit-scrollbar-thumb:hover,
+.detail-body pre::-webkit-scrollbar-thumb:hover,
+.map-view::-webkit-scrollbar-thumb:hover,
+.gantt-scroll::-webkit-scrollbar-thumb:hover,
+.cal-tg-scroll::-webkit-scrollbar-thumb:hover,
+.combobox-menu::-webkit-scrollbar-thumb:hover,
+.notif-list::-webkit-scrollbar-thumb:hover {
+  background: #6e7681;
+}
