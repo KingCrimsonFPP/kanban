@@ -135,6 +135,16 @@ test('cardDetail returns the raw frontmatter block, absolute path, title, and bo
   assert.ok(d.body.includes('A para.'));
 });
 
+// kanban.proj #211: the detail popup's own title fallback needs `prompt`
+// alongside title — cardDetail only carried title/body/epic/etc before.
+test('cardDetail carries prompt so the popup can fall back to it for a titleless card', () => {
+  const dir = tmpBoard();
+  cs.createCard(dir, { title: '', prompt: 'summarize the PR', status: 'backlog' });
+  const d = cs.cardDetail(dir, cs.nextId(dir) - 1);
+  assert.strictEqual(d.title, '');
+  assert.strictEqual(d.prompt, 'summarize the PR');
+});
+
 test('cardDetail surfaces a genuinely unrecognized frontmatter key verbatim', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'ext.card.md'),
@@ -206,6 +216,61 @@ test('createCard past id 9999 skips the numeric prefix (avoids breaking lexicogr
   assert.strictEqual(card.id, 10000);
   assert.ok(fs.existsSync(path.join(dir, 'over-the-line.card.md')));
   assert.ok(!fs.existsSync(path.join(dir, '10000.over-the-line.card.md')));
+});
+
+// kanban.proj #211: AI-prompt cards may save with no title at all — the
+// server must accept it (no forced "Untitled") and the filename's slug
+// component degrades to nothing, leaving the bare id prefix.
+test('createCard accepts an empty title — no "Untitled" fallback, filename is the bare id prefix', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { title: '', prompt: 'summarize the PR', status: 'backlog' });
+  assert.strictEqual(card.title, '');
+  const base = path.basename(card.file);
+  assert.strictEqual(base, `${String(card.id).padStart(4, '0')}.card.md`, 'no dangling dot, no slug segment');
+  const reread = cs.readCardFile(card.file);
+  assert.strictEqual(reread.title, '');
+  assert.strictEqual(reread.prompt, 'summarize the PR');
+});
+
+test('createCard treats a missing title field the same as an explicit empty one', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { status: 'backlog', prompt: 'do the thing' });
+  assert.strictEqual(card.title, '');
+  assert.strictEqual(path.basename(card.file), `${String(card.id).padStart(4, '0')}.card.md`);
+});
+
+// kanban.proj #211 verify finding: neither title nor prompt is no data at
+// all — nothing left for cardTitleDisplay to fall back to on any view.
+// Restore the pre-#211 "Untitled" safety net for exactly that case (the
+// browser's `required` toggle is not the only path in — curl, kanban-afk
+// dispatch, any direct POST /api/cards caller bypasses it entirely).
+test('createCard falls back to "Untitled" when both title and prompt are empty', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { title: '', prompt: '', status: 'backlog' });
+  assert.strictEqual(card.title, 'Untitled');
+  assert.strictEqual(path.basename(card.file), `${String(card.id).padStart(4, '0')}.untitled.card.md`);
+});
+
+test('createCard falls back to "Untitled" when title and prompt fields are both absent', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { status: 'backlog' });
+  assert.strictEqual(card.title, 'Untitled');
+});
+
+test('createCard falls back to "Untitled" when title is whitespace-only and prompt is absent', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { title: '   ', status: 'backlog' });
+  // Guards the exact browser scenario from the verify finding: the modal's
+  // native `required` accepts a single space, submitModal .trim()s it to ''
+  // before POSTing — so a whitespace-only title must be judged as blank here
+  // too, same as a literal empty string, not preserved verbatim.
+  assert.strictEqual(card.title, 'Untitled');
+});
+
+test('createCard keeps a real (non-blank) title as-is even with a prompt present', () => {
+  const dir = tmpBoard();
+  const card = cs.createCard(dir, { title: '  Ship it  ', prompt: 'ignored', status: 'backlog' });
+  assert.strictEqual(card.title, 'Ship it'); // H1 round-trip trims surrounding whitespace, same as any other title
 });
 
 test('createCard avoids filename collisions', () => {

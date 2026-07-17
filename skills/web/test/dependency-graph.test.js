@@ -480,3 +480,12 @@ test('treeIds/pathIds tolerate a self-referencing waiting_for without hanging', 
   assert.deepStrictEqual(treeIds(selfRef, 7), new Set([7]));
   assert.deepStrictEqual(pathIds(selfRef, 7), new Set([7]));
 });
+
+// kanban.proj #211: the map node needs `prompt` so its own label can fall
+// back to it exactly like every other view (cardTitleDisplay, card-title.js).
+test('cardToNode carries prompt through onto the built node, same as title/status/epic', () => {
+  const withPrompt = [{ id: 8, title: '', prompt: 'summarize the PR', status: 'backlog', waiting_for: [], archived: false }];
+  const g = buildDependencyGraph(withPrompt, null);
+  const node = g.nodes.find((n) => n.id === 8);
+  assert.strictEqual(node.prompt, 'summarize the PR');
+});

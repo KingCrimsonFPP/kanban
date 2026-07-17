@@ -460,7 +460,18 @@ function createCard(dir, input) {
   if (tags.length) { order.push('tags'); values.tags = ` ${formatList(tags)}`; }
   if (wantsEpic(input.epic)) { order.push('epic'); values.epic = ' true'; } // card #59: unset writes NO line (#51 lean rule)
   order.push('updated'); values.updated = ` ${nowLocalISO()}`; // card #35: machine-maintained stamp
-  const body = joinTitleBody(input.title || 'Untitled', input.body || '');
+  // kanban.proj #211: an AI-prompt card may be born with no title at all —
+  // no "Untitled" placeholder as long as a prompt stands in for it
+  // (cardTitleDisplay, card-title.js, shows the prompt on every view). But
+  // when NEITHER title nor prompt carries anything (verify finding: the
+  // client's `required` toggle is the only enforcement, and it's bypassable
+  // — a space-only title trims to '' client-side, and any direct API caller
+  // — curl, kanban-afk dispatch — bypasses the browser entirely), there is
+  // nothing for any view to fall back to: restore the pre-#211 "Untitled"
+  // safety net for exactly that one case.
+  const rawTitle = input.title || '';
+  const title = (rawTitle.trim() || promptVal) ? rawTitle : 'Untitled';
+  const body = joinTitleBody(title, input.body || '');
   // <0000-id>.<slug>.card.md — id zero-padded to 4 digits so files sort by
   // card id; frontmatter id stays the source of truth, this prefix is
   // cosmetic. Ids past 9999 skip the prefix entirely (mirrors
@@ -471,10 +482,16 @@ function createCard(dir, input) {
   // filename, which is out of scope here.
   // capSlug (card #86): keep the slug component under the NTFS 255 limit —
   // covers both branches below (prefixed and prefix-less past id 9999).
-  const slug = capSlug(slugify(input.title || `card-${id}`));
+  // kanban.proj #211: an empty title yields an empty slug, so the id<=9999
+  // branch degrades to the bare zero-padded id prefix (no dangling `.` and
+  // no fake "card-N" title landing in the filename); past id 9999 there IS
+  // no id prefix to fall back to, so `card-${id}` keeps that branch's
+  // filename non-empty exactly as before.
+  const slug = capSlug(slugify(title));
+  const idPrefix = String(id).padStart(4, '0');
   const file = id <= 9999
-    ? uniqueFilePath(dir, `${String(id).padStart(4, '0')}.${slug}`)
-    : uniqueFilePath(dir, slug);
+    ? uniqueFilePath(dir, slug ? `${idPrefix}.${slug}` : idPrefix)
+    : uniqueFilePath(dir, slug || `card-${id}`);
   writeAtomic(file, serializeCard({ order, values }, body));
   return readCardFile(file, false);
 }
@@ -495,6 +512,7 @@ function cardDetail(dir, id) {
     id: card.id, title: card.title, path: path.resolve(file), frontmatter, body: card.body,
     archived: card.archived, updated: card.updated, // card #35
     epic: card.epic, // kanban.proj #196: the detail popup's own epic wash, same tolerant read as the tiles'
+    prompt: card.prompt, // kanban.proj #211: lets the popup title fall back to the queued prompt, same as every other view
   };
 }
 

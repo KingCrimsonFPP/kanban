@@ -370,6 +370,8 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .modal.detail-modal.epic { background: rgba(240, 136, 62, 0.12); }
 /* card #87/#90: row layout moved to .popup-header (below) — see there. */
 .detail-header h2 { color: #58a6ff; font-size: 1.1em; }
+/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback (board tile) */
+.detail-title--prompt-fallback { font-style: italic; opacity: 0.85; }
 .detail-path-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .detail-path { color: #8b949e; font-size: 0.78em; word-break: break-all; }
 #detail-copy-btn { flex-shrink: 0; }
@@ -464,6 +466,10 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-node text { fill: #c9d1d9; font-family: inherit; }
 .map-node-id { font-size: 10px; fill: #8b949e; }
 .map-node-title { font-size: 11.5px; }
+/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback
+   (board tile, card-title.js) — SVG text has no font-style shorthand tricks
+   beyond the two properties that actually apply to it. */
+.map-node-title--prompt-fallback { font-style: italic; fill-opacity: 0.75; }
 /* card #57: archived nodes still stroke the neutral archive grey — archive
    is a location, so a card's parked pre-archive status (or, since card #91,
    its plain neutral default) shouldn't read live on the map. */
@@ -585,6 +591,8 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .cal-day.today .cal-day-num { color: #58a6ff; font-weight: 700; }
 .cal-chip { background: #161b22; border: 1px solid #30363d; border-left: 3px solid #30363d; border-radius: 5px; padding: 2px 6px; font-size: 0.72em; color: #c9d1d9; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-chip-id { color: #8b949e; }
+/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback (board tile) */
+.cal-chip-title--prompt-fallback { font-style: italic; opacity: 0.75; }
 /* card #45: epic washes the whole chip background (.cal-chip.epic, defined
    near .card.epic above — identical value, no conflict, so one shared rule
    covers both) instead of #91's dot — the priority/waiting left accents and
@@ -726,6 +734,9 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .gantt-group-row.status-unknown { color: #6e7681; }
 .gantt-label { font-size: 0.78em; color: #c9d1d9; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; /* card #39: labels are click targets now */ }
 .gantt-label-id { color: #8b949e; }
+/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback
+   (board tile, card-title.js) for the two gantt surfaces. */
+.gantt-label-title--prompt-fallback, .gantt-bar-text--prompt-fallback { font-style: italic; opacity: 0.75; }
 .gantt-bar-row { position: relative; z-index: 2; }
 .gantt-bar { position: absolute; top: 3px; height: 20px; display: flex; align-items: stretch; background: #0d1117; border: 1px solid #30363d; border-left-width: 3px; border-radius: 5px; font-size: 0.7em; color: #c9d1d9; cursor: grab; user-select: none; touch-action: none; overflow: hidden; }
 .gantt-bar-text { flex: 1; min-width: 0; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; pointer-events: none; }

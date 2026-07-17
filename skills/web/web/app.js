@@ -579,9 +579,16 @@ function archiveCardEl(card, opts) {
   el.draggable = true; // card #34: drag out of Archive restores to the drop column
   el.dataset.id = card.id;
   const sched = scheduleLabel(card, localTodayStr());
+  // kanban.proj #211: same empty-title-shows-the-prompt fallback the board
+  // tile got from kanban.proj #202 — reused verbatim via cardTitleDisplay
+  // (card-title.js), never re-derived here.
+  const titleDisplay = cardTitleDisplay(card);
+  const titleHtml = titleDisplay.isPromptFallback
+    ? `${AI_PROMPT_ICON}${escapeHtml(titleDisplay.text)}`
+    : escapeHtml(card.title);
   el.innerHTML =
     `<div class="card-head"><span class="card-id">#${card.id}</span>${statusBadge(card)}${archivedBadge()}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
-    `<div class="card-title">${escapeHtml(card.title)}</div>` +
+    `<div class="card-title${titleDisplay.isPromptFallback ? ' card-title--prompt-fallback' : ''}">${titleHtml}</div>` +
     `<div class="card-menu">` +
       `<button type="button" data-act="restore" data-id="${card.id}">Restore</button>` +
       `<button type="button" data-act="delete-arch" data-id="${card.id}">Delete</button>` +
@@ -1166,10 +1173,15 @@ function buildMapSvg(graph, layer) {
       `${pb.className ? ` ${pb.className}` : ''}${(!missing && !n.archived && n.waiting) ? ' waiting' : ''}${n.epic ? ' epic' : ''}` +
       `${selectable ? ' card-el' : ''}${selectable && selectedIds.has(id) ? ' selected' : ''}`;
     const idLabel = `#${id}`;
-    const titleLine = missing ? '(not found)' : truncateLabel(n.title, 22);
+    // kanban.proj #211: same empty-title-shows-the-prompt fallback every
+    // other view got (cardTitleDisplay, card-title.js) — n already carries
+    // `prompt` (dependency-graph.js's cardToNode). A missing stub has no
+    // card behind it at all, so it keeps its own '(not found)' text instead.
+    const titleDisplay = cardTitleDisplay(n);
+    const titleLine = missing ? '(not found)' : truncateLabel(titleDisplay.text, 22);
     const tooltip = missing
       ? `#${id} — referenced but not found on the board`
-      : `#${id} ${n.title}${n.archived ? ' (archived)' : ''}`;
+      : `#${id} ${titleDisplay.text}${n.archived ? ' (archived)' : ''}`;
     // card #91: status moved off the border onto its own dot — a filled
     // circle colored exactly like the old rect stroke. card #31's non-built-in
     // status (custom column or unlisted on-disk value) gets one of the 8
@@ -1213,7 +1225,7 @@ function buildMapSvg(graph, layer) {
         `<title>${escapeHtml(tooltip)}</title>` +
         `<rect width="${MAP_NODE_W}" height="${MAP_NODE_H}" rx="6"></rect>` +
         `<text x="10" y="18" class="map-node-id">${escapeHtml(idLabel)}</text>` +
-        `<text x="10" y="34" class="map-node-title">${escapeHtml(titleLine)}</text>` +
+        `<text x="10" y="34" class="map-node-title${!missing && titleDisplay.isPromptFallback ? ' map-node-title--prompt-fallback' : ''}">${escapeHtml(titleLine)}</text>` +
         statusDot + archivedDot + blockedPill +
       `</g>`;
   }
@@ -1528,9 +1540,32 @@ function syncReviewInputStyle() {
 // kanban.proj #200: shows/hides #row-prompt and keeps the header AI button's
 // aria-pressed in sync — the toggle IS the reveal, so unlike #50's one-way
 // "Show more fields" this can flip back off too (click again to collapse).
+// kanban.proj #204: shown also means moved — the row becomes the form's
+// very first field (ahead of Title), since reaching for the sparkle means
+// the prompt IS the thing you're about to type. Hidden always means back in
+// its permanent DOM slot, right before "Show more fields" (kanban.proj #199's
+// Title -> Assignee tab order is untouched — this only ever displaces the
+// row itself, never Assignee). CSS `order` can't give this a real tab order
+// (Tab follows DOM order, not paint order — the reasoning card #85's now-
+// retired assignee-row DOM-move helper already spells out), so this really
+// moves the node, both directions, on every call — not just the first.
 function setPromptRowVisible(show) {
-  $('#row-prompt').classList.toggle('hidden', !show);
+  const row = $('#row-prompt');
+  $('#card-form').insertBefore(row, show ? $('#f-title').closest('label') : $('#show-more-btn'));
+  row.classList.toggle('hidden', !show);
   $('#modal-ai-btn').setAttribute('aria-pressed', String(show));
+  updateTitleRequired(); // kanban.proj #211: revealing/hiding the row can flip whether Title is required
+}
+
+// kanban.proj #211: Title is required UNLESS the AI prompt row is visible
+// AND actually carries text — an AI-prompt-only card (assignee @afk, no
+// title of its own yet) can save empty; a shown-but-empty prompt row still
+// requires a title, same as a hidden one. Re-run on every reveal/hide
+// (setPromptRowVisible above) and on every keystroke in #f-prompt, so the
+// native constraint the browser enforces at submit time is always current.
+function updateTitleRequired() {
+  const promptShown = !$('#row-prompt').classList.contains('hidden');
+  $('#f-title').required = !(promptShown && $('#f-prompt').value.trim());
 }
 
 // kanban.proj #202: turning the AI prompt row ON — from the modal's own
@@ -1688,6 +1723,7 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#card-form').addEventListener('submit', submitModal);
   $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback
   $('#f-review').addEventListener('input', syncReviewInputStyle); // ADR 0009: live gold-border feedback
+  $('#f-prompt').addEventListener('input', updateTitleRequired); // kanban.proj #211: typing/clearing the prompt live-toggles whether Title is required
   // kanban.proj #200: toggles #row-prompt; focuses the input on reveal so
   // clicking the sparkle and typing is a two-step gesture, not three.
   // kanban.proj #202: turning it ON goes through enableAiPrompt() (also sets
@@ -1739,10 +1775,15 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // Names the object in a confirm (card #26's speedbump policy): title when we
-// know it, id otherwise.
+// know it, id otherwise. kanban.proj #211 verify: falls back through
+// cardTitleDisplay like every other title-rendering call site, so a
+// titleless AI-prompt card's confirm() text names it by its queued prompt
+// instead of a blank quoted title.
 function cardLabel(id) {
   const card = state.active.concat(state.archived).find((c) => c.id === id);
-  return card ? `#${id} "${card.title}"` : `#${id}`;
+  if (!card) return `#${id}`;
+  const titleDisplay = cardTitleDisplay(card);
+  return titleDisplay.text ? `#${id} "${titleDisplay.text}"` : `#${id}`;
 }
 
 // card #92: a done card archiving is completion, not a destructive act — skip
@@ -1964,7 +2005,12 @@ async function openDetailModal(id) {
   if (reqId !== detailRequestId) return; // a newer openDetailModal call superseded this one
   currentDetailId = data.id;
   currentDetailArchived = !!data.archived;
-  $('#detail-title').textContent = `#${data.id} ${data.title}`;
+  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
+  // view got (cardTitleDisplay, card-title.js) — cardDetail (card-store.js)
+  // now carries `prompt` alongside title for exactly this.
+  const titleDisplay = cardTitleDisplay(data);
+  $('#detail-title').textContent = `#${data.id} ${titleDisplay.text}`;
+  $('#detail-title').classList.toggle('detail-title--prompt-fallback', titleDisplay.isPromptFallback);
   $('#detail-path').textContent = data.path || '';
   $('#detail-copy-btn').dataset.path = data.path || '';
   resetCopyState();
@@ -2342,9 +2388,13 @@ function calendarChipEl(card, pos, time, isDue) {
   // every other surface uses (Archived ball, card #102 final design), gated
   // on the chip's own card.archived flag. Epic no longer rides this glyph
   // sequence at all (card #45: it's the chip's own background wash instead).
-  el.innerHTML = `${glyph}${timeLabel}<span class="cal-chip-id">#${card.id}</span>${statusBadge(card)}${card.archived ? archivedBadge() : ''} ${escapeHtml(card.title)}`;
+  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
+  // view got (cardTitleDisplay, card-title.js) — reused as-is.
+  const titleDisplay = cardTitleDisplay(card);
+  el.innerHTML = `${glyph}${timeLabel}<span class="cal-chip-id">#${card.id}</span>${statusBadge(card)}${card.archived ? archivedBadge() : ''} ` +
+    `<span class="cal-chip-title${titleDisplay.isPromptFallback ? ' cal-chip-title--prompt-fallback' : ''}">${escapeHtml(titleDisplay.text)}</span>`;
   const readOnlyHint = 'Archived — restore the card to reschedule';
-  el.title = `#${card.id} ${card.title}${isDue ? ' — due' : ''}${card.archived ? ` — ${readOnlyHint}` : ''}`; // plain-text property — full title survives the CSS truncation
+  el.title = `#${card.id} ${titleDisplay.text}${isDue ? ' — due' : ''}${card.archived ? ` — ${readOnlyHint}` : ''}`; // plain-text property — full title/prompt survives the CSS truncation
   return el;
 }
 
@@ -2461,7 +2511,8 @@ function renderCalendarMonthGrid(container) {
       const more = document.createElement('div');
       more.className = 'cal-more';
       more.textContent = `+${overflow.length} more`;
-      more.title = overflow.map((c) => `#${c.card.id} ${c.card.title}`).join('\n');
+      // kanban.proj #211: same fallback as every other title-bearing surface.
+      more.title = overflow.map((c) => `#${c.card.id} ${cardTitleDisplay(c.card).text}`).join('\n');
       dayEl.appendChild(more);
     }
     grid.appendChild(dayEl);
@@ -3009,12 +3060,15 @@ function ganttBarEl(bar, win) {
   const readOnlyHint = 'Archived — restore the card to reschedule';
   const startHint = bar.card.archived ? readOnlyHint : 'Drag to change the start date';
   const endHint = bar.card.archived ? readOnlyHint : 'Drag to change the range end';
-  // plain-text property — full title + true dates survive the CSS truncation/clipping
-  el.title = `#${bar.card.id} ${bar.card.title} (${bar.startDay}${bar.endDay !== bar.startDay ? ` → ${bar.endDay}` : ''})` +
+  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
+  // view got (cardTitleDisplay, card-title.js) — reused as-is, never re-derived.
+  const titleDisplay = cardTitleDisplay(bar.card);
+  // plain-text property — full title/prompt + true dates survive the CSS truncation/clipping
+  el.title = `#${bar.card.id} ${titleDisplay.text} (${bar.startDay}${bar.endDay !== bar.startDay ? ` → ${bar.endDay}` : ''})` +
     (bar.card.archived ? ` — ${readOnlyHint}` : '');
   el.innerHTML =
     `<span class="gantt-handle start" title="${startHint}"></span>` +
-    `<span class="gantt-bar-text"><span class="gantt-bar-id">#${bar.card.id}</span> ${escapeHtml(bar.card.title)}</span>` +
+    `<span class="gantt-bar-text${titleDisplay.isPromptFallback ? ' gantt-bar-text--prompt-fallback' : ''}"><span class="gantt-bar-id">#${bar.card.id}</span> ${escapeHtml(titleDisplay.text)}</span>` +
     `<span class="gantt-handle end" title="${endHint}"></span>`;
   return el;
 }
@@ -3153,7 +3207,10 @@ function renderGanttView() {
       // a bar that's entirely outside the clamped window).
       label.className = 'gantt-row gantt-label card-el' + (bar.card.epic ? ' epic' : '') + (selectedIds.has(bar.card.id) ? ' selected' : '');
       label.dataset.id = bar.card.id;
-      label.title = `#${bar.card.id} ${bar.card.title}`;
+      // kanban.proj #211: same fallback every other view got — reused via
+      // cardTitleDisplay, never re-derived (card-title.js).
+      const titleDisplay = cardTitleDisplay(bar.card);
+      label.title = `#${bar.card.id} ${titleDisplay.text}`;
       // card #97: the gutter row carried NEITHER dot before this card (#91 only
       // reached the bar itself) — "all components" means both join here too.
       // card #45: epic's cue is now the row's own background wash (.gantt-
@@ -3165,7 +3222,8 @@ function renderGanttView() {
       // archivedBadge() covers those gutter rows too, gated on the row's own
       // card.archived flag. The bar itself keeps its existing row-level mute
       // (card #98 reopen) instead of gaining a redundant second archived cue.
-      label.innerHTML = `<span class="gantt-label-id">#${bar.card.id}</span>${statusBadge(bar.card)}${bar.card.archived ? archivedBadge() : ''} ${escapeHtml(bar.card.title)}`;
+      label.innerHTML = `<span class="gantt-label-id">#${bar.card.id}</span>${statusBadge(bar.card)}${bar.card.archived ? archivedBadge() : ''} ` +
+        `<span class="gantt-label-title${titleDisplay.isPromptFallback ? ' gantt-label-title--prompt-fallback' : ''}">${escapeHtml(titleDisplay.text)}</span>`;
       gutter.appendChild(label);
       const row = document.createElement('div');
       row.className = 'gantt-row gantt-bar-row';
@@ -3181,8 +3239,8 @@ function renderGanttView() {
         d.dataset.archived = bar.card.archived ? '1' : ''; // read by wireGanttPointerDrag's pointerdown guard
         d.style.left = `${diffDays(win.startDay, bar.dueDay) * GANTT_DAY_PX + GANTT_DAY_PX / 2}px`; // centered on its day column
         d.title = bar.card.archived
-          ? `#${bar.card.id} ${bar.card.title} — due ${bar.dueDay} (archived — restore the card to reschedule)`
-          : `#${bar.card.id} ${bar.card.title} — due ${bar.dueDay} (drag to move the due date)`;
+          ? `#${bar.card.id} ${titleDisplay.text} — due ${bar.dueDay} (archived — restore the card to reschedule)`
+          : `#${bar.card.id} ${titleDisplay.text} — due ${bar.dueDay} (drag to move the due date)`;
         row.appendChild(d);
       }
       timeline.appendChild(row);
