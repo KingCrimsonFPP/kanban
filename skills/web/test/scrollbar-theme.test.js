@@ -67,3 +67,15 @@ test('the webkit scrollbar is slim (narrower than the ~17px OS default) and the 
 test('the webkit scrollbar track is transparent, not a hardcoded fill (containers sit on different backgrounds: page #0d1117 vs column/modal/map/gantt #161b22)', () => {
   assert.match(css, /::-webkit-scrollbar-track\s*[,{][\s\S]{0,600}?background:\s*transparent/, 'track blends into whichever surface it is over');
 });
+
+// Verify finding (kanban.proj #209): overflow: auto is silently inert unless
+// the box has a height/max-height of its own — a plain block child of body
+// (which sets neither) just grows to fit its content, so it never overflows
+// itself and its ::-webkit-scrollbar* rules never fire; html scrolls instead.
+// .map-view is the one themed selector with no bounded ancestor of its own
+// (main#board, .column-cards, .modal, .detail-body pre and the calendar/
+// gantt scrollers all get a real height/max-height elsewhere in this file),
+// so it needs its own explicit bound for the theming above to ever render.
+test('.map-view has its own height bound, so its overflow: auto (and the themed scrollbar rules above) can actually fire instead of silently growing the page', () => {
+  assert.match(css, /\.map-view\s*\{[^}]*\b(?:height|max-height):/, '.map-view sets height or max-height on itself, not just overflow: auto');
+});

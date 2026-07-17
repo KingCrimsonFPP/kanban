@@ -430,7 +430,15 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    are the exact hex values the kanban-cli skill's Mermaid
    output styles nodes with, so the two views read as the same graph. */
 #map-toggle-btn[aria-pressed="true"] { background: #1f6feb; border-color: #388bfd; color: #fff; }
-.map-view { overflow: auto; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; }
+/* kanban.proj #209 verify finding: overflow: auto alone never triggers on a
+   plain block child of body — with no height/max-height of its own (and body
+   sets none either), the box just grows to fit the graph, so the html
+   element's own scrollbar handled the overflow and .map-view's themed
+   ::-webkit-scrollbar* rules never fired. Bounded to the viewport under the
+   fixed page header the same way main#board is (see main#board above for the
+   --board-header-h/48px accounting) so the map now scrolls itself instead of
+   the whole page. */
+.map-view { overflow: auto; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; height: calc(100vh - var(--board-header-h, 64px) - 48px); }
 /* card #56: the status-filter pill row. Border color is inline per pill
    (statusColor() — covers custom statuses' hashed hues, which have no CSS
    rule; same reasoning as the column headers), so the rules here only shape
