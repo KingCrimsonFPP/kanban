@@ -104,6 +104,21 @@ test('fmtBodySegs: adjacent marked spans with no gap between them both format', 
   assert.deepStrictEqual(fmtBodySegs('**a****b**'), [{ t: 'bold', v: 'a' }, { t: 'bold', v: 'b' }]);
 });
 
+test('fmtBodySegs: a triple-star run (***bold***) is not a valid 2-star marker — the extra stars fall through as literal text flanking a clean bold span, not glued inside it', () => {
+  assert.deepStrictEqual(fmtBodySegs('***bold***'), [
+    { t: 'text', v: '*' },
+    { t: 'bold', v: 'bold' },
+    { t: 'text', v: '*' },
+  ]);
+});
+
+test('fmtBodySegs: a triple-backtick-adjacent run of stars only on the closing side still leaves the trailing star literal', () => {
+  assert.deepStrictEqual(fmtBodySegs('**bold***'), [
+    { t: 'bold', v: 'bold' },
+    { t: 'text', v: '*' },
+  ]);
+});
+
 test('fmtBodySegs: a lone unmatched backtick after a closed code span rejoins the trailing text', () => {
   assert.deepStrictEqual(fmtBodySegs('`a` and `b'),
     [{ t: 'code', v: 'a' }, { t: 'text', v: ' and `b' }]);

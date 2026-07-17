@@ -454,11 +454,16 @@ const btn=(label,act,data)=>{const b=el("button",null,label);b.dataset.act=act;i
 // the plain-text run byte for byte, so it renders literally instead of
 // silently eating the rest of the body. Content between markers is never
 // re-scanned for the other marker type — that's the "no nesting" contract.
+// A "**" is only a valid opener when it is exactly a 2-star run (text[i+2]
+// isn't itself a star) — a 3rd leading star (e.g. ***bold***) is ambiguous,
+// so it falls through as a literal '*' and the scan retries one char later,
+// which finds the clean "**" and leaves the true extra star(s) as plain
+// text instead of gluing a stray '*' onto the inside of a <strong> span.
 function fmtBodySegs(text){
 const segs=[];let buf="",i=0;
 const flush=()=>{if(buf){segs.push({t:"text",v:buf});buf=""}};
 while(i<text.length){
-if(text[i]==="*"&&text[i+1]==="*"){const close=text.indexOf("**",i+2);if(close!==-1){flush();segs.push({t:"bold",v:text.slice(i+2,close)});i=close+2;continue}}
+if(text[i]==="*"&&text[i+1]==="*"&&text[i+2]!=="*"){const close=text.indexOf("**",i+2);if(close!==-1){flush();segs.push({t:"bold",v:text.slice(i+2,close)});i=close+2;continue}}
 else if(text[i]==="`"){const close=text.indexOf("`",i+1);if(close!==-1){flush();segs.push({t:"code",v:text.slice(i+1,close)});i=close+1;continue}}
 buf+=text[i];i++}
 flush();
