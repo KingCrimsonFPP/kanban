@@ -1775,10 +1775,15 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // Names the object in a confirm (card #26's speedbump policy): title when we
-// know it, id otherwise.
+// know it, id otherwise. kanban.proj #211 verify: falls back through
+// cardTitleDisplay like every other title-rendering call site, so a
+// titleless AI-prompt card's confirm() text names it by its queued prompt
+// instead of a blank quoted title.
 function cardLabel(id) {
   const card = state.active.concat(state.archived).find((c) => c.id === id);
-  return card ? `#${id} "${card.title}"` : `#${id}`;
+  if (!card) return `#${id}`;
+  const titleDisplay = cardTitleDisplay(card);
+  return titleDisplay.text ? `#${id} "${titleDisplay.text}"` : `#${id}`;
 }
 
 // card #92: a done card archiving is completion, not a destructive act — skip

@@ -461,9 +461,17 @@ function createCard(dir, input) {
   if (wantsEpic(input.epic)) { order.push('epic'); values.epic = ' true'; } // card #59: unset writes NO line (#51 lean rule)
   order.push('updated'); values.updated = ` ${nowLocalISO()}`; // card #35: machine-maintained stamp
   // kanban.proj #211: an AI-prompt card may be born with no title at all —
-  // no "Untitled" placeholder; an empty title stays empty (cardTitleDisplay,
-  // card-title.js, is what stands a queued prompt in for it on every view).
-  const body = joinTitleBody(input.title || '', input.body || '');
+  // no "Untitled" placeholder as long as a prompt stands in for it
+  // (cardTitleDisplay, card-title.js, shows the prompt on every view). But
+  // when NEITHER title nor prompt carries anything (verify finding: the
+  // client's `required` toggle is the only enforcement, and it's bypassable
+  // — a space-only title trims to '' client-side, and any direct API caller
+  // — curl, kanban-afk dispatch — bypasses the browser entirely), there is
+  // nothing for any view to fall back to: restore the pre-#211 "Untitled"
+  // safety net for exactly that one case.
+  const rawTitle = input.title || '';
+  const title = (rawTitle.trim() || promptVal) ? rawTitle : 'Untitled';
+  const body = joinTitleBody(title, input.body || '');
   // <0000-id>.<slug>.card.md — id zero-padded to 4 digits so files sort by
   // card id; frontmatter id stays the source of truth, this prefix is
   // cosmetic. Ids past 9999 skip the prefix entirely (mirrors
@@ -479,7 +487,7 @@ function createCard(dir, input) {
   // no fake "card-N" title landing in the filename); past id 9999 there IS
   // no id prefix to fall back to, so `card-${id}` keeps that branch's
   // filename non-empty exactly as before.
-  const slug = capSlug(slugify(input.title || ''));
+  const slug = capSlug(slugify(title));
   const idPrefix = String(id).padStart(4, '0');
   const file = id <= 9999
     ? uniqueFilePath(dir, slug ? `${idPrefix}.${slug}` : idPrefix)

@@ -288,17 +288,28 @@ bound to `127.0.0.1` only.
   viewer-parity debt. This is not the general presence glyph ruled out
   above — it never appears once the card has a real title, prompt or no — it
   exists solely so no view ever renders a blank title while one is still
-  pending. **kanban.proj #211 also let a card SAVE with an empty title in the
-  first place** (previously the create/edit form's native `required` on
-  `#f-title` blocked it unconditionally, and `createCard` silently
-  substituted the placeholder title "Untitled"): `updateTitleRequired()`
-  (app.js) manages `#f-title`'s `required` property dynamically — required
-  UNLESS the AI prompt row is shown AND carries non-empty text, re-evaluated
-  on every prompt-row reveal/hide (`setPromptRowVisible`) and on every
-  keystroke in `#f-prompt` — so a hidden or emptied prompt row still requires
-  a title exactly as before. Server-side, `createCard` no longer forces an
-  "Untitled" placeholder (`joinTitleBody(input.title || '', ...)`) and the
-  filename's slug component degrades to nothing when the title is empty — the
+  pending — including `cardLabel()` (the single-card Archive/Delete `confirm()`
+  text), which a #211 verify finding caught still interpolating `card.title`
+  bare; it now runs through `cardTitleDisplay()` like every other call site.
+  **kanban.proj #211 also let a card SAVE with an empty title in the first
+  place** (previously the create/edit form's native `required` on `#f-title`
+  blocked it unconditionally, and `createCard` silently substituted the
+  placeholder title "Untitled"): `updateTitleRequired()` (app.js) manages
+  `#f-title`'s `required` property dynamically — required UNLESS the AI
+  prompt row is shown AND carries non-empty text, re-evaluated on every
+  prompt-row reveal/hide (`setPromptRowVisible`) and on every keystroke in
+  `#f-prompt` — so a hidden or emptied prompt row still requires a title
+  exactly as before. That client-side toggle is not the only path in, though
+  — a space-only title satisfies native `required` and trims to `''` before
+  the POST, and any direct API caller (curl, kanban-afk dispatch) bypasses
+  the browser form entirely — so a #211 verify finding found `createCard`
+  would happily persist a card with BOTH title and prompt empty: nothing for
+  any view to fall back to, a permanently blank tile. `createCard` now
+  applies the "Untitled" placeholder as a server-side floor for exactly that
+  one case (neither trimmed title nor prompt carries anything); a title-less
+  card WITH a prompt still saves title empty, unchanged, same as the
+  `joinTitleBody` call reflects. The filename's slug component still degrades
+  to nothing when the (real, non-fallback) title is empty — the
   `<0000-id>.<slug>.card.md` pattern collapses to the bare zero-padded id
   prefix alone (`0212.card.md`, no dangling `.`), since past id 9999 (where
   there's no numeric prefix to fall back to) the filename still needs
