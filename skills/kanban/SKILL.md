@@ -11,14 +11,21 @@ Manage a Kanban board as Markdown files in the `kanban/` directory. Each file is
 
 Treat cards as durable source material for future review. Do not rewrite or delete prior narrative content unless explicitly asked. When updating a card, append a brief narrative note to a `## Narrative` section at the end of the file. Focus on reasons, discoveries, insights, and decisions. Avoid transactional status-change logs unless they matter to the story. Use ISO dates.
 
-Narrative entry format:
+Narrative entry format (kanban.proj#178 — scan-optimized):
 
 ```markdown
 ## Narrative
-- 2026-02-05: Discovered the auth flow must support device-based MFA; shifted approach to use WebAuthn. (by @assistant)
+- 2026-02-05: **Shifted auth to WebAuthn.** Discovered the flow must support device-based MFA; `auth-plan.md` updated, unblocks `#12`. (by @assistant)
 ```
 
-If the card has no `## Narrative` section, add it. If a change is minor (e.g., typo), skip the narrative note unless it carries meaningful insight.
+Entry shape, in order:
+- **Bold TL;DR first** — verb-first, ≤10 words, ends with a period. Readers scan; the first words must carry "what happened." Genuinely trivial pings may skip the bold lead.
+- **1–2 supporting sentences** after it — plain, objective, roughly half the words you'd naturally write.
+- **Backtick every identifier** a reader must match verbatim: card ids, commit hashes, filenames, branch names. They never autolink in repo files, so the code font is doing real work.
+- **One event per bullet.** Two things happened = two bullets, even same author, same day. Never fuse events into one run-on line.
+- **No sub-bullets, no wrapped continuation lines** — the web renderer flattens nested bullets to siblings and a continuation line breaks the list. Keep each entry a single flat `- ` line.
+
+The convention is forward-only: never rewrite old entries to match. If the card has no `## Narrative` section, add it. If a change is minor (e.g., typo), skip the narrative note unless it carries meaningful insight.
 
 When a card is moved to `done`, add enough narrative detail that a future reader can understand the card's story and outcome. Keep it coherent and complete without being verbose.
 
