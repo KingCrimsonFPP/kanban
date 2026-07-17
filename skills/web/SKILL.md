@@ -208,15 +208,23 @@ bound to `127.0.0.1` only.
   prompt text routinely contains `:`/`#`/quotes that would corrupt an
   unquoted single-line frontmatter value; an embedded newline collapses to a
   space first, since frontmatter is one value per physical line. **Reveal
-  placement:** the row sits right after the Assignee+dates row and before
-  "Show more fields" — not between Title and Assignee (kanban.proj #199 pins
-  Assignee as the fixed 2nd focusable field in every form state) and not
-  gated behind `.modal-extra`/"Show more fields" either, so the field stays
-  reachable from the #50 minimal create flow (a "type title, click the
-  sparkle, type a prompt, Enter" quick-queue gesture, mirroring #85's
-  Assignee-in-minimal-form precedent). `openModal()` auto-reveals the row
-  when the card being edited already carries a prompt (existing data is
-  never hidden behind an unclicked toggle) and leaves it collapsed
+  placement:** hidden, the row's markup slot is right after the Assignee+dates
+  row and before "Show more fields" — not gated behind `.modal-extra`/"Show
+  more fields", so the field stays reachable from the #50 minimal create flow
+  (a "type title, click the sparkle, type a prompt, Enter" quick-queue
+  gesture, mirroring #85's Assignee-in-minimal-form precedent). **kanban.proj
+  #204:** the instant the row is shown — by the sparkle toggle OR by
+  `openModal()`'s auto-reveal below — `setPromptRowVisible()` physically
+  moves it to be the form's first field, ahead of Title: reaching for the
+  sparkle means the prompt is the thing you're about to type, so it should be
+  the first thing the cursor can reach. Hiding it moves the node straight back
+  to its resting slot. This only ever displaces the prompt row itself —
+  Assignee still stays the fixed 2nd focusable field (kanban.proj #199)
+  whenever the prompt row is hidden, and CSS `order` is deliberately not used
+  for any of this (Tab follows DOM order, not paint order — the reasoning
+  #85's retired `placeAssigneeRow()` already established). `openModal()`
+  auto-reveals the row when the card being edited already carries a prompt
+  (existing data is never hidden behind an unclicked toggle) and leaves it collapsed
   otherwise — new cards always start collapsed. **Visibility (at-a-glance
   read):** deliberately **nothing beyond the detail popup's frontmatter
   table** — no tile glyph, unlike the epic wash/status dot/archived
