@@ -278,6 +278,8 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
 .tag{border:1px solid var(--grid);border-radius:10px;padding:0 8px;font-size:11px;color:var(--ink2)}
 .bodytxt{white-space:pre-wrap;font-size:13px;color:var(--ink2);border-top:1px solid var(--grid);margin-top:9px;padding-top:9px;overflow-wrap:break-word}
+.bodytxt strong{color:var(--ink);font-weight:600}
+.bodytxt code{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--grid);border-radius:4px;padding:0 4px}
 .acts{border-top:1px solid var(--grid);margin-top:10px;padding-top:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .acts button{font-size:12.5px;padding:6px 11px}
 .lbl{font-size:11px;color:var(--muted);width:100%}
@@ -444,6 +446,33 @@ let focusRoot=null;
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
 const btn=(label,act,data)=>{const b=el("button",null,label);b.dataset.act=act;if(data)Object.assign(b.dataset,data);return b};
+// kanban.proj#178 follow-up: minimal inline formatting for card bodies —
+// **bold** and `code`, nothing else (no headings/lists/links, no nesting
+// inside a matched span). Pure segment splitter, no DOM: scans left to
+// right, and only treats a marker as an opener if its CLOSING partner
+// exists later in the string; an unmatched/unclosed marker falls through to
+// the plain-text run byte for byte, so it renders literally instead of
+// silently eating the rest of the body. Content between markers is never
+// re-scanned for the other marker type — that's the "no nesting" contract.
+function fmtBodySegs(text){
+const segs=[];let buf="",i=0;
+const flush=()=>{if(buf){segs.push({t:"text",v:buf});buf=""}};
+while(i<text.length){
+if(text[i]==="*"&&text[i+1]==="*"){const close=text.indexOf("**",i+2);if(close!==-1){flush();segs.push({t:"bold",v:text.slice(i+2,close)});i=close+2;continue}}
+else if(text[i]==="`"){const close=text.indexOf("`",i+1);if(close!==-1){flush();segs.push({t:"code",v:text.slice(i+1,close)});i=close+1;continue}}
+buf+=text[i];i++}
+flush();
+return segs}
+// Builds the card-body div from fmtBodySegs' output via el()/textContent
+// nodes only — card bodies are attacker-writable text (board's own card #10
+// XSS history), so this NEVER string-concatenates a segment into innerHTML.
+function bodyNode(text){
+const d=el("div","bodytxt");
+fmtBodySegs(text).forEach(s=>{
+if(s.t==="bold")d.appendChild(el("strong",null,s.v));
+else if(s.t==="code")d.appendChild(el("code",null,s.v));
+else d.appendChild(document.createTextNode(s.v))});
+return d}
 const find=id=>view.find(c=>String(c.id)===String(id));
 const isProv=id=>String(id).startsWith("n");
 const lstJS=v=>String(v||"").replace(/^\\[|\\]$/g,"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -648,7 +677,7 @@ row.appendChild(inp);
 row.appendChild(btn("Save","fmsave",{key:k}));
 d.appendChild(row)})}}
 if(!ro&&!descEd){const er=el("div","acts");er.appendChild(btn(c.body?"Edit description":"Add description","desc"));d.appendChild(er)}
-if(c.body&&!descEd)d.appendChild(el("div","bodytxt",c.body))}
+if(c.body&&!descEd)d.appendChild(bodyNode(c.body))}
 return d}
 function statusPills(){
 const row=el("div","pillrow");
