@@ -670,6 +670,101 @@ test('kanban.proj #204: setPromptRowVisible relocates #row-prompt to be the form
   });
 });
 
+test('kanban.proj #211: Title has no static `required` attribute — updateTitleRequired() manages it dynamically', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const html = await (await fetch(`${base}/`)).text();
+    assert.match(html, /<label>Title <input id="f-title"><\/label>/, 'no required attribute in markup');
+  });
+});
+
+test('kanban.proj #211: updateTitleRequired clears Title\'s required flag only while the prompt row is shown AND non-empty', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function updateTitleRequired\([\s\S]*?\n\}/)[0];
+    assert.match(fn, /row-prompt'\)\.classList\.contains\('hidden'\)/, 'reads the row\'s current shown/hidden state');
+    assert.match(fn, /f-title'\)\.required = !\(promptShown && \$\('#f-prompt'\)\.value\.trim\(\)\)/,
+      'required iff NOT (shown AND non-empty prompt) — hidden or empty prompt still requires a title');
+    const setVisible = js.match(/function setPromptRowVisible\([\s\S]*?\n\}/)[0];
+    assert.match(setVisible, /updateTitleRequired\(\)/, 'every reveal/hide re-evaluates requiredness');
+    assert.match(js, /f-prompt'\)\.addEventListener\('input', updateTitleRequired\)/, 'typing/clearing the prompt live-updates requiredness too');
+  });
+});
+
+test('kanban.proj #211: archiveCardEl falls back to the prompt-fallback title, same helper as cardEl (kanban.proj #202)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function archiveCardEl\([\s\S]*?\n\}/)[0];
+    assert.match(fn, /cardTitleDisplay\(card\)/, 'reuses the shared helper, no forked title-fallback logic');
+    assert.match(fn, /card-title\$\{titleDisplay\.isPromptFallback \? ' card-title--prompt-fallback' : ''\}/,
+      'same modifier class the board tile uses, so app.css needs no new rule');
+  });
+});
+
+test('kanban.proj #211: the map node label falls back to the prompt via cardTitleDisplay, same helper every other view uses', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.match(js, /const titleDisplay = cardTitleDisplay\(n\);/, 'reuses the shared helper on the node, no forked title-fallback logic');
+    assert.match(js, /truncateLabel\(titleDisplay\.text, 22\)/, 'the fallback text still goes through the same truncation as a real title');
+  });
+});
+
+test('kanban.proj #211: ganttBarEl\'s bar text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function ganttBarEl\([\s\S]*?\n\}/)[0];
+    assert.match(fn, /cardTitleDisplay\(bar\.card\)/, 'reuses the shared helper, no forked title-fallback logic');
+    assert.match(fn, /gantt-bar-text\$\{titleDisplay\.isPromptFallback \? ' gantt-bar-text--prompt-fallback' : ''\}/,
+      'same styling contract as the board tile\'s .card-title--prompt-fallback');
+  });
+});
+
+test('kanban.proj #211: the gantt gutter label and due-marker tooltip also fall back to the prompt via cardTitleDisplay', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function renderGanttView\([\s\S]*?\nfunction applyGanttDragVisual/)[0];
+    assert.match(fn, /cardTitleDisplay\(bar\.card\)/, 'the gutter row builder reuses the shared helper');
+    assert.match(fn, /gantt-label-id">[\s\S]*?titleDisplay\.text/, 'the visible label text goes through the fallback');
+    assert.match(fn, /d\.title = bar\.card\.archived[\s\S]*?titleDisplay\.text[\s\S]*?titleDisplay\.text/,
+      'the due-marker tooltip (both the archived and live phrasing) also uses the fallback text');
+  });
+});
+
+test('kanban.proj #211: calendarChipEl\'s chip text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/function calendarChipEl\([\s\S]*?\n\}/)[0];
+    assert.match(fn, /cardTitleDisplay\(card\)/, 'reuses the shared helper, no forked title-fallback logic');
+    assert.match(fn, /escapeHtml\(titleDisplay\.text\)/, 'the chip\'s own text uses the fallback');
+    assert.match(fn, /el\.title = `#\$\{card\.id\} \$\{titleDisplay\.text\}/, 'the plain-text tooltip property also uses the fallback');
+  });
+});
+
+test('kanban.proj #211: the calendar\'s "+N more" overflow tooltip also falls back to the prompt via cardTitleDisplay', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    assert.match(js, /overflow\.map\(\(c\) => `#\$\{c\.card\.id\} \$\{cardTitleDisplay\(c\.card\)\.text\}`\)/,
+      'each hidden card\'s line in the overflow tooltip reuses the shared helper too');
+  });
+});
+
+test('kanban.proj #211: the detail popup title falls back to the prompt via cardTitleDisplay', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const fn = js.match(/async function openDetailModal\([\s\S]*?\n\}/)[0];
+    assert.match(fn, /cardTitleDisplay\(data\)/, 'reuses the shared helper, no forked title-fallback logic');
+    assert.match(fn, /detail-title'\)\.textContent = `#\$\{data\.id\} \$\{titleDisplay\.text\}`/, 'the popup H2 uses the fallback text');
+  });
+});
+
 test('index html has a "Last modified" line element in the detail popup header (card #35)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
@@ -1462,11 +1557,12 @@ test('dense-surface guard: the dots precede the croppable title, and the truncat
     const js = await (await fetch(`${base}/app.js`)).text();
     const chip = js.match(/function calendarChipEl\([\s\S]*?\n\}/);
     // card #108: same shape as the gantt gutter label below — statusBadge,
-    // then the conditional archived ball, then the title.
-    assert.match(chip[0], /statusBadge\(card\)\}\$\{card\.archived \? archivedBadge\(\) : ''\} \$\{escapeHtml\(card\.title\)\}/,
+    // then the conditional archived ball, then the (kanban.proj #211:
+    // fallback-aware) title.
+    assert.match(chip[0], /statusBadge\(card\)\}\$\{card\.archived \? archivedBadge\(\) : ''\} \` \+\s*\r?\n\s*`<span class="cal-chip-title[\s\S]*?escapeHtml\(titleDisplay\.text\)/,
       'calendar chip: statusBadge (then the conditional archived ball) is immediately followed by the (croppable) title — the dots stay in the never-cropped head');
     const render = js.match(/function renderGanttView\([\s\S]*?\n\}/);
-    assert.match(render[0], /statusBadge\(bar\.card\)\}\$\{bar\.card\.archived \? archivedBadge\(\) : ''\} \$\{escapeHtml\(bar\.card\.title\)\}/,
+    assert.match(render[0], /statusBadge\(bar\.card\)\}\$\{bar\.card\.archived \? archivedBadge\(\) : ''\} \` \+\s*\r?\n\s*`<span class="gantt-label-title[\s\S]*?escapeHtml\(titleDisplay\.text\)/,
       'gantt gutter label: statusBadge, then the conditional archived ball, then the title');
     const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
     assert.match(css, /\.cal-chip\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis/,
@@ -2682,10 +2778,16 @@ test('XSS sweep: card.title never lands in innerHTML unescaped — board tile, a
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     assert.match(js.match(/function cardEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
+    // kanban.proj #211: archiveCardEl/cardEl still escape the raw title on
+    // their non-fallback branch (title present); calendarChipEl/ganttBarEl/
+    // renderGanttView now escape `titleDisplay.text` instead — cardTitleDisplay's
+    // output (either the real title or, for a titleless AI-prompt card, the
+    // prompt text) — but that's still card-derived user data, still escaped
+    // every time, never raw-interpolated.
     assert.match(js.match(/function archiveCardEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
-    assert.match(js.match(/function calendarChipEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
-    assert.match(js.match(/function ganttBarEl\([\s\S]*?\n\}/)[0], /escapeHtml\(bar\.card\.title\)/);
-    assert.match(js.match(/function renderGanttView\([\s\S]*?\n\}/)[0], /escapeHtml\(bar\.card\.title\)/);
+    assert.match(js.match(/function calendarChipEl\([\s\S]*?\n\}/)[0], /escapeHtml\(titleDisplay\.text\)/);
+    assert.match(js.match(/function ganttBarEl\([\s\S]*?\n\}/)[0], /escapeHtml\(titleDisplay\.text\)/);
+    assert.match(js.match(/function renderGanttView\([\s\S]*?\n\}/)[0], /escapeHtml\(titleDisplay\.text\)/);
   });
 });
 

@@ -26,6 +26,7 @@ function cardToNode(c, waiting) {
     id: c.id, title: c.title, status: c.status, archived: !!c.archived, epic: !!c.epic,
     priority: c.priority || '', waiting: !!waiting,
     blocked: WB.isBlockedValue(c.blocked), blockedReason: WB.blockedReason(c.blocked),
+    prompt: c.prompt || null, // kanban.proj #211: lets the map label fall back to it (cardTitleDisplay)
   };
 }
 

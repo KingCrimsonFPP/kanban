@@ -232,7 +232,16 @@ bound to `127.0.0.1` only.
   Assignee still stays the fixed 2nd focusable field (kanban.proj #199)
   whenever the prompt row is hidden, and CSS `order` is deliberately not used
   for any of this (Tab follows DOM order, not paint order — the reasoning
-  #85's retired `placeAssigneeRow()` already established). `openModal()`
+  #85's retired `placeAssigneeRow()` already established). **kanban.proj #211
+  ratified #204's placement as the standing rule** — human ruling: the prompt
+  row goes above ALL fields, including Title, the instant it's revealed, full
+  stop. (#204 shipped this exact behavior on its own branch but that branch
+  was never merged to main; #211 is what actually landed it, unchanged.) The
+  #199/#204 tension some earlier narrative worried about was never real: #199
+  pins Title → Assignee adjacency **only for the row's hidden/resting
+  state** — #204/#211 only ever move the prompt row itself, never Assignee,
+  so both rules hold simultaneously in every state the form can be in.
+  `openModal()`
   auto-reveals the row when the card being edited already carries a prompt
   (existing data is never hidden behind an unclicked toggle) and leaves it collapsed
   otherwise — new cards always start collapsed. **Visibility (at-a-glance
@@ -255,14 +264,45 @@ bound to `127.0.0.1` only.
   escaped, the instant card-store.js writes it, so the value is never
   actually hidden — only not glanceable from the board. Revisit once the
   dispatcher follow-up defines what "presence" means operationally.
-  **One narrow exception (kanban.proj #202):** a card with an EMPTY title but
-  a prompt — e.g. one dispatched by an external process before it's been
-  given a title of its own — shows the sparkle + the prompt text itself in
-  the tile's title spot (`cardTitleDisplay()`, card-title.js;
-  `.card-title--prompt-fallback`, italic/muted). This is not the general
-  presence glyph ruled out above — it never appears once the card has a real
-  title, prompt or no — it exists solely so the tile isn't blank while a
-  title is still pending.
+  **One narrow exception (kanban.proj #202, extended to every view by
+  kanban.proj #211):** a card with an EMPTY title but a prompt — e.g. one
+  dispatched by an external process before it's been given a title of its
+  own — shows the sparkle + the prompt text itself in the title's own spot,
+  everywhere a title renders: the board/Archive-column tile (`cardEl`/
+  `archiveCardEl`), the map's node label AND the map's isolated-row archived
+  tiles (`archiveCardEl` again), the gantt bar text AND gutter label AND
+  due-marker tooltip, the calendar chip AND its "+N more" overflow tooltip,
+  and the detail popup's own header title. Every one of those call sites
+  reuses `cardTitleDisplay()` (card-title.js) as-is — no forked title-
+  fallback logic anywhere — and pairs it with a `*-prompt-fallback` CSS
+  modifier class (italic/muted, one per surface: `.card-title--`,
+  `.gantt-bar-text--`, `.gantt-label-title--`, `.cal-chip-title--`,
+  `.map-node-title--`, `.detail-title--`) mirroring the board tile's
+  original treatment. `dependency-graph.js`'s `cardToNode` and card-store's
+  `cardDetail` both had to start carrying `prompt` alongside `title` for the
+  map and detail popup respectively — every other surface already worked off
+  a full card object. **Out of scope for #211: the standalone viewer skill**
+  (`skills/viewer`) has its own vanilla-JS reimplementation and does not get
+  this fallback — a follow-up card owns viewer parity, same as every other
+  web-only feature this SKILL.md's Assignee-color/epic-wash writeups flag as
+  viewer-parity debt. This is not the general presence glyph ruled out
+  above — it never appears once the card has a real title, prompt or no — it
+  exists solely so no view ever renders a blank title while one is still
+  pending. **kanban.proj #211 also let a card SAVE with an empty title in the
+  first place** (previously the create/edit form's native `required` on
+  `#f-title` blocked it unconditionally, and `createCard` silently
+  substituted the placeholder title "Untitled"): `updateTitleRequired()`
+  (app.js) manages `#f-title`'s `required` property dynamically — required
+  UNLESS the AI prompt row is shown AND carries non-empty text, re-evaluated
+  on every prompt-row reveal/hide (`setPromptRowVisible`) and on every
+  keystroke in `#f-prompt` — so a hidden or emptied prompt row still requires
+  a title exactly as before. Server-side, `createCard` no longer forces an
+  "Untitled" placeholder (`joinTitleBody(input.title || '', ...)`) and the
+  filename's slug component degrades to nothing when the title is empty — the
+  `<0000-id>.<slug>.card.md` pattern collapses to the bare zero-padded id
+  prefix alone (`0212.card.md`, no dangling `.`), since past id 9999 (where
+  there's no numeric prefix to fall back to) the filename still needs
+  `card-<id>` to stay non-empty.
 - **Epic/wayfinder (card #59; glyph redesigned by card #91; dot retired for a
   background wash by card #45)** — the form's Epic checkbox (inside the #50
   "Show more fields" section) writes the optional `epic: true` frontmatter
