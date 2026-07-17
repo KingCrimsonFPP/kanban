@@ -2016,7 +2016,21 @@ function addSearchTerm(term) {
 
 window.addEventListener('DOMContentLoaded', () => {
   const input = $('#search-input');
-  input.addEventListener('input', () => renderBoard());
+  // kanban.proj #205: the Ctrl+F "#" prefill only makes sense while an id is
+  // still being typed (digits). searchHashStrip re-checks the box on every
+  // keystroke and drops the leading "#" the moment a non-numeric char shows
+  // up after it, so the query reads as a plain search term instead of a
+  // broken #<id> one. Caret shifts left by the same 1 char the strip
+  // removed from the front, so typing feels uninterrupted.
+  input.addEventListener('input', () => {
+    const stripped = searchHashStrip(input.value);
+    if (stripped !== null) {
+      const caret = Math.max(0, input.selectionStart - 1);
+      input.value = stripped;
+      input.setSelectionRange(caret, caret);
+    }
+    renderBoard();
+  });
   $('#search-clear-btn').addEventListener('click', clearSearch);
   document.addEventListener('keydown', (e) => {
     if (e.key !== '/') return;

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { searchHotkeyPrefill } = require('../web/search-hotkey');
+const { searchHotkeyPrefill, searchHashStrip } = require('../web/search-hotkey');
 
 // kanban.proj #198: Ctrl+F / Cmd+F focuses the search box instead of the
 // browser's own find bar, pre-filling "#" (caret right after) so digits
@@ -92,4 +92,36 @@ test('missing arguments resolve to null, never throw', () => {
   assert.strictEqual(searchHotkeyPrefill(null, outsideModal), null);
   assert.strictEqual(searchHotkeyPrefill({ key: 'f', ctrlKey: true }, null), null);
   assert.strictEqual(searchHotkeyPrefill({ ctrlKey: true }, outsideModal), null);
+});
+
+// kanban.proj #205: small correction — the "#" the hotkey prefills is only
+// meant to stick around while the user is actually typing an id (digits).
+// The moment a non-numeric char lands after it, this drops the leading "#"
+// so the box reads as a plain search term instead of a broken #<id> one.
+
+test('bare "#" (nothing typed yet) is left alone', () => {
+  assert.strictEqual(searchHashStrip('#'), null);
+});
+
+test('"#" followed by digits is left alone (still forming an id)', () => {
+  assert.strictEqual(searchHashStrip('#1'), null);
+  assert.strictEqual(searchHashStrip('#42'), null);
+});
+
+test('a non-numeric char right after "#" strips the "#"', () => {
+  assert.strictEqual(searchHashStrip('#a'), 'a');
+});
+
+test('a non-numeric char after some digits strips the "#", keeping the rest', () => {
+  assert.strictEqual(searchHashStrip('#12a'), '12a');
+});
+
+test('a value with no leading "#" is left alone', () => {
+  assert.strictEqual(searchHashStrip('status:doing'), null);
+  assert.strictEqual(searchHashStrip(''), null);
+});
+
+test('non-string input resolves to null, never throws', () => {
+  assert.strictEqual(searchHashStrip(null), null);
+  assert.strictEqual(searchHashStrip(undefined), null);
 });

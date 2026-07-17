@@ -37,8 +37,23 @@ function searchHotkeyPrefill(chord, ctx) {
   return { value, selectionStart: 0, selectionEnd: value.length };
 }
 
+// kanban.proj #205: the "#" prefill above is only meant to stick while the
+// user is still typing an id (digits). Called on every 'input' event with
+// the box's current value — as long as everything after the "#" is digits
+// (or nothing yet), the "#" stays; the moment a non-numeric char shows up
+// in there, the id search is off the table, so drop the leading "#" and
+// let the rest read as a plain search term. Returns null (no change) rather
+// than echoing the input back unchanged, so callers can skip touching
+// value/selection when nothing needs to move.
+function searchHashStrip(value) {
+  if (typeof value !== 'string' || value[0] !== '#') return null;
+  if (/^\d*$/.test(value.slice(1))) return null;
+  return value.slice(1);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { searchHotkeyPrefill };
+  module.exports = { searchHotkeyPrefill, searchHashStrip };
 } else {
   window.searchHotkeyPrefill = searchHotkeyPrefill;
+  window.searchHashStrip = searchHashStrip;
 }
