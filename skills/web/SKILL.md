@@ -275,6 +275,16 @@ bound to `127.0.0.1` only.
   `.modal.detail-modal.epic` in app.css paints the identical `epicColorSoft()`
   12% wash over the panel's background — the raw `epic: true` frontmatter row
   still shows in the popup's frontmatter table unchanged, the wash is additive.
+  **kanban.proj #201 fixed a cascade bug**: `.epic` and `.selected` (Multi-select,
+  card #25/#39) are both 2-class selectors on the same property — `background`
+  on the tile/chip/gutter-label, SVG `fill` on the map node — and `.selected`
+  is declared later, so the same-specificity tie silently went to `.selected`
+  and the epic wash vanished the instant an epic card was ctrl/shift/right-click
+  selected (the gantt BAR was never affected — its wash is a `box-shadow`, a
+  different property than `.gantt-bar.selected`'s `background`). Fixed with a
+  3-class override (`.card.epic.selected` etc.) that outranks both 2-class
+  rules outright, so the wash reasserts itself while selection's own
+  outline/glow — properties `.epic` never touches — still show too.
 - **Status dot (card #97; NEVER mutes for archive, card #102 reopen)** — `statusBadge()`
   (status-colors.js) renders on every card rendering: board tiles (live
   AND archived, unlike the epic wash the Archive column gets this one too), the map's

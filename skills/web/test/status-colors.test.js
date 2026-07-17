@@ -158,6 +158,28 @@ test('app.css washes every surface\'s .epic class in epicColorSoft() — no epic
   assert.ok(!css.includes('.map-epic-dot'), 'the map SVG epic-dot circle is gone');
 });
 
+test('epic wash survives selection — a 3-class override beats the same-specificity .epic/.selected tie (kanban.proj #201)', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
+  const soft = epicColorSoft();
+  // .card.epic and .card.selected are both 2-class selectors that set
+  // `background`; .selected is declared later (the Multi-select block), so
+  // without an override it silently wins the same-specificity tie and the
+  // epic tint vanishes the instant an epic card is ctrl/shift/right-click
+  // selected. Same tie, same property, on the calendar chip / gantt gutter
+  // label (background) and the map node (SVG `fill`). Only a
+  // higher-specificity rule fixes this without re-breaking the OTHER
+  // documented tie a few lines up (.selected must still beat plain
+  // per-status backgrounds/fills).
+  assert.ok(css.includes(`.card.epic.selected, .cal-chip.epic.selected, .gantt-label.epic.selected { background: ${soft}; }`),
+    'board tile / calendar chip / gantt gutter label keep the epic wash once selected');
+  assert.ok(css.includes(`.map-node.epic.selected rect { fill: ${soft}; }`),
+    'map node keeps the epic wash once selected');
+  // The gantt BAR never had this bug: its epic wash is a box-shadow (card
+  // #45), a different property than .gantt-bar.selected's `background`, so
+  // there's no tie to lose and no override is needed here.
+  assert.ok(!css.includes('.gantt-bar.epic.selected'), 'gantt bar needs no override — its box-shadow wash already survives selection');
+});
+
 test('the map node border is one neutral weight for every status (card #91) — status moved to its own dot', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.map-node rect\s*\{[^}]*stroke:\s*#30363d/, 'one neutral stroke color, not per-status');
