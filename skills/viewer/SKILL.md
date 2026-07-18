@@ -41,7 +41,12 @@ bare terms hit title+body+tags). `review:`/`blocked:` (ADR 0009, card #181)
 are their own family: UNLIKE every scope above, a bare `review:`/`blocked:`
 (no value) is itself a complete term — "the sticker is present" (the shared
 predicate) — never dropped as mid-typing; `review:PR`/`blocked:vendor` is a
-case-insensitive substring match on the sticker's own text. Cards #74/#153 add `tree:<id>`/`path:<id>`
+case-insensitive substring match on the sticker's own text. `epic:`
+(kanban.proj #222) is its own single-field family, same never-dropped bare
+shape as `review:`/`blocked:` above, matching every card with `epic: true` —
+but with **no value form and no negation**: whatever follows the colon is
+discarded, so `epic:` and `epic:foo` parse identically, and it filters every
+view (board/map/gantt/calendar), not just the map. Cards #74/#153 add `tree:<id>`/`path:<id>`
 (`#`-tolerant, e.g. `tree:#153`): tree is the card's whole dependency
 component (undirected flood-fill over `waiting_for` + `parent:` epic
 membership — the same edges the Map view draws); path is the narrower
@@ -115,7 +120,16 @@ writes `tree:<id>`/`path:<id>` into the search box and closes the sheet, no
 view switch; the view underneath re-filters itself immediately (Map redraws
 the pruned graph with ghost stubs where a cone edge exits the focus, Board
 shows only the focused cards in their columns, same machinery every other
-search term uses).
+search term uses). Map view's own status-pill row also carries an
+**"Epics" chip** (kanban.proj #222, map view only — `render()`'s/
+`renderGantt()`'s/`renderCalendar()`'s own pill rows don't grow it) that
+toggles the `epic:` search term into the box — tap sets it, tap again clears
+it — same "write straight into the box, then re-render" pattern as the
+Dependency tree/path buttons above, but a toggle rather than an overwrite.
+Epic-marked matches render as full map nodes; their members still render as
+the usual dimmed ghost stubs (unchanged), and tapping an epic node still
+opens its detail sheet with the same "Dependency tree"/"Dependency path"
+buttons described above — untouched by this card.
 
 ## The change loop
 

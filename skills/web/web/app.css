@@ -454,6 +454,16 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-filter-row, .gantt-filter-row, .calendar-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .map-filter-toggle, .gantt-filter-toggle, .calendar-filter-toggle { background: #0d1117; border: 2px solid #30363d; border-radius: 999px; color: #c9d1d9; font-size: 0.78em; padding: 2px 10px; cursor: pointer; }
 .map-filter-toggle.off, .gantt-filter-toggle.off, .calendar-filter-toggle.off { opacity: 0.45; border-style: dashed; color: #8b949e; }
+/* kanban.proj #222: the map's "Epics" tap-chip — rides in the SAME row as
+   the status pills above (buildMapFilterRow appends it last; the row's flex
+   `gap` spaces it identically). Base look matches .map-filter-toggle's, but
+   the ON state is its own rule rather than reusing .off: a status pill
+   defaults ON and dashes when turned OFF, while this chip defaults OFF
+   (epic: absent from the search box) and lights up SOLID, epic orange
+   (EPIC_COLOR, #f0883e — same hue as .card.epic's wash and the epic
+   membership edges below), when tapped on. */
+.map-epic-chip { background: #0d1117; border: 2px solid #30363d; border-radius: 999px; color: #c9d1d9; font-size: 0.78em; padding: 2px 10px; cursor: pointer; }
+.map-epic-chip.on { border-color: #f0883e; color: #f0883e; background: rgba(240, 136, 62, 0.12); }
 .map-canvas { display: block; }
 /* card #91: the node border is ONE neutral weight regardless of status — the
    old per-status stroke (card #57) and the epic stroke (card #59) both used
