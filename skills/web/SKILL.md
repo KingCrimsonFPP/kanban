@@ -690,6 +690,23 @@ bound to `127.0.0.1` only.
   (card #39): click for the detail popup (#7), ctrl-click to toggle / shift-click to
   range-select (dark wash +
   blue glow), right-click for the bulk menu. Ghost stubs stay click-through only.
+  **`epic:` search term + the "Epics" chip (kanban.proj #222)** — `epic:` is a
+  bare-scope search term, same never-dropped shape as `review:`/`blocked:`
+  above (a bare scope elsewhere, like `status:`, is dropped mid-keystroke;
+  `epic:` isn't), matching every card with `epic: true`. Unlike
+  `review:`/`blocked:` it has **no value form and no negation** in v1 —
+  anything typed after the colon is ignored, so `epic:` and `epic:foo` parse
+  identically. It composes with the rest of the query, bare text, and the
+  status pills by the usual intersection rule, and filters board/map/gantt/
+  calendar alike (it's a plain search term, not map-specific). The map's
+  control row carries an **"Epics" chip** (map view only) that toggles it
+  into the search box — tap sets `epic:`, tap again clears it — the same
+  "write straight into the search box" pattern as the "Dependency tree"/
+  "Dependency path" buttons below, but a toggle rather than a replace. With
+  `epic:` active, matching epic cards render as full nodes and their members
+  still render as the usual dimmed ghost stubs (unchanged — `epic:` doesn't
+  suppress membership stubs); right-clicking an epic node still offers
+  `tree:<id>` to expand its subtree, untouched by this card.
   **Collapsible sections (card #97)** — the layered graph and the "No dependencies"
   row are each their own collapse/expand toggle (same chevron + look as the board's
   per-column collapse, card #15), sharing one header builder

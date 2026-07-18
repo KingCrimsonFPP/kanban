@@ -62,6 +62,10 @@ def parse_card(path):
         # same contract as kanban-web's card-store.js parent field — used to
         # build epic-membership edges for the map + tree:/path: traversal.
         "pt": parent_id(fm.get("parent")),
+        # kanban.proj #222: epic-marked flag, same tolerant any-case 'true'
+        # read as kanban-web's card-store.js (`epic: get('epic').toLowerCase()
+        # === 'true'`) — drives the epic: search term (qMatch's "epic" case).
+        "ep": (fm.get("epic", "") or "").strip().lower() == "true",
         "body": "\n".join(rest).strip()[:4000],
         "fm": {k: v for k, v in fm.items() if k != "id"},
         "fn": name,
@@ -379,6 +383,14 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .pillrow button{font-size:11px;border-radius:12px;padding:3px 10px;display:inline-flex;align-items:center;gap:5px;color:var(--ink2)}
 .pillrow button.off{opacity:.4}
 .pillrow .dot{width:8px;height:8px}
+/* kanban.proj #222: the map's "Epics" tap-chip — rides in the SAME pillrow
+   as the status pills (renderMap appends it after statusPills()'s row; the
+   row's flex gap spaces it identically). Inherits .pillrow button's base
+   look; the ON state is its own rule (not .off, which means the OPPOSITE
+   here: a status pill defaults ON and dims when off, this chip defaults OFF
+   and lights up epic orange, #f0883e — same hue as .medge.epicedge above,
+   kanban-web's EPIC_COLOR) when tapped on. */
+.epicchip.on{border-color:#f0883e;color:#f0883e;background:rgba(240,136,62,.12)}
 .card.archcard{opacity:.55}
 .pill{cursor:pointer}
 </style></head><body>
@@ -495,6 +507,11 @@ const GFIELDS=["tree","path"];
 // itself a complete "sticker present" term, UNLIKE every SFIELDS scope
 // above (mirrors kanban-web's search.js STICKER_FIELDS split).
 const STFIELDS=["review","blocked"];
+// kanban.proj #222: epic: is its own single-field family — bare presence,
+// never dropped (same shape as STFIELDS), but with NO value form: whatever
+// follows the colon is discarded rather than kept for a substring match,
+// mirrors kanban-web's search.js EPIC_FIELDS split.
+const EFIELDS=["epic"];
 function parseTerm(tok){
 const m1=/^#(\\d+)$/.exec(tok);if(m1)return{f:"id",v:m1[1]};
 const m2=/^([A-Za-z]+):(.*)$/.exec(tok);
@@ -502,7 +519,8 @@ if(m2){const k=m2[1].toLowerCase();
 if(k==="id"){const v=m2[2].trim();return v?{f:"id",v:v}:null}
 if(GFIELDS.indexOf(k)!==-1){const v=m2[2].trim().replace(/^#/,"");return v?{f:k,v:v}:null}
 if(SFIELDS.indexOf(k)!==-1){const v=m2[2].trim().toLowerCase();return v?{f:k,v:v}:null}
-if(STFIELDS.indexOf(k)!==-1)return{f:k,v:m2[2].trim().toLowerCase()}}
+if(STFIELDS.indexOf(k)!==-1)return{f:k,v:m2[2].trim().toLowerCase()}
+if(EFIELDS.indexOf(k)!==-1)return{f:k,v:""}}
 return{f:null,v:tok.toLowerCase()}}
 // card #74: tree:/path: terms need the full board's graph to resolve
 // (connected component / directed cone), which a single (term, card) pair
@@ -527,6 +545,11 @@ case "file":return String(c.fn||"").toLowerCase().indexOf(t.v)!==-1;
 // case-insensitive substring on the sticker's own text.
 case "review":return t.v?String(rvReason(c)||"").toLowerCase().indexOf(t.v)!==-1:rvReason(c)!==null;
 case "blocked":return t.v?String(blkReason(c)||"").toLowerCase().indexOf(t.v)!==-1:blkReason(c)!==null;
+// kanban.proj #222: epic: is a pure presence check on the parsed boolean
+// flag (c.ep, set by parse_card's tolerant any-case 'true' read) — t.v is
+// always "" (parseTerm discards it), so there's no substring branch to
+// mirror review:/blocked:'s.
+case "epic":return c.ep===true;
 case "ids":return t.ids.has(Number(c.id));
 case "tree":case "path":return false;
 default:return title.indexOf(t.v)!==-1||body.indexOf(t.v)!==-1||tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1)}})}
@@ -579,9 +602,9 @@ if(o.title!==undefined)c.t=o.title;if(o.priority)c.p=o.priority;if(o.assignee!==
 if(o.fm&&!isProv(o.id)){c.fm=c.fm||{};for(const k in o.fm){const v=o.fm[k];
 if(v)c.fm[k]=v;else delete c.fm[k];
 if(k==="start_date")c.start=v;else if(k==="end_date")c.end=v;else if(k==="due_date")c.due=v;
-else if(k==="tags")c.tags=lstJS(v);else if(k==="waiting_for")c.w=lstJS(v);else if(k==="blocked")c.bl=v;else if(k==="review")c.rv=v}}
+else if(k==="tags")c.tags=lstJS(v);else if(k==="waiting_for")c.w=lstJS(v);else if(k==="blocked")c.bl=v;else if(k==="review")c.rv=v;else if(k==="epic")c.ep=String(v).trim().toLowerCase()==="true"}}
 return}
-if(o.op==="create"){nseq++;const pid="n"+nseq;const cr={op:"create",title:o.title,priority:o.priority||"Normal",status:o.status||"backlog",_pid:pid};if(o.assignee)cr.assignee=o.assignee;if(o.body)cr.body=o.body;ops.push(cr);view.push({id:pid,t:o.title,s:cr.status,p:cr.priority,a:o.assignee||"",due:"",start:"",upd:"",tags:[],w:[],bl:"",rv:"",body:o.body||"",fm:{}});return}}
+if(o.op==="create"){nseq++;const pid="n"+nseq;const cr={op:"create",title:o.title,priority:o.priority||"Normal",status:o.status||"backlog",_pid:pid};if(o.assignee)cr.assignee=o.assignee;if(o.body)cr.body=o.body;ops.push(cr);view.push({id:pid,t:o.title,s:cr.status,p:cr.priority,a:o.assignee||"",due:"",start:"",upd:"",tags:[],w:[],bl:"",rv:"",ep:false,body:o.body||"",fm:{}});return}}
 function cardNode(c,detail){
 const selc=String(sel)===String(c.id)||(focusRoot!=null&&String(focusRoot)===String(c.id));
 const ro=detail&&!!c.arch;
@@ -998,9 +1021,25 @@ d.setAttribute("data-mapnode",String(n.id));
 d.appendChild(el("span","cid","#"+n.id));
 d.appendChild(document.createTextNode(truncate(n.title,30)));
 return d}
+// kanban.proj #222: mobile-first shortcut for the map's `epic:` search term —
+// rides in the SAME pillrow as the status pills (renderMap only: render()/
+// renderGantt()/renderCalendar() call statusPills() unaugmented, so the chip
+// never shows outside Map view). Toggles: tap writes epic: into #q, tap
+// again removes it — same "write straight into the box, re-render" pattern
+// as the graphfocus tree:/path: buttons (Cards #74/#153), but a TOGGLE since
+// this chip only ever manages the one term (graphfocus always REPLACES).
+function isEpicSearchActive(){
+const raw=String($("q")?$("q").value:"");
+return raw.trim().split(/\\s+/).some(t=>/^epic:/i.test(t))}
+function epicChip(){
+const on=isEpicSearchActive();
+const b=el("button",on?"epicchip on":"epicchip","Epics");
+b.dataset.act="epicchip";
+b.title=on?"Clear the epic: search term":"Filter the map to epic-marked cards (writes epic: into the search box)";
+return b}
 function renderMap(){
 const mv=$("mapview");mv.replaceChildren();
-mv.appendChild(statusPills());
+const pillrow=statusPills();pillrow.appendChild(epicChip());mv.appendChild(pillrow);
 const graph=buildDepGraph(visList());
 if(!graph.nodes.length){mv.appendChild(el("div","map-empty","No cards to show."));return}
 const legend=el("div","map-legend");
@@ -1316,6 +1355,18 @@ if(t.dataset&&t.dataset.coltoggle!==undefined){colOpen[t.dataset.coltoggle]=!col
 if(t.dataset&&t.dataset.caldaytoggle!==undefined){calDayOpen[t.dataset.caldaytoggle]=!calDayOpen[t.dataset.caldaytoggle];renderCalendar();return}
 if(t.dataset&&t.dataset.calhrtoggle!==undefined){calHrOpen[t.dataset.calhrtoggle]=!calHrOpen[t.dataset.calhrtoggle];renderCalendar();return}
 if(t.dataset&&t.dataset.act==="spill"){const k=t.dataset.st;statusVis[k]=!isVis(k);render();renderMap();renderGantt();renderCalendar();return}
+// kanban.proj #222: the map's "Epics" chip — same control-row-checked-first
+// reasoning as the "spill" status pills above; toggles epic: in #q like
+// $("q")'s own input listener does, then re-renders every view (epic:
+// filters board/map/gantt/calendar alike, not just the map it's tapped from).
+if(t.dataset&&t.dataset.act==="epicchip"){
+const toks=String($("q").value||"").trim().split(/\\s+/).filter(Boolean);
+const on=toks.some(x=>/^epic:/i.test(x));
+const next=on?toks.filter(x=>!/^epic:/i.test(x)):toks.concat("epic:");
+$("q").value=next.join(" ");
+focusRoot=null;
+qTerms=resolveGraphTerms(next.map(parseTerm).filter(Boolean));
+render();renderMap();renderGantt();renderCalendar();return}
 if(t.dataset&&t.dataset.tap==="ren"){ren=true;descEd=false;pillEd=null;render();return}
 if(t.dataset&&t.dataset.act==="pill"){pillEd=pillEd===t.dataset.pill?null:t.dataset.pill;ren=false;descEd=false;render();return}
 if(t.getAttribute&&t.getAttribute("data-mapnode")!==null){

@@ -942,8 +942,52 @@ function buildFilterPillRow(filter, columnIds, rowClass, pillClass, titleFor) {
 // visually resets across the 5s poll. Clicks ride #map-view's delegated
 // listener (see the map wiring section).
 function buildMapFilterRow() {
-  return buildFilterPillRow(loadMapStatusFilter(), boardColumnIds(), 'map-filter-row', 'map-filter-toggle',
+  const row = buildFilterPillRow(loadMapStatusFilter(), boardColumnIds(), 'map-filter-row', 'map-filter-toggle',
     (col, on) => `${on ? 'Hide' : 'Show'} ${columnLabel(col)} cards on the map (hidden cards ghost when a visible card references them)`);
+  // kanban.proj #222: the "Epics" tap-chip rides in the same control row,
+  // map-view only (buildGanttFilterRow/buildCalendarFilterRow below never
+  // call this) — see buildEpicFilterChip.
+  row.appendChild(buildEpicFilterChip());
+  return row;
+}
+
+// kanban.proj #222: mobile-first shortcut for the map's `epic:` search term
+// (card #222) — same "write straight into #search-input, then renderBoard()"
+// pattern as focusOn()'s tree:/path: buttons (card #74) and addSearchTerm's
+// assignee/tag click (#189), but a TOGGLE (tap sets `epic:`, tap again clears
+// it) rather than focusOn's always-replace or addSearchTerm's idempotent-add,
+// since this chip only ever manages the one term and composes with whatever
+// else (status pills, other search terms) is already in the box.
+function isEpicSearchActive() {
+  const input = $('#search-input');
+  const raw = input ? input.value : '';
+  return raw.trim().split(/\s+/).some((tok) => /^epic:/i.test(tok));
+}
+
+function toggleEpicSearchTerm() {
+  const input = $('#search-input');
+  if (!input) return;
+  const tokens = input.value.trim().split(/\s+/).filter(Boolean);
+  const on = tokens.some((tok) => /^epic:/i.test(tok));
+  const next = on ? tokens.filter((tok) => !/^epic:/i.test(tok)) : tokens.concat('epic:');
+  input.value = next.join(' ');
+  renderBoard();
+}
+
+// Rebuilt by every renderMapView() call, same as the status-filter row
+// (buildFilterPillRow) — reads the search box fresh each time so its
+// pressed/unpressed look never drifts from whatever's actually in the box
+// (typed by hand, cleared, or toggled by this same chip).
+function buildEpicFilterChip() {
+  const on = isEpicSearchActive();
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'map-epic-chip';
+  btn.className = 'map-epic-chip' + (on ? ' on' : '');
+  btn.setAttribute('aria-pressed', String(on));
+  btn.title = on ? 'Clear the epic: search term' : 'Filter the map to epic-marked cards (writes epic: into the search box)';
+  btn.textContent = 'Epics';
+  return btn;
 }
 
 // card #98: same mechanism, gantt-scoped — statuses + Archive (boardColumnIds(),
@@ -2251,6 +2295,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const filterBtn = e.target.closest('.map-filter-toggle[data-col]');
     if (filterBtn) {
       toggleMapStatusFilter(filterBtn.dataset.col);
+      return;
+    }
+    // kanban.proj #222: the "Epics" chip — same control-row-buttons-checked-
+    // first reasoning as the status pills above.
+    const epicChip = e.target.closest('#map-epic-chip');
+    if (epicChip) {
+      toggleEpicSearchTerm();
       return;
     }
     const actBtn = e.target.closest('button[data-act]');
