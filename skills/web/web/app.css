@@ -263,7 +263,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 #f-review.review-active { border-color: #eac54f; }
 .card-menu { display: flex; gap: 8px; margin-top: 8px; }
 .card-menu button { padding: 2px 8px; font-size: 0.72em; }
-.toast { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: #161b22; border: 1px solid #f85149; color: #f0f6fc; padding: 10px 16px; border-radius: 6px; z-index: 20; }
+.toast { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: #161b22; border: 1px solid #f85149; color: #f0f6fc; padding: 10px 16px; border-radius: 6px; z-index: 20; cursor: pointer; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 30; }
 .modal { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; width: min(560px, 92vw); max-height: 90vh; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
 .modal h2 { color: #58a6ff; font-size: 1.1em; }

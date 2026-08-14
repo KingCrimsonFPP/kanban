@@ -1537,6 +1537,11 @@ async function onDrop(id, status) {
 
 window.addEventListener('DOMContentLoaded', () => {
   loadBoard().catch((e) => toast('Load failed: ' + e.message));
+  // kanban.proj #228: click-to-dismiss — wired once since #toast is static markup.
+  $('#toast').addEventListener('click', () => {
+    clearTimeout(toast._t);
+    $('#toast').classList.add('hidden');
+  });
   $('#board-copy-btn').addEventListener('click', copyBoardPath); // card #55
   $('#refresh-btn').addEventListener('click', () =>
     loadBoard().then(() => setStale(false)).catch((e) => toast('Refresh failed: ' + e.message)));
