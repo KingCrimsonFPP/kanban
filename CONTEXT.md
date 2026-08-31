@@ -77,7 +77,7 @@ Four skills, one board (card #28 is the restructure record; #110 added the viewe
 | `kanban` | the AI | file contracts + scripts; also defines `config.yaml` and `notifications.md` and when the AI must notify |
 | `kanban-web` | the human, desktop | live browser editor |
 | `kanban-cli` | the human, anywhere | printed board + `AskUserQuestion` |
-| `kanban-viewer` | the human, phone/tablet/Cowork | generated single-file HTML, read-only + queued-change payload |
+| `kanban-viewer` | the human, phone/tablet/Cowork | generated single-file HTML, edits queue as a change payload |
 
 **Parity rule:** web and cli implement the *same operations under the same rules*
 (CRUD, hard `doing` entry gate (waiting + blocked), bulk actions with per-card skips, speedbumps on every
