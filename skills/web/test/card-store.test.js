@@ -239,7 +239,7 @@ test('createCard treats a missing title field the same as an explicit empty one'
   assert.strictEqual(path.basename(card.file), `${String(card.id).padStart(4, '0')}.card.md`);
 });
 
-// kanban.proj #211 verify finding: neither title nor prompt is no data at
+// kanban.proj #211: neither title nor prompt is no data at
 // all — nothing left for cardTitleDisplay to fall back to on any view.
 // Restore the pre-#211 "Untitled" safety net for exactly that case (the
 // browser's `required` toggle is not the only path in — curl, kanban-afk
@@ -260,7 +260,7 @@ test('createCard falls back to "Untitled" when title and prompt fields are both 
 test('createCard falls back to "Untitled" when title is whitespace-only and prompt is absent', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: '   ', status: 'backlog' });
-  // Guards the exact browser scenario from the verify finding: the modal's
+  // Guards the exact browser scenario that let this slip: the modal's
   // native `required` accepts a single space, submitModal .trim()s it to ''
   // before POSTing — so a whitespace-only title must be judged as blank here
   // too, same as a literal empty string, not preserved verbatim.

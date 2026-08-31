@@ -11,15 +11,27 @@ if [ -z "$SEARCH_TERM" ]; then
     exit 1
 fi
 
+# field()/title() are duplicated per script (same frontmatter-scoped awk as
+# view_board.sh / eligible_cards.sh) so each file stays copy-alone. The
+# content search itself stays whole-file — that's the point of this script;
+# only the metadata header is frontmatter-scoped.
+field() {
+    awk -v f="$2" '/^---$/{fm++;next} fm==1 && $0 ~ "^"f":"{sub("^"f":[ \t]*","");print;exit}' "$1"
+}
+
+title() {
+    awk '/^---$/{fm++;next} fm==2 && /^# /{sub("^# ","");print;exit}' "$1"
+}
+
 echo "=== Cards matching: $SEARCH_TERM ==="
 echo
 
 grep -il "$SEARCH_TERM" "$KANBAN_DIR"/*.card.md 2>/dev/null | while read -r file; do
-    id=$(grep "^id:" "$file" | sed 's/id: *//')
-    status=$(grep "^status:" "$file" | sed 's/status: *//')
-    title=$(grep "^# " "$file" | head -1 | sed 's/^# //')
+    id=$(field "$file" id)
+    status=$(field "$file" status)
+    t=$(title "$file")
 
-    printf "#%-3s %-12s %s\n" "${id:-?}" "[$status]" "$title"
+    printf "#%-3s %-12s %s\n" "${id:-?}" "[$status]" "$t"
 
     # Show matching lines with context
     echo "  Matches:"

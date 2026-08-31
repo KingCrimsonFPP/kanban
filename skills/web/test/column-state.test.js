@@ -118,7 +118,7 @@ test('mergeCollapsedState tolerates arbitrary column names (dots/spaces) — pla
   assert.deepStrictEqual(merged, { 'a.b': true, 'c d': false, archive: true });
 });
 
-test('liveStatuses dedupes repeated config entries — no duplicate columns (card #31 verify finding)', () => {
+test('liveStatuses dedupes repeated config entries — no duplicate columns (card #31, regression)', () => {
   assert.deepStrictEqual(liveStatuses(['triage', 'triage', 'done']), ['triage', 'done']);
 });
 
@@ -341,7 +341,7 @@ test('soloStatusFilter: right-click on an already-soloed Archive pill restores A
     GANTT_IDS.reduce((o, id) => (o[id] = true, o), {}));
 });
 
-// --- card #98 verify finding: the gantt groups cards by their RAW on-disk
+// --- card #98: the gantt groups cards by their RAW on-disk
 // status (gantt-model.js's ganttGroups gives an unlisted status its OWN
 // labeled group row), unlike the map/board which fold an unlisted status
 // into the first column's bucket (mapFilterColumn/columnForStatus). Reusing

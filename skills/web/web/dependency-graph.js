@@ -64,7 +64,7 @@ function isCardWaiting(c, byId) {
 // becomes a child->epic edge with `kind: 'epic'` (waiting_for edges carry
 // `kind: 'dep'`). The epic is the SINK, not the root — an epic is done only
 // when its children are done, so under the map's "down = completes later"
-// convention it lays out BELOW its children (franc's 2026-07-13 regrill
+// convention it lays out BELOW its children (a 2026-07-13 design review
 // flipped the original epic-on-top build: epic-as-container read as a false
 // prerequisite). Membership is not sequencing: it feeds the layered layout
 // and gets the same ghost-stub courtesy, but it never makes anyone `waiting`
@@ -99,7 +99,7 @@ function buildDependencyGraph(cards, visibleIds) {
     if (!toVisible) ghostIds.add(to);
     edges.push({ from, to, kind, fromGhost: !fromVisible, toGhost: !toVisible });
   };
-  // v3 (card #151, franc's third grill): the epic's color flows ALONG the
+  // v3 (card #151, third design pass): the epic's color flows ALONG the
   // chain instead of fanning from every member. `nonTerminal` collects, per
   // epic, the members some OTHER member of the same epic waits on — their
   // work continues inside the epic, so they get no direct hop; only the

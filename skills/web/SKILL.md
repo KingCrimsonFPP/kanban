@@ -289,7 +289,7 @@ bound to `127.0.0.1` only.
   above — it never appears once the card has a real title, prompt or no — it
   exists solely so no view ever renders a blank title while one is still
   pending — including `cardLabel()` (the single-card Archive/Delete `confirm()`
-  text), which a #211 verify finding caught still interpolating `card.title`
+  text), which #211 caught still interpolating `card.title`
   bare; it now runs through `cardTitleDisplay()` like every other call site.
   **kanban.proj #211 also let a card SAVE with an empty title in the first
   place** (previously the create/edit form's native `required` on `#f-title`
@@ -302,7 +302,7 @@ bound to `127.0.0.1` only.
   exactly as before. That client-side toggle is not the only path in, though
   — a space-only title satisfies native `required` and trims to `''` before
   the POST, and any direct API caller (curl, kanban-afk dispatch) bypasses
-  the browser form entirely — so a #211 verify finding found `createCard`
+  the browser form entirely — so until #211 `createCard`
   would happily persist a card with BOTH title and prompt empty: nothing for
   any view to fall back to, a permanently blank tile. `createCard` now
   applies the "Untitled" placeholder as a server-side floor for exactly that
@@ -432,8 +432,9 @@ bound to `127.0.0.1` only.
   A RESERVED color is an open value space with no class to reuse, so the
   `.card-assignee` span rides a `data-assignee-color` attribute instead;
   `paintAssigneeColors()` (app.js) paints it with one small CSSOM assignment
-  after the tile's `innerHTML` lands — never a string style attribute (same
-  CSP `style-src 'self'` reasoning as the #49 verify finding above). Renders
+  after the tile's `innerHTML` lands — never a string style attribute (the
+  CSP ships `style-src 'self'` without `unsafe-inline`, so inline `style`
+  attributes are blocked — CSSOM assignment is the compliant path). Renders
   on every card-carrying-an-assignee surface `assigneeBadge()` already had:
   board tiles (live and archived, via `cardEl`/`archiveCardEl`) and the map's
   isolated-row tiles. The edit/create modal tints the `#f-assignee` input's
@@ -576,7 +577,7 @@ bound to `127.0.0.1` only.
   layered SVG graph: nodes are cards (id + title), edges are `waiting_for` (arrow
   from the depended-on card to the card waiting on it, same direction as the
   `kanban-cli` skill's Mermaid dependency printout). **Membership rendering (card
-  #151, v3 after two regrills):** the epic is the SINK, not the root — it
+  #151, v3):** the epic is the SINK, not the root — it
   closes only when its children close, so under the map's down-is-later
   convention it lays out BELOW its children. The epic's color flows ALONG the
   chain rather than fanning from every member: a `waiting_for` edge whose two
@@ -735,7 +736,6 @@ bound to `127.0.0.1` only.
   above; this is a web-only feature today (cards #152/#153 track cli/viewer parity).
 - **Calendar view** — a top-bar "📅 Calendar" button swaps the board for a month grid
   (weeks start Monday; prev/next/Today controls; outside-month days dimmed, today
-
   highlighted). Live cards by default; dated ARCHIVED cards join too, opt-in via
   the Archive pill below (card #108). The date triad (card #40): the
   **working range** (start→end inclusive; compat: start→due when there's no end date)
@@ -941,7 +941,6 @@ bound to `127.0.0.1` only.
   while the timeline's horizontal scroll position is carried across
   re-renders.
 
-
 ## Board config: `config.yaml` (cards #27, #30, #31)
 
 Optional, human-edited, per board:
@@ -1008,7 +1007,7 @@ here (card #100) — this app is config-driven and doesn't enforce them.
 - All three lists **suggest, never validate** — the form's comboboxes offer
   the registered values but free text still saves fine. (Hand-rolled menus,
   not `<datalist>`: native datalists misrender inside VSCode's Simple Browser.)
-- Like `board.md`/`notifications.md`, not a card.
+- Not a card — only `*.card.md` files are cards.
 
 ## Notifications writer contract (for agents)
 
@@ -1040,16 +1039,16 @@ own single line:
 - The full v2 contract — when to write (per-action-or-grouped discipline), message
   shape, clear = archive — lives in `/kanban`'s SKILL.md (card #133); this is the
   same file shape, not a second contract.
-- Like `board.md`, this file is not a card (only `*.card.md` files are cards).
+- Not a card — only `*.card.md` files are cards.
 
 ## Boundaries
 
 - This is the **only** skill that runs a server / is desktop-only. The plugin has exactly
-  three surfaces: **kanban** (AI-driven card management), **kanban-web** (this — the
+  four surfaces: **kanban** (AI-driven card management), **kanban-web** (this — the
   human's live editor, desktop), **kanban-cli** (the human's conversational editor,
-  works under remote control). The old `board`/`dashboard`/`dependencies` skills are
-  retired and deleted (card #53; git history keeps them recoverable). "App" and
-  "dashboard" in older docs both mean this skill.
+  works under remote control), **kanban-viewer** (generated single-file HTML board
+  for phone/tablet; queued-change payload, Claude applies). The old
+  `board`/`dashboard`/`dependencies` skills are retired and deleted (card #53).
 - `archive` here is a *location* (the `archived/` folder), not a status — ADR 0002's
   data model is unchanged, but since card #34 the column has full UI parity: drag a
   batch onto Archive to archive it (one confirm, skipped when the whole batch is

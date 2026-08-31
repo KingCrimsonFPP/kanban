@@ -74,7 +74,7 @@ function archiveNeedsConfirm(cards) {
 // `archived`; dest is 'archive' or a live column. The doing entry gate
 // (waiting OR blocked via `refusesDoingFn`, epic #137) stays per card and
 // only guards entering 'doing' — applied to archived cards too, since a
-// drop names their destination status. Speedbump matrix (grilled): a batch
+// drop names their destination status. Speedbump matrix (reviewed): a batch
 // -> archive confirms unless every card in it is already done (card #92); a
 // batch containing archived cards -> live column confirms naming the
 // restore count; pure live -> live stays confirm-free.

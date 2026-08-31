@@ -46,3 +46,5 @@ different surface.
 - **`archive` is modeled as a *location* (the `kanban/archived/` folder), not a
   status** (see `CONTEXT.md`). This diverges from the static `/kanban-dashboard`,
   which still treats archive as a 5th status-column — to be reconciled later.
+
+**Postscript (2026-08-31)** — The `kanban-browse`, `kanban-board`, `kanban-dashboard`, and `kanban-dependencies` skills named above were later consolidated and deleted; the archive-behavior divergence was reconciled by ADR 0005.

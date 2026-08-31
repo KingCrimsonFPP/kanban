@@ -6,7 +6,8 @@ Date: 2026-07-09 · Status: accepted · Cards: #27, #30 (future: #31)
 
 Boards want curated vocabularies (assignees, priorities, tags) without the
 file format ever rejecting content — cards are hand-edited Markdown and the
-parser's prime directive is tolerance (ADR 0002).
+parser's prime directive is tolerance (the suggest-never-validate registry
+language in `CONTEXT.md` and the kanban skill's file contracts).
 
 ## Decision
 

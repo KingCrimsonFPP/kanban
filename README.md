@@ -64,10 +64,12 @@ wiring. Claude Code only.
 
 With the skills installed, in your agent session:
 
-1. Run `/kanban` and tell it which folder you want to work on — it sets up
+1. Run `/kanban` — or `/kanban:kanban` when another plugin also ships a
+   `kanban` skill — and tell it which folder you want to work on — it sets up
    the board there (or adopts an existing directory of `*.card.md` files).
-2. Once your kanban is set up, ask `/kanban-web` to create the dashboard —
-   it starts the local server and hands you the board URL.
+2. Once your kanban is set up, ask `/kanban-web` (`/kanban:web` in
+   plugin-qualified form) to create the web editor — it starts the local
+   server and hands you the board URL.
 
 Or try the bundled demo board straight from a clone of this repo:
 
@@ -88,7 +90,7 @@ is a self-contained sample board; point the same command at any directory of
 | `kanban` | the AI | AI-driven card management — every file contract (card frontmatter, `config.yaml`, `notifications.md`) and when the AI must notify the human lives here. |
 | `kanban-web` | the human, desktop | A live browser editor: a localhost Node server (stdlib-only) + vanilla-JS SPA with drag-drop board, full CRUD, bulk actions, search, a notifications inbox, and four views (board, dependency map, gantt, calendar). Bound to `127.0.0.1` only. |
 | `kanban-cli` | the human, anywhere | A conversational editor — Claude prints the board and drives typed actions and `AskUserQuestion`, with the same operations and rules as `kanban-web`. Works identically at a terminal or under remote control on mobile. |
-| `kanban-viewer` | the human, phone/tablet/Cowork | Generates a self-contained single-file HTML board — a read-only tap UI (move, edit, archive, delete, create) whose edits queue into an "Apply kanban changes" payload you paste back into chat for Claude to apply. |
+| `kanban-viewer` | the human, phone/tablet/Cowork | Generates a self-contained single-file HTML board — a tap UI (move, edit, archive, delete, create) whose edits queue in a tray, nothing touching disk until you paste its "Apply kanban changes" payload back into chat — Claude is the write path. |
 
 Web and CLI implement the same operations under the same rules (the `doing`
 entry gate, bulk actions, speedbumps, notifications); a few things are
@@ -158,11 +160,12 @@ adding it to the list.
 
 ## More docs
 
-- [`docs/adr/`](docs/adr/) — architecture decision records (ADR 0001–0008),
+- [`docs/adr/`](docs/adr/) — architecture decision records (ADR 0001–0009),
   covering why the CLI is Claude-driven, why `kanban-web` gets a scoped
   local-server exception, hand-rolled widgets, tolerant vocabulary registries,
   archive-column UI parity, the shared interaction grammar, the date triad,
-  and the machine-managed `updated` field.
+  the machine-managed `updated` field, and review and human-attention as
+  overlay stickers, not columns.
 - [`docs/cross-harness.md`](docs/cross-harness.md) — cross-harness caveats:
   which skills port cleanly outside Claude Code and which carry the
   (Claude Only) tag, and why.

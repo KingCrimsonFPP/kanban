@@ -1487,7 +1487,7 @@ test('the map node border is neutral; status moves to its own dot with a raw-sta
     const js = await (await fetch(`${base}/app.js`)).text();
     const svg = js.match(/function buildMapSvg\([\s\S]*?\nfunction /);
     assert.doesNotMatch(svg[0], /status-\$\{missing/, 'the node group no longer carries a status-* class');
-    // card #49 verify finding: the dot's color used to be an inline
+    // card #49: the dot's color used to be an inline
     // `style="fill:..."` attribute, which a strict `style-src 'self'` CSP
     // (no unsafe-inline) silently blocks the browser from applying — it's a
     // `status-${statusColorClass(n.status)}` CSS class now (app.css carries
@@ -1545,7 +1545,7 @@ test('the gantt gutter row gets the status dot AND the epic wash class; the bar 
   });
 });
 
-// verify finding: the dense-surface "dot must not crowd the text" guard is
+// The dense-surface "dot must not crowd the text" guard is
 // satisfied deliberately (dots always precede the croppable title; .cal-chip/
 // .gantt-label's nowrap+ellipsis only ever crops the tail) but nothing pinned
 // the mechanism — a later reorder (title before the dots) or a dropped
@@ -1812,7 +1812,7 @@ test('gantt status filter: own persisted state, statuses + Archive (default OFF 
     // A changed statuses list invalidates the gantt filter too, same as mapStatusFilter/collapsedColumns/columnSort.
     const applyStatuses = js.match(/function applyStatuses\([\s\S]*?\n\}/);
     assert.match(applyStatuses[0], /ganttStatusFilter = null/, 'a changed column set re-merges the gantt filter, not just the map\'s');
-    // verify finding: applyProjectName's own comment says a projectName change
+    // The gap guarded here: applyProjectName's own comment says a projectName change
     // "invalidates all of them" (collapsedColumns/columnSort/modalFullscreen/
     // viewMode/mapStatusFilter/calendarSubview/mapSectionsCollapsed) — but
     // ganttStatusFilter, keyed the identical memoize-once-per-project way, was
@@ -1866,7 +1866,7 @@ test('renderGanttView renders the #98 status-filter row UNCONDITIONALLY and comp
     assert.ok(rowIdx > -1, 'the filter row is built');
     assert.ok(groupsIdx > -1 && rowIdx < groupsIdx,
       'the row is appended before groups are computed — if it vanished on the everything-filtered-out state there would be no control left to toggle a status back ON, same reasoning as the map\'s #56 row');
-    // verify finding: mapFilterVisibleIds folds an unlisted status into the
+    // The bug guarded here: mapFilterVisibleIds folds an unlisted status into the
     // FIRST column's toggle (correct for the map/board) — but ganttGroups
     // (gantt-model.js) groups cards by their RAW status and gives an
     // unlisted one its OWN separate group row, so that catch-all mapping
@@ -2463,7 +2463,7 @@ test('Esc closes the open popup directly on the first press — no exit-fullscre
     'an open detail popup closes on the very first Esc, fullscreen or not');
   assert.match(body, /if \(!\$\('#modal'\)\.classList\.contains\('hidden'\)\) \{ requestCloseModal\(\); return; \}/,
     'the edit/new-card modal now closes on Esc through the #26 unsaved-changes guard, same call the X button makes');
-  // verify finding: before this, a fullscreen-capable bulk popup (bulkSingle/
+  // Before this, a fullscreen-capable bulk popup (bulkSingle/
   // Tags/Schedule) left Esc a true no-op — the old fullscreen-exit step was
   // removed and nothing replaced it for these three. Esc must close them
   // directly too, same as their own backdrop-click (no confirm — bulk edits
@@ -2472,7 +2472,7 @@ test('Esc closes the open popup directly on the first press — no exit-fullscre
     'Esc closes an open bulk-edit popup directly, same as its backdrop-click');
 });
 
-test('closeAnyBulkPopup closes whichever bulk popup is open, no confirm — the fix for the Esc-is-inert-on-bulk-popups verify finding', () => {
+test('closeAnyBulkPopup closes whichever bulk popup is open, no confirm — the fix for the Esc-is-inert-on-bulk-popups bug', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/function closeAnyBulkPopup\([\s\S]*?\n\}/);
   assert.ok(fn, 'closeAnyBulkPopup found in app.js');
@@ -2536,7 +2536,7 @@ test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, 
   assert.match(body, /e\.key === 'ArrowDown' \|\| e\.key === 'ArrowUp'/);
   assert.match(body, /setHighlight\(nextHighlightIndex\(items\.length, highlightIndex, e\.key === 'ArrowDown' \? 1 : -1\)\);/);
   assert.match(body, /e\.preventDefault\(\); \/\/ don't let the browser hunt for another focusable element/);
-  // verify finding: Enter must NEVER fall through to the form while the menu
+  // Enter must NEVER fall through to the form while the menu
   // is open ("ONLY when the menu is closed" — card #95 AC1). An open menu
   // always consumes it: picks the highlighted row, or — nothing highlighted —
   // just closes the menu so the very next Enter is the one that reaches the
@@ -2550,7 +2550,7 @@ test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, 
     'the old highlightIndex-gated Enter (which let it fall through to submit while the menu stayed open) is gone');
 });
 
-test('setHighlight scrolls the highlighted row into view — a menu taller than its 180px max-height must not hide the active row (verify finding)', () => {
+test('setHighlight scrolls the highlighted row into view — a menu taller than its 180px max-height must not hide the active row (regression)', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/const setHighlight = \(idx\) => \{[\s\S]*?\n  \};/);
   assert.ok(fn, 'setHighlight found in app.js');
@@ -2563,7 +2563,7 @@ test("combobox Up/Down highlight reuses the existing hover treatment, not a new 
   assert.match(css, /\.combobox-item:hover, \.combobox-item\.active \{ background: #1f6feb33; \}/);
 });
 
-// --- verify finding: card #92's "one rule, three callers" is only pinned for
+// --- card #92's "one rule, three callers" is only pinned for
 // drag-to-Archive (via dragPlan/selection.test.js) — doArchive (tile/detail
 // Archive button) and bulkArchive (bulk menu's Archive selected) call
 // archiveNeedsConfirm too, but nothing asserted that wiring, so a regression
@@ -2708,14 +2708,14 @@ test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the fi
   });
 });
 
-// verify finding: the first pass exempted GET from the guard entirely, which
+// The first pass exempted GET from the guard entirely, which
 // left DNS rebinding's read/exfiltration half open — a rebound hostile origin
 // is same-origin to the browser once resolved to 127.0.0.1, so a GET fetch
 // from that tab would return the full board with no write ever attempted.
 // The guard now applies uniformly; only a PRESENT disallowed header is
 // refused, so a normal top-level GET (which sends no Origin and whose Host
 // always matches the address actually loaded) keeps working unmodified.
-test('GET requests ARE blocked by the Origin/Host guard too — reads are not exempt (card #49 verify finding)', async () => {
+test('GET requests ARE blocked by the Origin/Host guard too — reads are not exempt (card #49, regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'GET', '/api/board', { headers: { origin: 'http://evil.example', host: 'evil.example' } });
@@ -2723,7 +2723,7 @@ test('GET requests ARE blocked by the Origin/Host guard too — reads are not ex
   });
 });
 
-test('GET /api/board with no Origin/Referer/Host override succeeds — direct tool calls and normal browser navigation stay legitimate (card #49 verify finding)', async () => {
+test('GET /api/board with no Origin/Referer/Host override succeeds — direct tool calls and normal browser navigation stay legitimate (card #49, regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'GET', '/api/board', {});
@@ -2731,7 +2731,7 @@ test('GET /api/board with no Origin/Referer/Host override succeeds — direct to
   });
 });
 
-test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (card #49 verify finding)', async () => {
+test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (card #49, regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const port = new URL(base).port;

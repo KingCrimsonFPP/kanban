@@ -198,7 +198,7 @@ test('the map node border is one neutral weight for every status (card #91) — 
 // tile (epic #137 renamed #107's amber "blocked" stroke to waiting; the
 // manual blocked sticker is a red pill, not a border)
 
-// verify finding: every other SKILL.md prose paragraph documenting a border/
+// Every other SKILL.md prose paragraph documenting a border/
 // dot feature (card #97/#101/#102/#99) gets a phrase-pinning doc test here or
 // in status-pill-docs.test.js, specifically to catch silent drift — #107's
 // new bullet was missing one. Pinning it the same way.
@@ -241,8 +241,8 @@ test('the blocked sticker\'s red pill is styled on both surfaces it shows (tiles
 
 // --- card #97: the shared HTML status dot, joining epicBadge() everywhere --
 
-test('statusBadge colors a built-in status via a status-dot--* class, never inline style (card #97, revised card #49 verify finding)', () => {
-  // card #49 verify finding: this used to write `style="background:..."` —
+test('statusBadge colors a built-in status via a status-dot--* class, never inline style (card #97, revised by #49)', () => {
+  // card #49: this used to write `style="background:..."` —
   // a literal inline-style HTML attribute — which a strict `style-src 'self'`
   // CSP (no unsafe-inline) blocks the browser from applying at all, rendering
   // every status dot colorless. It now writes a class (app.css's
@@ -326,7 +326,7 @@ test('statusBadge tolerates a missing/null status without throwing (card #97)', 
   assert.doesNotThrow(() => statusBadge({}));
 });
 
-test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* color rule per statusColorClass() outcome — no inline style (card #97, revised card #49 verify finding)', () => {
+test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* color rule per statusColorClass() outcome — no inline style (card #97, revised by #49)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.status-dot\s*\{[^}]*width:\s*8px;[^}]*height:\s*8px;[^}]*border-radius:\s*50%/,
     'same 8px dot shape .archived-dot carries');
@@ -339,7 +339,7 @@ test('app.css paints a shape-only .status-dot rule, plus one .status-dot--* colo
   });
 });
 
-test('no fused-dot gap rule survives for epic+status — card #45 retired the epic dot that rule existed for (verify finding, superseded)', () => {
+test('no fused-dot gap rule survives for epic+status — card #45 retired the epic dot that rule existed for (superseded)', () => {
   // Card #97's original problem: on the two dense surfaces without
   // .card-head's flex gap (calendar chips, gantt gutter labels),
   // epicBadge()+statusBadge() emitted with zero whitespace between them and
@@ -417,7 +417,7 @@ test('app.css agrees with the JS palette on every status-colored surface (card #
   assert.ok(!css.includes('.map-node.archived .map-status-dot'), 'no archived status-dot mute rule (card #102 reopen)');
 });
 
-// --- card #49 verify finding: the CSP's `style-src 'self'` (no unsafe-inline)
+// --- card #49: the CSP's `style-src 'self'` (no unsafe-inline)
 // blocks the browser from applying an HTML `style="..."` attribute at all —
 // statusBadge() and the map SVG's custom-status dot were the one channel that
 // broke (every other statusColor() consumer in app.js sets style via the
@@ -425,14 +425,14 @@ test('app.css agrees with the JS palette on every status-colored surface (card #
 // every status color through a class instead. Pin the absence directly so a
 // future edit can't quietly reintroduce an inline style attribute here.
 
-test('neither status-colors.js nor app.js emits a literal style="..." HTML attribute anywhere (card #49 verify finding)', () => {
+test('neither status-colors.js nor app.js emits a literal style="..." HTML attribute anywhere (card #49, regression)', () => {
   const statusColorsSrc = fs.readFileSync(path.join(__dirname, '..', 'web', 'status-colors.js'), 'utf8');
   const appSrc = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   assert.doesNotMatch(statusColorsSrc, /style="/, 'status-colors.js must never build an inline style="" attribute string — CSP style-src has no unsafe-inline');
   assert.doesNotMatch(appSrc, /style="/, 'app.js must never build an inline style="" attribute string — CSP style-src has no unsafe-inline (CSSOM .style.x assignments are fine, they do not match this pattern)');
 });
 
-test('statusColorClass covers the exact same value space as statusColor — every hashed slot has a matching CSS class both for .status-dot-- and .map-status-dot.status- (card #49 verify finding)', () => {
+test('statusColorClass covers the exact same value space as statusColor — every hashed slot has a matching CSS class both for .status-dot-- and .map-status-dot.status- (card #49, regression)', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   STATUS_PALETTE.forEach((hex, i) => {
     assert.ok(css.includes(`.map-status-dot.status-palette-${i} { fill: ${hex};`), `map-status-dot palette rule present: palette-${i}`);

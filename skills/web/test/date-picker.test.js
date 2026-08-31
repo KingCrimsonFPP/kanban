@@ -51,7 +51,7 @@ test('initialMonth falls back to today\'s month for empty/garbage current values
 });
 
 // impossible months are legal on disk (never-validate) but must not render a
-// broken grid — fall back to today (card #41 verify finding)
+// broken grid — fall back to today (card #41)
 test('initialMonth falls back to today for impossible months', () => {
   assert.deepStrictEqual(initialMonth('2026-13-05', '2026-07-09'), { year: 2026, monthIndex: 6 });
   assert.deepStrictEqual(initialMonth('2026-00-15', '2026-07-09'), { year: 2026, monthIndex: 6 });

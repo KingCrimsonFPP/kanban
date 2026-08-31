@@ -68,7 +68,7 @@ test('the webkit scrollbar track is transparent, not a hardcoded fill (container
   assert.match(css, /::-webkit-scrollbar-track\s*[,{][\s\S]{0,600}?background:\s*transparent/, 'track blends into whichever surface it is over');
 });
 
-// Verify finding (kanban.proj #209): overflow: auto is silently inert unless
+// The bug guarded (kanban.proj #209): overflow: auto is silently inert unless
 // the box has a height/max-height of its own — a plain block child of body
 // (which sets neither) just grows to fit its content, so it never overflows
 // itself and its ::-webkit-scrollbar* rules never fire; html scrolls instead.

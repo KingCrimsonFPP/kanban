@@ -15,7 +15,7 @@ const path = require('node:path');
 // keeping main#board's height in sync with the page header's real height)
 // is pinned as a JS structure test since jsdom isn't wired into this suite.
 //
-// Verify finding (adversarial review, kanban.proj #207): the original cut of
+// The bug these tests guard (kanban.proj #207): the original cut of
 // these tests was regex-only against source text, so `.column-header { ...
 // position: sticky ... }` read as "passing" even though the column headers
 // never actually stuck — main#board's pre-existing `overflow-x: auto` forces
@@ -48,20 +48,20 @@ test('main#board stretches its columns to equal height instead of sizing each to
   assert.doesNotMatch(css, /main#board\s*\{[^}]*align-items:\s*flex-start/, 'the old per-column sizing rule is gone');
 });
 
-test('main#board is bounded to the viewport under the page header, so align-items: stretch gives every column the same definite, working height (verify finding fix)', () => {
+test('main#board is bounded to the viewport under the page header, so align-items: stretch gives every column the same definite, working height (regression)', () => {
   assert.doesNotMatch(css, /main#board\s*\{[^}]*height:\s*auto/,
     'height is bounded, not auto — a column stretched to an unbounded main#board never gets a definite, scrollable box');
   assert.match(css, /main#board\s*\{[^}]*height:\s*calc\([^)]*var\(--board-header-h/,
     'the bound is derived from the real page-header height (--board-header-h), not a guessed fixed px');
 });
 
-test('each .column is a column flexbox (header, then an independently-scrolling card list) and clips content to its own rounded box (verify finding fix)', () => {
+test('each .column is a column flexbox (header, then an independently-scrolling card list) and clips content to its own rounded box (regression)', () => {
   assert.match(css, /\.column\s*\{[^}]*display:\s*flex/, 'column is a flex container');
   assert.match(css, /\.column\s*\{[^}]*flex-direction:\s*column/, 'stacks header above card list, not side by side');
   assert.match(css, /\.column\s*\{[^}]*overflow:\s*hidden/, 'clips to its own box — no more content spilling out past a height-capped column');
 });
 
-test('.column-cards — not main#board or .column — is what actually scrolls vertically, one column at a time (verify finding fix)', () => {
+test('.column-cards — not main#board or .column — is what actually scrolls vertically, one column at a time (regression)', () => {
   assert.match(css, /\.column-cards\s*\{[^}]*flex:\s*1/, 'fills whatever height .column-header did not use');
   assert.match(css, /\.column-cards\s*\{[^}]*min-height:\s*0/, 'without this, a flex item refuses to shrink below its content size and the scroll never engages');
   assert.match(css, /\.column-cards\s*\{[^}]*overflow-y:\s*auto/, 'this column\'s own card list scrolls independently of every other column');
@@ -77,7 +77,7 @@ test('the page header is sticky to the viewport top, opaque, and layered above o
   assert.ok(Number(zMatch[1]) < 30, 'header stacks below the modal backdrop (30) so popups still overlay it');
 });
 
-test('each column header stays visible above its own column\'s scrolling card list without needing position: sticky (verify finding fix)', () => {
+test('each column header stays visible above its own column\'s scrolling card list without needing position: sticky (regression)', () => {
   assert.doesNotMatch(css, /\.column-header\s*\{[^}]*position:\s*sticky/,
     'sticky is gone — the header is simply outside the region that scrolls (.column-cards), so it can never scroll away in the first place');
   assert.match(css, /\.column-header\s*\{[^}]*flex-shrink:\s*0/, 'stays its natural height even if the header row wraps');
@@ -102,7 +102,7 @@ test('syncBoardHeaderHeight is wired at DOMContentLoaded (static markup, no need
   assert.match(appJs, /window\.addEventListener\(\s*['"]resize['"]\s*,\s*syncBoardHeaderHeight\)/, 'falls back to a resize listener when ResizeObserver is unavailable');
 });
 
-test('renderBoardColumns preserves every column\'s own scroll position (and #board\'s horizontal one) across a rebuild (verify finding fix follow-on)', () => {
+test('renderBoardColumns preserves every column\'s own scroll position (and #board\'s horizontal one) across a rebuild (regression follow-on)', () => {
   // Now that each .column-cards scrolls independently (see the per-column
   // scroll test above), wiping and rebuilding #board's children on every
   // renderBoard() call — including the unconditional 5s auto-refresh poll,

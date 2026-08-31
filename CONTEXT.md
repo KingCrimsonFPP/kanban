@@ -16,7 +16,7 @@ One work item, stored as a single `<0000-id>.<slug>.card.md` file (frontmatter +
 _Avoid_: task, ticket, item, issue.
 
 **Narrative Entry Shape** (kanban.proj#178):
-The scan-optimized format for every bullet in a card's `## Narrative` section: a **bold, verb-first TL;DR** (≤10 words, ends with a period), 1–2 plain supporting sentences, every identifier backticked (card ids, commits, filenames, branches), one event per bullet, and no sub-bullets or wrapped continuation lines. It exists because readers scan rather than read, and the web renderer flattens nested bullets to siblings and breaks on continuation lines — the shape is a rendering constraint, not just a style preference. Entries are forward-only: never rewritten to match. Full rules in `skills/kanban/SKILL.md`'s "Narrative Record" section; research backing in kanban.proj's `docs/afk-artifacts-2026-07-16/2026-07-16-narrative-readability-research.md`.
+The scan-optimized format for every bullet in a card's `## Narrative` section: a **bold, verb-first TL;DR** (≤10 words, ends with a period), 1–2 plain supporting sentences, every identifier backticked (card ids, commits, filenames, branches), one event per bullet, and no sub-bullets or wrapped continuation lines. It exists because readers scan rather than read, and the web renderer flattens nested bullets to siblings and breaks on continuation lines — the shape is a rendering constraint, not just a style preference. Entries are forward-only: never rewritten to match. Full rules in `skills/kanban/SKILL.md`'s "Narrative Record" section.
 _Avoid_: fusing multiple events into one bullet, sub-bullets or nested lists, rewriting old entries to the new shape.
 
 **Status** (a.k.a. **Column**):
@@ -44,7 +44,7 @@ A "finished — approve me" sticker: `review: <text>`, the text saying what to c
 _Avoid_: column, lane (it is a sticker, not a status); approved, done (a review card is not done yet).
 
 **Web** (skill `kanban-web`, formerly `kanban-app`):
-The human's live editor — localhost Node server + browser SPA, desktop only. "App" and "dashboard" in older docs/cards both refer to this skill (the static `kanban-dashboard` was deprecated 2026-07-08, retired 2026-07-09, and deleted 2026-07-10 — card #53; recoverable from git history).
+The human's live editor — localhost Node server + browser SPA, desktop only. "App" and "dashboard" in older docs/cards both refer to this skill (the static `kanban-dashboard` was deprecated 2026-07-08, retired 2026-07-09, and deleted 2026-07-10 — card #53).
 _Avoid_: app, dashboard (in new writing).
 
 **CLI** (skill `kanban-cli`, formerly `kanban-browse`):
@@ -52,7 +52,7 @@ The human's conversational editor — Claude-driven printed board + typed action
 _Avoid_: browse, TUI.
 
 **Viewer** (skill `kanban-viewer`, formerly `kanban-remote` — card #110):
-The human's read-only tap surface — a generated single-file HTML board that works where web can't reach (phone, tablet, Cowork). Changes don't touch disk: they queue in a tray and come back as an "Apply kanban changes" payload that Claude applies under the `kanban` skill's write contracts.
+The human's tap surface — a generated single-file HTML board that works where web can't reach (phone, tablet, Cowork). Changes don't touch disk: they queue in a tray and come back as an "Apply kanban changes" payload that Claude applies under the `kanban` skill's write contracts.
 _Avoid_: remote, editor (it renders and queues; Claude writes).
 
 ## Role trio (card #132)
@@ -95,8 +95,8 @@ Ctrl+S/Cmd+S save-the-open-popup hotkey (card #172 — same no-popups-no-chords
 reasoning), and the Ctrl+F/Cmd+F search-focus hotkey (kanban.proj #198 — a
 printed board has no search box for a chord to focus). A feature added to
 one editor lands in the other (or gets a
-line in this table saying why not). Retired skills are deleted outright (git
-history keeps them recoverable — card #53).
+line in this table saying why not). Retired skills are deleted outright (card
+#53).
 Web's `tree:<id>`/`path:<id>` dependency-focus search terms (card #74) are
 mirrored in cli as scoped "Dependencies tree/path for #id" Mermaid views (card
 #152) and in the viewer as `tree:`/`path:` search terms plus card-sheet

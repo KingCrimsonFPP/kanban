@@ -45,7 +45,7 @@ test('skills/cli/SKILL.md\'s bulk-assign example no longer hardcodes the old @al
   assert.ok(!cliSkill.includes('@alex'));
 });
 
-// verify finding: the "Creating a Card" worked example (the doc's only
+// The "Creating a Card" worked example (the doc's only
 // full card-creation template) must not assign a pre-trio handle — #100's
 // own grab-semantics section a few lines below says such a handle "carries
 // no special meaning", so a future session copying the template verbatim

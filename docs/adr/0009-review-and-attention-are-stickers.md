@@ -5,7 +5,7 @@ Date: 2026-07-16 · Status: accepted (amended 2026-07-20, amendment NOT yet impl
 ## Context
 
 Card #181 asked for a `review` column — "an extra column to see, at a glance,
-what's waiting for my review." Grilling it (/grill-with-docs, 2026-07-16) split
+what's waiting for my review." Stress-testing the ask (2026-07-16) split
 "waiting for me" into two cases: A — work is finished, approve/verify it; B —
 work is mid-flight and needs my decision before it continues. Modeling either as
 a column forced a `doing → review → done` lifecycle, redefined `done` to mean

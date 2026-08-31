@@ -24,7 +24,7 @@ test('SKILL.md documents contextmenu suppression as scoped to the pill row only,
   assert.match(webSkill, /#39 shared right-click bulk\s*\n?\s*menu untouched/);
 });
 
-// verify finding: the #99 calendar status-filter row's own write-up was left
+// The #99 calendar status-filter row's own write-up was left
 // out of an earlier batch — the Gantt's #98 row got a dedicated
 // "Status-filter row" paragraph, but the Calendar section never mentioned
 // filtering at all. Pinning its contract here the same way, in the Calendar
