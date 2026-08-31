@@ -1,6 +1,6 @@
 'use strict';
-// Pure graph-builder + layered-layout math for the dependency map view (card
-// #19). No DOM here — same dual-environment pattern as search.js/column-*.js:
+// Pure graph-builder + layered-layout math for the dependency map view.
+// No DOM here — same dual-environment pattern as search.js/column-*.js:
 // loaded as a plain <script> in the browser (app.js calls these as bare
 // globals) AND required directly by node --test.
 //
@@ -9,7 +9,7 @@
 // direction as that skill's `n<depId> --> n<id>` output, so the two views
 // read the same graph the same way.
 //
-// The waiting/blocked predicates come from waiting-blocked.js (epic #137's
+// The waiting/blocked predicates come from waiting-blocked.js (the
 // one shared home) — in Node via require, in the browser off window, where
 // waiting-blocked.js loads first (app.html order). Namespace object rather
 // than destructured consts, same shared-scope reasoning as gantt-model's CAL.
@@ -17,7 +17,7 @@ const WB = (typeof module !== 'undefined' && module.exports)
   ? require('./waiting-blocked')
   : window;
 
-// card #107 gave the node its precomputed gate flags; epic #137 split them:
+// The node carries precomputed gate flags:
 // `waiting` (some waiting_for dep not done — the amber stroke) and `blocked`
 // (the manual sticker — the red pill), with `blockedReason` riding along for
 // the pill's tooltip.
@@ -26,7 +26,7 @@ function cardToNode(c, waiting) {
     id: c.id, title: c.title, status: c.status, archived: !!c.archived, epic: !!c.epic,
     priority: c.priority || '', waiting: !!waiting,
     blocked: WB.isBlockedValue(c.blocked), blockedReason: WB.blockedReason(c.blocked),
-    prompt: c.prompt || null, // kanban.proj #211: lets the map label fall back to it (cardTitleDisplay)
+    prompt: c.prompt || null, // lets the map label fall back to it (cardTitleDisplay)
   };
 }
 
@@ -44,7 +44,7 @@ function isCardWaiting(c, byId) {
 // card is visible", mirroring search.js's own "empty query matches
 // everything").
 //
-// Design decisions (see card #19):
+// Design decisions:
 // - An edge with NEITHER endpoint visible is dropped entirely — only
 //   matching cards are "the slice you're looking at"; an edge floating
 //   between two invisible cards has nothing on-screen to anchor it to.
@@ -60,7 +60,7 @@ function isCardWaiting(c, byId) {
 //   separately so the caller can render them in a detached cluster instead
 //   of mixing them into the layered graph.
 //
-// card #151 — epic membership edges: a child card's `parent: <epic-id>`
+// Epic membership edges: a child card's `parent: <epic-id>`
 // becomes a child->epic edge with `kind: 'epic'` (waiting_for edges carry
 // `kind: 'dep'`). The epic is the SINK, not the root — an epic is done only
 // when its children are done, so under the map's "down = completes later"
@@ -99,7 +99,7 @@ function buildDependencyGraph(cards, visibleIds) {
     if (!toVisible) ghostIds.add(to);
     edges.push({ from, to, kind, fromGhost: !fromVisible, toGhost: !toVisible });
   };
-  // v3 (card #151, third design pass): the epic's color flows ALONG the
+  // The epic's color flows ALONG the
   // chain instead of fanning from every member. `nonTerminal` collects, per
   // epic, the members some OTHER member of the same epic waits on — their
   // work continues inside the epic, so they get no direct hop; only the
@@ -134,7 +134,7 @@ function buildDependencyGraph(cards, visibleIds) {
     }
   }
   for (const c of cards) {
-    // card #151: membership edge, terminal member -> epic (the epic is the
+    // Membership edge, terminal member -> epic (the epic is the
     // sink; it closes last). `parent` is a single id; self-parent adds
     // nothing. When the pair already has a dep edge IN EITHER DIRECTION (the
     // card waits on its epic, or the epic waits on the card), sequencing
@@ -153,7 +153,7 @@ function buildDependencyGraph(cards, visibleIds) {
     .map((id) => (byId.has(id) ? cardToNode(byId.get(id), isCardWaiting(byId.get(id), byId))
       : { id, title: null, status: null, archived: false, epic: false, priority: '', waiting: false, blocked: false, blockedReason: '', missing: true }));
 
-  // card #151: the isolated row is keyed off SEQUENCING edges only, while the
+  // The isolated row is keyed off SEQUENCING edges only, while the
   // layered graph lays out every node touched by ANY edge (`participants`) —
   // a node whose only edges are epic membership joins the graph and the row
   // both. Both derivations live here, in the pure module, so their different
@@ -179,7 +179,7 @@ function buildDependencyGraph(cards, visibleIds) {
 // strictly shrinks by at least one id every outer-loop iteration (the normal
 // path removes every ready node, the cycle-break path removes exactly one),
 // so this always terminates in O(V+E) regardless of how many/how large the
-// cycles are — the "must not hang on a cycle" half of card #19's requirement.
+// cycles are — the map must never hang on a cycle.
 function layerNodes(nodeIds, edges) {
   const remaining = new Set(nodeIds);
   const inDegree = new Map(nodeIds.map((id) => [id, 0]));
@@ -208,12 +208,12 @@ function layerNodes(nodeIds, edges) {
   return layer;
 }
 
-// card #74 — "Dependency tree" (connected component) and "Dependency path"
+// "Dependency tree" (connected component) and "Dependency path"
 // (directed cone) for the tree:<id> / path:<id> search terms. Both reuse
 // buildDependencyGraph(cards, null).edges as their ONLY source of truth for
-// adjacency — the exact edge set (waiting_for + #151 membership, with its
+// adjacency — the exact edge set (waiting_for + membership, with its
 // sequencing-wins-the-pair/nonTerminal suppression already applied) that the
-// map draws, per card #74's design point 2. Neither function re-derives
+// map draws. Neither function re-derives
 // waiting_for/parent iteration.
 //
 // - treeIds: undirected flood-fill (the connected component) — "everything
@@ -225,7 +225,7 @@ function layerNodes(nodeIds, edges) {
 //   reachable FROM/TO the id is excluded — this is what makes path: a
 //   narrower cone than tree:'s whole component.
 //
-// Both: unknown/non-numeric id -> empty Set (no error, per design point 6);
+// Both: unknown/non-numeric id -> empty Set (no error, by design);
 // an isolated card (no edges at all) resolves to a one-element Set (itself);
 // visited-set BFS makes both cycle-safe (never hangs, mirrors layerNodes'
 // own cycle tolerance).

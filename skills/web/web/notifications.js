@@ -1,5 +1,5 @@
 'use strict';
-// Pure notification helpers (card #22). No DOM access — loaded as a plain
+// Pure notification helpers. No DOM access — loaded as a plain
 // <script> before app.js in the browser AND required directly by node --test,
 // same dual-environment pattern as refresh-policy.js / column-state.js.
 
@@ -22,7 +22,7 @@ function unseenUnread(list, seenIds) {
   return list.filter((n) => !n.read && !seenIds.has(n.id));
 }
 
-// Card #133 message shape: the text before the FIRST "; more: " is the TLDR
+// Message shape: the text before the FIRST "; more: " is the TLDR
 // (renderers bold it); the rest is detail. No separator = the whole message
 // is TLDR. `more` excludes the separator itself — renderers that want the
 // message verbatim slice the original by tldr.length instead.
@@ -34,7 +34,7 @@ function splitTldr(message) {
   return { tldr: s.slice(0, idx), more: s.slice(idx + TLDR_SEPARATOR.length) };
 }
 
-// Card #133 levels: debug | info | warning | error; absent or unknown reads
+// Levels: debug | info | warning | error; absent or unknown reads
 // as info (back-compat with pre-level entries).
 const NOTIFICATION_LEVELS = ['debug', 'info', 'warning', 'error'];
 function notificationLevel(entry) {

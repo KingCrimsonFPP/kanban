@@ -1,5 +1,5 @@
 #!/bin/bash
-# Show cards waiting on unresolved dependencies (epic #137): any `waiting_for`
+# Show cards waiting on unresolved dependencies: any `waiting_for`
 # id whose card exists (live or archived) and is not `done`. Done deps and
 # dangling ids are non-blocking; a card whose deps are all resolved is not
 # listed. Each unresolved id is shown with its live status.

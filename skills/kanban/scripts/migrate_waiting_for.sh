@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot migration for epic #137: rename the `blocked_by:` frontmatter field
+# One-shot migration: rename the `blocked_by:` frontmatter field
 # to `waiting_for:` across a board, in place. Covers <dir> and <dir>/archived.
 # Frontmatter lines only — body text (narratives, prose mentioning blocked_by)
 # is never touched. Dry-run by default; pass --apply to rewrite.

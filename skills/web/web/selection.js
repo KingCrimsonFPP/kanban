@@ -1,5 +1,5 @@
 'use strict';
-// Pure multi-select logic (card #25). Selection is a Set of card ids — never
+// Pure multi-select logic. Selection is a Set of card ids — never
 // DOM state — so it survives renderBoard() rebuilds including auto-refresh
 // polls. Dual-environment module, same pattern as refresh-policy.js.
 
@@ -9,9 +9,9 @@ function toggleSelection(set, id) {
   return next;
 }
 
-// Shift+click adds a RANGE (card #144): union of the current selection with
+// Shift+click adds a RANGE: union of the current selection with
 // every id between anchor and target in the active view's rendered order.
-// Additive on purpose — the card's grammar is "shift to ADD a range", so a
+// Additive on purpose — the grammar is "shift to ADD a range", so a
 // previous range never gets un-selected by the next one, and a stale/missing
 // anchor degrades to adding just the target (never a toggle — shift must not
 // deselect). A target that isn't rendered returns the input set unchanged
@@ -35,7 +35,7 @@ function pruneSelection(set, liveIds) {
   return new Set([...set].filter((id) => live.has(id)));
 }
 
-// Right-click semantics (cards #33/#39): the gesture's target REPLACES the
+// Right-click semantics: the gesture's target REPLACES the
 // selection when it wasn't selected; an already-selected target keeps the
 // whole batch as the menu's subject. Returns the input set unchanged (same
 // reference) in the no-change case so callers can skip a re-render.
@@ -43,9 +43,9 @@ function contextSelection(set, id) {
   return set.has(id) ? set : new Set([id]);
 }
 
-// Bulk-move rule (card #25): the doing entry gate stays PER CARD, and only
+// Bulk-move rule: the doing entry gate stays PER CARD, and only
 // gates entering 'doing'. `refusesDoingFn` is the caller's combined predicate
-// (waiting OR blocked, epic #137) — this module stays mechanism, the
+// (waiting OR blocked) — this module stays mechanism, the
 // vocabulary lives in waiting-blocked.js. Returns { movable, refused,
 // unchanged } card lists; ids with no matching card (deleted mid-selection)
 // are dropped silently.
@@ -61,7 +61,7 @@ function partitionByMovable(ids, byId, targetStatus, refusesDoingFn) {
   return { movable, refused, unchanged };
 }
 
-// card #92: archiving a fully-done batch is the natural completion flow, not
+// Archiving a fully-done batch is the natural completion flow, not
 // a destructive act, so the confirm is skipped — but only when EVERY card
 // in the batch is done; one non-done card keeps today's single confirm.
 // Shared by the tile Archive button, drag-to-Archive (via dragPlan below),
@@ -70,12 +70,12 @@ function archiveNeedsConfirm(cards) {
   return cards.some((c) => c.status !== 'done');
 }
 
-// One plan for any drag batch (card #34: archive column parity). Cards carry
+// One plan for any drag batch (archive column parity). Cards carry
 // `archived`; dest is 'archive' or a live column. The doing entry gate
-// (waiting OR blocked via `refusesDoingFn`, epic #137) stays per card and
+// (waiting OR blocked via `refusesDoingFn`) stays per card and
 // only guards entering 'doing' — applied to archived cards too, since a
-// drop names their destination status. Speedbump matrix (reviewed): a batch
-// -> archive confirms unless every card in it is already done (card #92); a
+// drop names their destination status. Speedbump matrix: a batch
+// -> archive confirms unless every card in it is already done; a
 // batch containing archived cards -> live column confirms naming the
 // restore count; pure live -> live stays confirm-free.
 function dragPlan(ids, byId, dest, refusesDoingFn) {

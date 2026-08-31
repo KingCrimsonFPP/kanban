@@ -1,5 +1,5 @@
 'use strict';
-// Pure helper for priority emphasis (card #30). No DOM access — same
+// Pure helper for priority emphasis. No DOM access — same
 // dual-environment pattern as assignee-badge.js: loaded as a plain <script>
 // in the browser (app.js calls priorityBadge as a bare global) AND required
 // directly by node --test.

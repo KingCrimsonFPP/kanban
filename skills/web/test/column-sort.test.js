@@ -7,11 +7,11 @@ const {
 
 // --- constants --------------------------------------------------------
 
-test('SORT_FIELDS lists exactly id / priority / due / modified / assignee (card #45 split + #46)', () => {
+test('SORT_FIELDS lists exactly id / priority / due / modified / assignee', () => {
   assert.deepStrictEqual(SORT_FIELDS, ['id', 'priority', 'due', 'modified', 'assignee']);
 });
 
-test('SORT_FIELD_LABELS names the split fields "Due date" and "Last modified" (card #45) and "Assignee" (card #46)', () => {
+test('SORT_FIELD_LABELS names the split fields "Due date" and "Last modified" and "Assignee"', () => {
   assert.strictEqual(SORT_FIELD_LABELS.due, 'Due date');
   assert.strictEqual(SORT_FIELD_LABELS.modified, 'Last modified');
   assert.strictEqual(SORT_FIELD_LABELS.assignee, 'Assignee');
@@ -21,7 +21,7 @@ test('DEFAULT_SORT_DIRECTION: priority and modified start desc (High-first / new
   assert.deepStrictEqual(DEFAULT_SORT_DIRECTION, { id: 'asc', priority: 'desc', due: 'asc', modified: 'desc', assignee: 'asc' });
 });
 
-test('DEFAULT_SORT preserves pre-#18 behavior: live columns priority-desc, Archive id-asc', () => {
+test('DEFAULT_SORT: live columns priority-desc, Archive id-asc', () => {
   assert.deepStrictEqual(DEFAULT_SORT, {
     backlog: { field: 'priority', direction: 'desc' },
     todo: { field: 'priority', direction: 'desc' },
@@ -49,7 +49,7 @@ test('mergeSortState overrides only columns with a structurally valid {field, di
   });
 });
 
-test('mergeSortState migrates a legacy saved field "date" to "due", direction preserved (card #45)', () => {
+test('mergeSortState migrates a legacy saved field "date" to "due", direction preserved', () => {
   const result = mergeSortState({ todo: { field: 'date', direction: 'desc' }, done: { field: 'date', direction: 'asc' } });
   assert.deepStrictEqual(result.todo, { field: 'due', direction: 'desc' });
   assert.deepStrictEqual(result.done, { field: 'due', direction: 'asc' });
@@ -88,7 +88,7 @@ test('mergeSortState drops unknown/stale column keys from a prior column set', (
   assert.strictEqual('review' in result, false);
 });
 
-// --- card #31: dynamic column keys ---------------------------------------------
+// --- dynamic column keys ---------------------------------------------
 
 test('mergeSortState with a custom column set derives defaults per column: priority-desc live, id-asc archive', () => {
   const ids = ['triage', 'review', 'archive'];
@@ -99,7 +99,7 @@ test('mergeSortState with a custom column set derives defaults per column: prior
   });
 });
 
-test('mergeSortState honors a saved entry for a custom column and drops keys from a prior column set (card #31)', () => {
+test('mergeSortState honors a saved entry for a custom column and drops keys from a prior column set', () => {
   const ids = ['triage', 'review', 'archive'];
   const merged = mergeSortState({ review: { field: 'due', direction: 'desc' }, todo: { field: 'id', direction: 'asc' } }, ids);
   assert.deepStrictEqual(merged.review, { field: 'due', direction: 'desc' });
@@ -107,13 +107,13 @@ test('mergeSortState honors a saved entry for a custom column and drops keys fro
   assert.strictEqual('todo' in merged, false);
 });
 
-test('mergeSortState applies the #45 legacy "date"→"due" migration to custom columns too', () => {
+test('mergeSortState applies the legacy "date"→"due" migration to custom columns too', () => {
   const ids = ['triage', 'review', 'archive'];
   const merged = mergeSortState({ review: { field: 'date', direction: 'desc' } }, ids);
   assert.deepStrictEqual(merged.review, { field: 'due', direction: 'desc' });
 });
 
-test('mergeSortState tolerates arbitrary column names (dots/spaces) as keys (card #31)', () => {
+test('mergeSortState tolerates arbitrary column names (dots/spaces) as keys', () => {
   const ids = ['a.b', 'c d', 'archive'];
   const merged = mergeSortState({ 'c d': { field: 'id', direction: 'desc' } }, ids);
   assert.deepStrictEqual(merged['c d'], { field: 'id', direction: 'desc' });
@@ -162,7 +162,7 @@ test('compareCards priority asc puts Normal before High, ties still id-stable', 
   assert.deepStrictEqual(sorted.map((c) => c.id), [3, 4, 1, 2]); // Normal(3,4) then High(1,2), each ascending by id
 });
 
-// --- compareCards: due (the pre-#45 'date' field, renamed) -----------------
+// --- compareCards: due (formerly the 'date' field) -------------------------
 
 test('compareCards due asc sorts earliest due_date first', () => {
   const cards = [
@@ -214,7 +214,7 @@ test('compareCards due: same due_date ties break by id ascending', () => {
   assert.deepStrictEqual(sorted.map((c) => c.id), [1, 2, 3]);
 });
 
-test('compareCards due: a datetime due_date sorts correctly against plain dates — lexicographic ISO (card #36)', () => {
+test('compareCards due: a datetime due_date sorts correctly against plain dates — lexicographic ISO', () => {
   // '2026-07-01' < '2026-07-01T09:00' < '2026-07-02' < '2026-07-02T08:30'
   // (a bare date sorts before any datetime on the same day; that's the
   // documented consequence of comparing ISO strings lexicographically, no
@@ -240,7 +240,7 @@ test('sortCards does not mutate the input array', () => {
   assert.deepStrictEqual(cards, original);
 });
 
-// --- card #30: priority rank comes from the configured list, not a hardcoded 'High' check ---
+// --- priority rank comes from the configured list, not a hardcoded 'High' check ---
 
 const PRIO = { field: 'priority', direction: 'desc' };
 
@@ -280,12 +280,12 @@ test('priority ties still break by id ascending under a configured list', () => 
   assert.deepStrictEqual(sortCards(cards, PRIO, ['P0', 'P1']).map((c) => c.id), [4, 9]);
 });
 
-// --- card #43: the Due date sort is triad-aware — due wins, else the range
+// --- the Due date sort is triad-aware — due wins, else the range
 // end, else its start; only truly dateless cards sort last.
 
 const DUE_ASC = { field: 'due', direction: 'asc' };
 
-test('due sort keys on due, else end, else start — range-only cards join the order (card #43)', () => {
+test('due sort keys on due, else end, else start — range-only cards join the order', () => {
   const cards = [
     { id: 1, due_date: '2026-07-01T14:00' },
     { id: 2, start_date: '2026-06-20', end_date: '2026-06-25' },
@@ -305,8 +305,8 @@ test('due sort orders by time within a day, date-only first (start-of-day read)'
   assert.deepStrictEqual(sortCards(cards, DUE_ASC).map((c) => c.id), [3, 2, 1]);
 });
 
-// --- card #45: the Last modified sort keys on the machine-maintained
-// `updated` stamp (card #35) — newest-first by default, missing-last always.
+// --- the Last modified sort keys on the machine-maintained
+// `updated` stamp — newest-first by default, missing-last always.
 
 test('modified desc sorts most recently updated first', () => {
   const cards = [
@@ -344,7 +344,7 @@ test('modified: an empty-string updated is treated as missing, sorts last', () =
   assert.deepStrictEqual(sortCards(cards, { field: 'modified', direction: 'desc' }).map((c) => c.id), [2, 1]);
 });
 
-test('modified: a date-only updated stamp sorts against datetimes lexicographically, start-of-day read (same rule as due, card #36)', () => {
+test('modified: a date-only updated stamp sorts against datetimes lexicographically, start-of-day read (same rule as due)', () => {
   const cards = [
     { id: 1, updated: '2026-07-09T09:00:00' },
     { id: 2, updated: '2026-07-09' },
@@ -362,7 +362,7 @@ test('modified: identical updated stamps tie-break by id ascending', () => {
   assert.deepStrictEqual(sortCards(cards, { field: 'modified', direction: 'desc' }).map((c) => c.id), [1, 2, 3]);
 });
 
-// --- card #46: the Assignee sort groups cards by owner handle. Registered
+// --- the Assignee sort groups cards by owner handle. Registered
 // handles rank by the config.yaml assignees REGISTRY order (human first, then
 // HITL, then AFK reads better than alphabetical); unregistered handles follow
 // all registered ones, lexicographic among themselves; unassigned cards sort
@@ -372,7 +372,7 @@ const REGISTRY = ['@alex', '@claude-hitl', '@claude-afk'];
 const ASSIGNEE_ASC = { field: 'assignee', direction: 'asc' };
 const ASSIGNEE_DESC = { field: 'assignee', direction: 'desc' };
 
-test('assignee asc ranks registered handles by registry order, not alphabetically (card #46)', () => {
+test('assignee asc ranks registered handles by registry order, not alphabetically', () => {
   const cards = [
     { id: 1, assignee: '@claude-afk' },
     { id: 2, assignee: '@alex' },
@@ -444,7 +444,7 @@ test('assignee: an empty or absent registry degrades to plain lexicographic, una
   assert.deepStrictEqual(sortCards(cards, ASSIGNEE_DESC, [], []).map((c) => c.id), [1, 4, 3, 2]);
 });
 
-test('mergeSortState accepts a saved assignee sort as structurally valid (card #46)', () => {
+test('mergeSortState accepts a saved assignee sort as structurally valid', () => {
   const merged = mergeSortState({ todo: { field: 'assignee', direction: 'asc' }, done: { field: 'assignee', direction: 'desc' } });
   assert.deepStrictEqual(merged.todo, { field: 'assignee', direction: 'asc' });
   assert.deepStrictEqual(merged.done, { field: 'assignee', direction: 'desc' });
@@ -459,10 +459,10 @@ test('assignee joining SORT_FIELDS leaves the defaults untouched: DEFAULT_SORT a
   });
 });
 
-// --- card #44: scheduleKey/scheduleLabel — the tile's top-right datetime and
+// --- scheduleKey/scheduleLabel — the tile's top-right datetime and
 // the Date sort must share one source of truth.
 
-test('scheduleKey follows the #43 precedence: due, else end, else start, else null', () => {
+test('scheduleKey follows the triad precedence: due, else end, else start, else null', () => {
   assert.strictEqual(scheduleKey({ due_date: '2026-07-01', end_date: '2026-08-01' }), '2026-07-01');
   assert.strictEqual(scheduleKey({ end_date: '2026-08-01', start_date: '2026-06-01' }), '2026-08-01');
   assert.strictEqual(scheduleKey({ start_date: '2026-06-01' }), '2026-06-01');

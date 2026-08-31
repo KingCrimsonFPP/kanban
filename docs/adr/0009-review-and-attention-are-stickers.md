@@ -1,10 +1,10 @@
 # 0009. Review and human-attention are stickers, not columns
 
-Date: 2026-07-16 · Status: accepted (amended 2026-07-20, amendment NOT yet implemented) · Cards: kanban.proj#181, #185, #190
+Date: 2026-07-16 · Status: accepted (amended 2026-07-20, amendment NOT yet implemented)
 
 ## Context
 
-Card #181 asked for a `review` column — "an extra column to see, at a glance,
+The original ask was a `review` column — "an extra column to see, at a glance,
 what's waiting for my review." Stress-testing the ask (2026-07-16) split
 "waiting for me" into two cases: A — work is finished, approve/verify it; B —
 work is mid-flight and needs my decision before it continues. Modeling either as
@@ -29,12 +29,12 @@ Statuses stay `backlog, todo, doing, done`; `done` stays terminal ("truly
 finished," not "PR opened"). Both stickers overlay any status, render as pills,
 are skipped by agents and the corpse-sweep, and are surfaced by search
 (`review:`/`blocked:` = present, `review:PR` = substring) and click-to-filter on
-the pill (card #189's mechanism) — which recovers "at a glance," on demand and
+the pill — which recovers "at a glance," on demand and
 from anywhere.
 
 ## Considered options
 
-- A `review` column (the literal #181 ask): rejected. It forces a `done`=merged
+- A `review` column (the literal ask): rejected. It forces a `done`=merged
   redefinition, new column-default/color code across web + cli + viewer, and a
   status-transition machine — and a column cannot overlay `doing`, so "actively
   working, and part needs your eyes" is inexpressible.
@@ -43,8 +43,9 @@ from anywhere.
 
 - AFK green-path changes: an `@afk` code card, on green, opens its PR and gets
   `review: PR #N` while staying in `doing`; it is NOT stamped `done` at PR-open.
-  Card #185 flips it to `done` on merge, or re-works it on changes-requested.
-- The corpse-sweep gains a clause (card #190): an `@afk` card in `doing` with no
+  The dispatcher's PR poll flips it to `done` on merge, or re-works it on
+  changes-requested.
+- The corpse-sweep gains a clause: an `@afk` card in `doing` with no
   live worker is a corpse only if it wears neither `blocked` nor `review`.
 - `doing` now legitimately holds a mix (running, awaiting-review, blocked); pills
   and filters, not columns, separate them.
@@ -53,12 +54,11 @@ from anywhere.
 
 ## Amendment (2026-07-20) — poll ownership moves to kanban-lint. NOT YET IMPLEMENTED
 
-The kanban-afk decomposition (kanban.proj#213; #214 session-archetype
-resolution; kanban-afk repo ADR 0001) re-homes this ADR's polling
-consequences. Ratified, and recorded here so the design survives context
-loss — but **nothing below is built yet**; today's monolithic `kanban-afk`
+The kanban-afk decomposition (kanban-afk repo ADR 0001, plus its
+session-archetype resolution) re-homes this ADR's polling consequences.
+Ratified and recorded here as the durable home of the decision — but **nothing below is built yet**; today's monolithic `kanban-afk`
 skill still behaves exactly as the Consequences above describe. Lands with
-the `kanban-lint` build (implementation ticket: kanban.proj#224).
+the `kanban-lint` build.
 
 - **PR-poll + close-on-merge migrate dispatcher → `kanban-lint`** (the
   infrequent reconcile loop). The dispatcher sheds them; its only "review"

@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { MODAL_TYPES, DEFAULT_FULLSCREEN, mergeFullscreenState } = require('../web/modal-fullscreen');
 
-test('MODAL_TYPES lists the five fullscreen-capable popups (card #32 added the bulk pair, #42 the schedule popup)', () => {
+test('MODAL_TYPES lists the five fullscreen-capable popups', () => {
   assert.deepStrictEqual(MODAL_TYPES, ['edit', 'detail', 'bulkSingle', 'bulkTags', 'bulkSchedule']);
 });
 

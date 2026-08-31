@@ -2,11 +2,11 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { searchHotkeyPrefill, searchHashStrip } = require('../web/search-hotkey');
 
-// kanban.proj #198: Ctrl+F / Cmd+F focuses the search box instead of the
+// Ctrl+F / Cmd+F focuses the search box instead of the
 // browser's own find bar, pre-filling "#" (caret right after) so digits
 // immediately form the #<id> exact-match term. Pure chord + value-decision
 // logic; the DOM wiring in app.js is a thin preventDefault + focus/value/
-// setSelectionRange shim, same split as save-hotkey.js/#172.
+// setSelectionRange shim, same split as save-hotkey.js.
 
 const outsideModal = { modalOpen: false, currentValue: '' };
 
@@ -94,7 +94,7 @@ test('missing arguments resolve to null, never throw', () => {
   assert.strictEqual(searchHotkeyPrefill({ ctrlKey: true }, outsideModal), null);
 });
 
-// kanban.proj #205: small correction — the "#" the hotkey prefills is only
+// small correction — the "#" the hotkey prefills is only
 // meant to stick around while the user is actually typing an id (digits).
 // The moment a non-numeric char lands after it, this drops the leading "#"
 // so the box reads as a plain search term instead of a broken #<id> one.

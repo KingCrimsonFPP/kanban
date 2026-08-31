@@ -1,5 +1,5 @@
 'use strict';
-// Ctrl+S / Cmd+S saves the open popup (card #172): the keyboard twin of that
+// Ctrl+S / Cmd+S saves the open popup: the keyboard twin of that
 // popup's Save/Apply button, so a save habit formed in every other editor
 // works mid-typing here instead of popping the browser's save-page dialog.
 // Pure decision logic only — given the chord and which save-capable popups
@@ -14,7 +14,7 @@
 // competing actions (add tag / remove tags), so Ctrl+S there stays a no-op
 // rather than guessing. Chord is strict: exactly Ctrl+S or Cmd+S — Alt or
 // Shift chords (e.g. Ctrl+Shift+S "save as" muscle memory) never match,
-// mirroring the Alt+Enter hotkey's strictness (card #145).
+// mirroring the Alt+Enter hotkey's strictness.
 
 // Priority order is deterministic tie-breaking only; the popups are mutually
 // exclusive in practice.

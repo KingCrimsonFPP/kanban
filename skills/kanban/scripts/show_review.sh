@@ -1,6 +1,6 @@
 #!/bin/bash
 # Show cards carrying the `review:` sticker — "finished, approve me",
-# blocked's sibling (ADR 0009, card #181). Same predicate as blocked's:
+# blocked's sibling (ADR 0009). Same predicate as blocked's:
 # trimmed value contains >=1 alphanumeric char; YAML boolean special-case:
 # false/no -> not in review; true -> in review, text unspecified. Does NOT
 # gate `doing` entry — that gate stays waiting_for + blocked only.

@@ -26,22 +26,22 @@ test('values compare strictly — "1" vs 1 is dirty, whitespace matters', () => 
   assert.strictEqual(isDirty({ title: 'a ' }, { title: 'a' }), true);
 });
 
-// card #50: minimal-first create form — the one presentation decision that's
+// minimal-first create form — the one presentation decision that's
 // pure (DOM wiring is covered by manual checks, not fabricated tests).
 
-test('card #50: create mode opens minimal until expanded', () => {
+test('create mode opens minimal until expanded', () => {
   assert.strictEqual(isMinimalCreate(false, false), true);
 });
 
-test('card #50: "Show more fields" (expanded) lifts minimal for the rest of the open', () => {
+test('"Show more fields" (expanded) lifts minimal for the rest of the open', () => {
   assert.strictEqual(isMinimalCreate(false, true), false);
 });
 
-test('card #50: edit mode is never minimal, expanded or not', () => {
+test('edit mode is never minimal, expanded or not', () => {
   assert.strictEqual(isMinimalCreate(true, false), false);
   assert.strictEqual(isMinimalCreate(true, true), false);
 });
 
-test('card #50: a fresh open (expanded omitted/undefined) is minimal again — one-way per open, nothing persisted', () => {
+test('a fresh open (expanded omitted/undefined) is minimal again — one-way per open, nothing persisted', () => {
   assert.strictEqual(isMinimalCreate(false, undefined), true);
 });

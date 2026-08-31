@@ -12,10 +12,10 @@ that tag into the installer's selection menu.
   SPA (`node skills/web/scripts/server.js <board-dir>`); works from any
   harness that can run a shell command and open a browser.
 - **`kanban-cli`** — **Claude Code-only as written.** It's built entirely on
-  `AskUserQuestion`, a Claude Code built-in tool with no stand-in named here
-  for other harnesses. Porting it means replacing every `AskUserQuestion`
-  call with that harness's own prompt/confirmation mechanism (or plain
-  free-text Q&A) — not done in this repo.
+  `AskUserQuestion`, a Claude Code built-in tool with no cross-harness
+  equivalent named in the skill. Porting it means replacing every
+  `AskUserQuestion` call with that harness's own prompt/confirmation
+  mechanism (or plain free-text Q&A) — a port this repo doesn't ship.
 - **`kanban-viewer`** — **partially portable.** The generator
   (`build_editor.py`) and the static HTML it produces are plain Python +
   browser code with no Claude dependency. But the SKILL.md's delivery/apply

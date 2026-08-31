@@ -1,5 +1,5 @@
 'use strict';
-// Pure dirty-check for the create/edit form (card #26). No DOM access — the
+// Pure dirty-check for the create/edit form. No DOM access — the
 // caller snapshots field values on modal open and asks isDirty(snapshot,
 // current) before a backdrop-click close. Dual-environment module, same
 // pattern as refresh-policy.js.
@@ -15,7 +15,7 @@ function isDirty(snapshot, current) {
   return a.some((k) => !(k in current) || snapshot[k] !== current[k]);
 }
 
-// card #50: minimal-first create form — the pure mode → presentation decision.
+// Minimal-first create form — the pure mode → presentation decision.
 // The create modal opens with just Title + a "Show more fields" button; edit
 // always opens full. `expanded` is the per-open reveal flag: openModal passes
 // false on every open (one-way per open, nothing persisted), the show-more

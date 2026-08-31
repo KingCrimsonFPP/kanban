@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { tagUnion, addTagChanges, removeTagsChanges, scheduleChanges, scheduleSummary } = require('../web/bulk-edit');
 
-// card #32: pure rules behind the bulk Edit-tags popup.
+// pure rules behind the bulk Edit-tags popup.
 
 const CARDS = [
   { id: 1, tags: ['app', 'design'] },
@@ -40,7 +40,7 @@ test('removeTagsChanges strips the chosen tags, touching only cards that carry o
   assert.deepStrictEqual(removeTagsChanges(CARDS, ['nope']), []);
 });
 
-// card #42: pure rules behind the Schedule… popup. Per field: a non-empty
+// pure rules behind the Schedule… popup. Per field: a non-empty
 // value sets it (trimmed, never validated), a checked clear box wins with '',
 // empty + unchecked leaves the card's value alone (key absent), and a fully
 // untouched popup returns null (Apply is a no-op).

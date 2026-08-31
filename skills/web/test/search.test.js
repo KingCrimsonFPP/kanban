@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { parseSearchQuery, cardMatchesQuery, filterCards, searchSuggestionItems } = require('../web/search');
 
-// --- parseSearchQuery: syntax table from card #17 -------------------------
+// --- parseSearchQuery: the search syntax table ----------------------------
 
 test('parseSearchQuery on empty/blank input yields no terms', () => {
   assert.deepStrictEqual(parseSearchQuery(''), []);
@@ -29,7 +29,7 @@ test('title: / body: / status: / priority: / tags: / file: / assignee: parse as 
   assert.deepStrictEqual(parseSearchQuery('assignee:@afk'), [{ field: 'assignee', value: '@afk' }]);
 });
 
-// kanban.proj #186: A:/a: is a thin alias for assignee: — same field, same
+// A:/a: is a thin alias for assignee: — same field, same
 // value/lowercasing rules, just a shorter prefix to type.
 test('A: and a: alias assignee:, case-insensitively on the prefix itself', () => {
   assert.deepStrictEqual(parseSearchQuery('A:@afk'), [{ field: 'assignee', value: '@afk' }]);
@@ -42,7 +42,7 @@ test('a valueless A:/a: prefix (mid-typing) is dropped, same as the other scoped
   assert.deepStrictEqual(parseSearchQuery('a:'), []);
 });
 
-// --- ADR 0009 (card #181): review:/blocked: sticker scopes ------------------
+// --- ADR 0009: review:/blocked: sticker scopes ------------------
 
 test('review: and blocked: parse as their own scoped term, value lowercased like the other substring scopes', () => {
   assert.deepStrictEqual(parseSearchQuery('review:PR'), [{ field: 'review', value: 'pr' }]);
@@ -54,7 +54,7 @@ test('UNLIKE every other scoped prefix, a bare review:/blocked: (no value) is a 
   assert.deepStrictEqual(parseSearchQuery('blocked:'), [{ field: 'blocked', value: '' }]);
 });
 
-// --- kanban.proj #222: epic: bare-scope term -------------------------------
+// --- epic: bare-scope term -------------------------------
 
 test('UNLIKE every other scoped prefix (but like review:/blocked:), a bare epic: (no value) is a COMPLETE term, not dropped', () => {
   assert.deepStrictEqual(parseSearchQuery('epic:'), [{ field: 'epic', value: '' }]);
@@ -216,7 +216,7 @@ test('a bare `review: true`/`blocked: true` sticker (text unspecified) is presen
   assert.deepStrictEqual(idsFor3('review:x'), [], 'no text to substring-match against');
 });
 
-test('epic: bare term matches exactly the cards with epic===true (kanban.proj #222)', () => {
+test('epic: bare term matches exactly the cards with epic===true', () => {
   const cards = [
     { id: 1, title: 'a', body: '', status: 'todo', priority: 'Normal', tags: [], epic: true },
     { id: 2, title: 'b', body: '', status: 'todo', priority: 'Normal', tags: [], epic: false },
@@ -261,7 +261,7 @@ test('typing "status:" with no value yet does not flash a false all-match — sa
   assert.deepStrictEqual(idsFor('status:'), CARDS.map((c) => c.id));
 });
 
-// --- card #74: tree:<id> / path:<id> --------------------------------------
+// --- tree:<id> / path:<id> --------------------------------------
 
 test('tree: and path: parse as their own scoped term, id kept case-verbatim like id:', () => {
   assert.deepStrictEqual(parseSearchQuery('tree:74'), [{ field: 'tree', value: '74' }]);
@@ -324,7 +324,7 @@ function idsFor2(cards, query) {
   return filterCards(cards, parseSearchQuery(query)).map((c) => c.id);
 }
 
-// --- searchSuggestionItems (kanban.proj #187): the search box autocomplete --
+// --- searchSuggestionItems: the search box autocomplete --
 
 test('typing a bare fragment suggests it plain, plus every KNOWN_FIELDS scoped form', () => {
   assert.deepStrictEqual(searchSuggestionItems('@afk'), [

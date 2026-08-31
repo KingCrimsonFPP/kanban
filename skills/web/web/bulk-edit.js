@@ -1,5 +1,5 @@
 'use strict';
-// Pure rules for the bulk Edit-tags popup (card #32). No DOM — same
+// Pure rules for the bulk Edit-tags popup. No DOM — same
 // dual-environment pattern as the other web modules. The popup shows the
 // union of tags across the selected cards (with per-tag counts), adds a tag
 // everywhere it's missing, and strips chosen tags from the cards carrying
@@ -26,11 +26,11 @@ function removeTagsChanges(cards, remove) {
     .map((c) => ({ id: c.id, tags: c.tags.filter((t) => !doomed.has(t.toLowerCase())) }));
 }
 
-// Pure rules for the Schedule… popup (card #42). fields =
+// Pure rules for the Schedule… popup. fields =
 // { start: {value, clear}, end: {...}, due: {...} } straight off the three
 // rows. Per field: a checked clear box WINS (PATCH '' — the card-store clear
 // contract) even over a typed value; otherwise a non-empty value sets the
-// field (trimmed, verbatim — never validated, card #36's free-text contract);
+// field (trimmed, verbatim — never validated, the free-text date contract);
 // empty + unchecked leaves the key out so the card keeps its value. A fully
 // untouched popup returns null — Apply is then a no-op (no PATCHes, no
 // `updated` bumps).

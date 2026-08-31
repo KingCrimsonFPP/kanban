@@ -143,7 +143,7 @@ assignees: # role-trio registry
   - handle: "@hitl"
     name: "AI (HITL)"
     kind: ai-hitl
-    description: "AI will grab it but needs a human in the loop (grilling, spec, tickets, approval)."
+    description: "AI will grab it but needs a human in the loop (review, spec, tickets, approval)."
   - handle: "@afk"
     name: "AI (AFK)"
     kind: ai-afk

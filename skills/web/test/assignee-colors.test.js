@@ -5,7 +5,7 @@ const path = require('node:path');
 const { STATUS_PALETTE, statusHash } = require('../web/status-colors');
 const { assigneeColor, assigneeColorClass, findAssigneeEntry } = require('../web/assignee-colors');
 
-// --- card #183: assignee colors mirror status-colors.js's contract ------------
+// --- assignee colors mirror status-colors.js's contract ------------
 
 test('a reserved config.yaml color wins over the hash', () => {
   const assignees = [{ handle: '@alex', color: '#ff00ff' }];
@@ -57,7 +57,7 @@ test('findAssigneeEntry returns the exact-match entry or null', () => {
   assert.strictEqual(findAssigneeEntry('', [alex]), null);
 });
 
-// --- the CSS-class twin (card #49-style CSP compliance) -----------------------
+// --- the CSS-class twin (CSP compliance) -----------------------
 
 test('assigneeColorClass reuses the exact palette-N slot statusColorClass would give the same string, for the hashed case', () => {
   const cls = assigneeColorClass('@alex', []);
@@ -79,11 +79,11 @@ test('assigneeColorClass is deterministic and pure, same contract as statusColor
   assert.strictEqual(assigneeColorClass('@bot', []), assigneeColorClass('@bot', []));
 });
 
-// --- doc pin: SKILL.md documents the Assignee text color (card #183, kanban.proj #191) ---
+// --- doc pin: SKILL.md documents the Assignee text color ---
 
-test('SKILL.md documents the Assignee text color, citing card #183/kanban.proj #191 and the reserved/hashed contract', () => {
+test('SKILL.md documents the Assignee text color and the reserved/hashed contract', () => {
   const skill = fs.readFileSync(path.join(__dirname, '..', 'SKILL.md'), 'utf8');
-  const bullet = skill.match(/- \*\*Assignee text color \(card #183, kanban\.proj #191\)\*\*[\s\S]*?(?=\n- \*\*|\n## )/);
+  const bullet = skill.match(/- \*\*Assignee text color\*\*[\s\S]*?(?=\n- \*\*|\n## )/);
   assert.ok(bullet, 'the Assignee text color bullet exists');
   assert.match(bullet[0], /assigneeBadge\(\)/, 'names the helper');
   assert.match(bullet[0], /assignee-text--palette-N/, 'states the hashed case uses the parallel assignee-text--palette-N class');
@@ -93,8 +93,8 @@ test('SKILL.md documents the Assignee text color, citing card #183/kanban.proj #
   assert.doesNotMatch(bullet[0], /colored dot|dot glyph/, 'no leftover dot-glyph language');
 });
 
-test('SKILL.md documents the OPTIONAL assignees[].color config field, citing card #183', () => {
+test('SKILL.md documents the OPTIONAL assignees[].color config field', () => {
   const skill = fs.readFileSync(path.join(__dirname, '..', 'SKILL.md'), 'utf8');
-  assert.match(skill, /\*\*`assignees\[\]\.color`\*\* \(card #183, OPTIONAL\)/);
-  assert.match(skill, /color: "#58a6ff"\s+# card #183: OPTIONAL/, 'the config.yaml example shows the field');
+  assert.match(skill, /\*\*`assignees\[\]\.color`\*\* \(OPTIONAL\)/);
+  assert.match(skill, /color: "#58a6ff"\s+# OPTIONAL/, 'the config.yaml example shows the field');
 });

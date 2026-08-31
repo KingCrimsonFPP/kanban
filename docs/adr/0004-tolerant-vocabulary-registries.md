@@ -1,6 +1,6 @@
 # 0004. Config vocabularies suggest, never validate
 
-Date: 2026-07-09 · Status: accepted · Cards: #27, #30 (future: #31)
+Date: 2026-07-09 · Status: accepted
 
 ## Context
 
@@ -22,5 +22,5 @@ are never errors. Only the human edits the lists; the app writes only the
 
 Vocabulary drift is visible (unknown values look unstyled/sort last) instead
 of forbidden. Planned extension: an official `statuses` list where unknown
-statuses render in backlog until promoted (card #31, draft→trusted applied
-to columns).
+statuses render in backlog until promoted — the same suggest-never-validate
+posture applied to columns.

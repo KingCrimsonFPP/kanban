@@ -26,8 +26,9 @@ Two rules that come from the medium:
 there and not duplicated here: id assignment (`config.yaml` `nextId` — use it and
 advance it), `<0000-id>.<slug>.card.md` naming, frontmatter fields, narrative
 preservation (never rewrite `## Narrative`; append to it), archive-as-location,
-and the notifications writer contract. This skill only defines the *interaction
-loop*; `/kanban` defines what a correct write looks like.
+the waiting/blocked predicates, the `doing` entry gate, and the notifications
+writer contract. This skill only defines the *interaction loop*; `/kanban`
+defines what a correct write looks like.
 
 ## Locating the board
 
@@ -51,17 +52,16 @@ poll, freshness comes from re-reading.
 bash <SCRIPTS_DIR>/view_board.sh <kanban-dir>
 ```
 
-Prints cards grouped by column with `[HIGH]`, `[waiting: …]` (unresolved
-`waiting_for` ids only — a card whose deps are all `done` shows no flag), and
-`[blocked: <reason>]` flags. The
-column set and order follow `config.yaml`'s `statuses` list when present
-(card #31; the script parses the **inline** `statuses: [a, b, c]` form only —
-a block-form list falls back to the default Backlog / Todo / Doing / Done). A
-card whose status isn't in the list groups under the **first** column with its
-raw status shown inline as `[status: <raw>]` — never rewrite it; promotion is
-the human adding the status to `config.yaml`. Present the output lightly
-formatted as markdown. If every column is empty, say "No cards yet." and offer
-**New card** / Done.
+Prints cards grouped by column with `[HIGH]`, `[waiting: …]`, and
+`[blocked: <reason>]` flags — the waiting/blocked predicates behind the flags
+are `/kanban`'s. The column set and order follow `config.yaml`'s `statuses`
+list when present (the script parses the **inline** `statuses: [a, b, c]` form
+only — a block-form list falls back to the default Backlog / Todo / Doing /
+Done). A card whose status isn't in the list groups under the **first** column
+with its raw status shown inline as `[status: <raw>]` — never rewrite it;
+promotion is the human adding the status to `config.yaml`. Present the output
+lightly formatted as markdown. If every column is empty, say "No cards yet."
+and offer **New card** / Done.
 
 If unread notifications exist (see the inbox section), mention the count next to
 the board — the conversational equivalent of the web app's bell badge.
@@ -87,14 +87,14 @@ browse the archive, or a **command** — `move 5 to doing`, `archive 3,5,7`,
 
 On id `N`: locate the file (glob `<kanban-dir>/*.card.md` + `grep -l '^id: N$'`,
 falling back to `list_all_cards.sh` for the id→file map), Read it, show it — the
-markdown renders directly, with one exception (card #106, below). Check
-`archived/` too; an archived card shows with an `[archived]` marker. No match
-→ "No card #N." and back to step 2.
+markdown renders directly, with one exception (below). Check `archived/` too;
+an archived card shows with an `[archived]` marker. No match → "No card #N."
+and back to step 2.
 
-**Exception — format local-datetime frontmatter values** (card #106): a raw
-value like `updated: 2026-07-10T09:36:31`, or a `start_date`/`end_date`/
-`due_date` carrying a time component, reads badly with its literal `T`
-separator — show it as `2026-07-10 | 09:36:31` instead (web-app parity, see
+**Exception — format local-datetime frontmatter values:** a raw value like
+`updated: 2026-07-10T09:36:31`, or a `start_date`/`end_date`/`due_date`
+carrying a time component, reads badly with its literal `T` separator — show
+it as `2026-07-10 | 09:36:31` instead (web-app parity, see
 `formatLocalDateTime` in the kanban-web skill). Date-only values
 (`due_date: 2026-07-10`, no `T`) are unaffected.
 
@@ -120,63 +120,57 @@ All writes follow `/kanban` contracts. After any write, confirm what happened in
 one line and re-print the affected card or board section.
 
 - **Create** — collect title, then ask (or accept inline) status, priority, tags,
-  `waiting_for`, assignee, start/end/due dates (the #40 triad: from-to working
-  range + independent deadline, each date or local datetime), the epic flag
-  (card #59: a boolean, mirroring the web form's checkbox — set writes
-  `epic: true`, unset writes no line), description. Suggest assignees, priorities,
-  and tags from `config.yaml`'s lists (they suggest, never validate — free text
-  is fine; priorities default to High/Normal/Low when unconfigured; with no
-  `assignees` registry, suggest the `@human`/`@hitl`/`@afk` role trio — card
-  #132, CONTEXT.md's Role trio glossary). Only title
-  is required; default the rest (`status: backlog`, `priority: Normal`).
+  `waiting_for`, assignee, start/end/due dates (from–to working range plus an
+  independent deadline, each a date or local datetime), the epic flag,
+  description. Suggest assignees, priorities, and tags from `config.yaml`'s
+  lists (they suggest, never validate — free text is fine; priorities default
+  to High/Normal/Low when unconfigured; with no `assignees` registry, suggest
+  the `@human`/`@hitl`/`@afk` role trio — CONTEXT.md's Role trio glossary).
+  Only title is required; default the rest (`status: backlog`,
+  `priority: Normal`).
 - **Edit** — ask which fields to change, or accept them inline ("set priority
   High, due 2026-08-01"). Frontmatter fields and title/description are editable;
   the body — including `## Narrative` and unmanaged frontmatter keys — is
   preserved verbatim, same as the web form. Blocking a card is a plain field
   edit (`blocked: <reason>`), but capture the why conversationally — if the
-  user says "block 5" without a reason, ask for one before writing (card #137;
-  `blocked: true` with reason unspecified is the fallback, not the default).
+  user says "block 5" without a reason, ask for one before writing
+  (`blocked: true` with reason unspecified is the fallback, not the default).
 - **Move** — update `status`. Offer the board's `statuses` list (default four
-  when unconfigured) as the valid columns. **`doing` entry gate, hard reject
-  (card #137):** a card cannot enter `doing` while **waiting** (any
-  `waiting_for` id names a card not `done`; dangling ids don't count) or
-  **blocked** (`blocked` holds a valid reason — trimmed, ≥ 1 alphanumeric
-  character, or YAML `true`) — refuse and name which: "waiting on #34" /
-  "blocked: <reason>", exactly like the web app's snap-back toast; the gate is
-  pinned to the literal status `doing` even on a custom-list board. No
-  override; the escape hatch is editing the card's `waiting_for` or clearing
-  its `blocked` field (a deliberate two-step). Entry-only — no eviction:
-  blocking a card already in `doing` leaves it there. Agents never grab a
-  blocked card, in any column.
+  when unconfigured) as the valid columns. The **`doing` entry gate** — its
+  waiting/blocked predicates, literal-`doing` pinning, entry-only scope, and
+  no-override two-step escape hatch — is defined in `/kanban`. Here it is a
+  hard reject: refuse the move and name which condition fired ("waiting on
+  #34" / "blocked: <reason>"), the conversational twin of the web app's
+  snap-back toast.
 - **Archive / Restore** — move the file into / out of `kanban/archived/`
   (location, not status; status untouched).
 - **Delete** — permanently remove the card file.
 - **Bulk** — commands take multiple ids: `archive 3,5,7`, `delete 3,5`,
-  `move 3,5 to todo`, and bulk edits (card #32): `assign 3,5 @afk` (empty
-  assignee = unassign), `set priority 3,5 Low`, `tag 3,5 design` /
-  `untag 3,5 design` (dedupe per card), and
+  `move 3,5 to todo`, and bulk edits: `assign 3,5 @afk` (empty assignee =
+  unassign), `set priority 3,5 Low`, `tag 3,5 design` / `untag 3,5 design`
+  (dedupe per card), and
   `schedule 3,5 from 2026-07-10 to 2026-07-12 due 2026-07-15` (any subset of the
-  three; `clear start/end/due` removes a field — the #42 popup's set/clear/leave
+  three; `clear start/end/due` removes a field — the web app's set/clear/leave
   semantics). Archive/delete take one confirm naming
   the whole batch ("Archive #3 #5 #7 — 3 cards?"); bulk edits don't (they're
-  the reversible direction). Per-card skips (gate-refused move to `doing`
-  — waiting or blocked — missing id) don't
-  abort the batch; finish with one summary line naming what changed and what
-  was skipped and why — the web app's summary-toast semantics.
+  the reversible direction). Per-card skips (a gate-refused move to `doing`, a
+  missing id) don't abort the batch; finish with one summary line naming what
+  changed and what was skipped and why — the web app's summary-toast semantics.
 
 ### Speedbumps
 
 Every destructive action confirms first, naming its object: archive, delete, bulk
 archive/delete/move (one confirm per batch, with the count), notification remove
 and clear-all (both archive to `archived/notifications.md`, never delete — still
-confirmed since they empty the tray). **Restore is exempt** (it's the reversible direction). Under remote
-control, confirms go through `AskUserQuestion` — never assume a yes.
+confirmed since they empty the tray). **Restore is exempt** (it's the reversible
+direction). Under remote control, confirms go through `AskUserQuestion` — never
+assume a yes.
 
 ## Notifications inbox
 
-Same file and contract as the web app's bell: `<kanban-dir>/notifications.md`
-(the v2 writer contract — entry shape, `level`, TLDR-first message, clear =
-archive — is documented in `/kanban`, card #133). On "Notifications":
+Same file and contract as the web app's bell: `<kanban-dir>/notifications.md` —
+the writer contract (entry shape, `level`, TLDR-first message, clear = archive)
+is defined in `/kanban`. On "Notifications":
 
 1. Print all entries newest-first, unread flagged, level shown (absent =
    `info`), with the TLDR segment (the text before `; more: `) **bolded**:
@@ -192,20 +186,19 @@ archive — is documented in `/kanban`, card #133). On "Notifications":
 
 Skip malformed entries (missing numeric `id` or empty `message`) when printing;
 like the web app, move their raw blocks verbatim to `archived/notifications.md`
-on the next rewrite — never delete them (card #133: deletion never happens).
+on the next rewrite — never delete them.
 
 ## Dependency view
 
 On "Dependencies": read all cards (live **and** archived — dependency edges are
 location-independent) and print a Mermaid `graph LR` in a fenced block: nodes
 `#id title` styled by status (classDefs matching the board palette — the exact
-hexes in the web skill's `status-colors.js`: backlog cyan
-(card #57: grey now means archived, never backlog), todo blue, doing green, done
-purple, archived muted grey), edges from **dependency to the waiting card**
-(each `waiting_for` entry points from the dep to the card that lists it) — the
-same direction as the web app's map view. A `waiting_for` id with no matching
-card renders as a "not found" node (dangling — display-only, it never makes
-the card waiting). **Membership edges (card #151, v3):** the epic is the sink —
+hexes in the web skill's `status-colors.js`: backlog cyan, todo blue, doing
+green, done purple, archived muted grey), edges from **dependency to the
+waiting card** (each `waiting_for` entry points from the dep to the card that
+lists it) — the same direction as the web app's map view. A `waiting_for` id
+with no matching card renders as a "not found" node (dangling — display-only,
+it never makes the card waiting). **Membership edges:** the epic is the sink —
 it closes last. Only a TERMINAL member (no other member of the same epic
 waits on it; a chainless member is its own terminal) draws a dashed Mermaid
 link into its epic (`n<id> -.-> n<epicId>`) — membership, not sequencing,
@@ -223,16 +216,15 @@ are membership appears in the diagram AND the list, matching the web map. If the
 off-filter cards as dimmed nodes rather than dropping edges silently.
 
 **Scoped to one card — "Dependencies tree for #74" / "Dependencies path for
-#74"** (card #74/#152 parity: web's `tree:<id>`/`path:<id>` search terms).
-Same edge set as the whole-board view above (`waiting_for` sequencing +
-card #151 `parent:` membership, sequencing-wins-the-pair already applied,
-epic as sink), read over live **and** archived cards regardless of any
-active board filter — traversal always runs over the full board; only
-whether an archived member actually *renders* stays gated by the Archive
-filter. `#`-tolerant id (`tree:74` and `tree:#74` are the same target), one
-id per request. An id matching no card (unknown or non-numeric) matches
-nothing — say so, don't error. Two variants, same machinery as web's
-`treeIds`/`pathIds`:
+#74"** (mirroring web's `tree:<id>`/`path:<id>` search terms). Same edge set
+as the whole-board view above (`waiting_for` sequencing + `parent:`
+membership, sequencing-wins-the-pair already applied, epic as sink), read
+over live **and** archived cards regardless of any active board filter —
+traversal always runs over the full board; only whether an archived member
+actually *renders* stays gated by the Archive filter. `#`-tolerant id
+(`tree:74` and `tree:#74` are the same target), one id per request. An id
+matching no card (unknown or non-numeric) matches nothing — say so, don't
+error. Two variants, same machinery as web's `treeIds`/`pathIds`:
 
 - **tree** — the undirected connected component containing the id: flood-fill
   every node reachable by following edges in **either** direction, starting
@@ -257,14 +249,13 @@ asks for the scoped view directly.
 
 Full CRUD, the `doing` entry gate (waiting + blocked), bulk actions, speedbumps,
 notifications, dependency view, assignee suggestions: **same behavior, same
-rules.** Web's `tree:`/`path:` dependency-focus search terms (card #74) are
-mirrored as the scoped "Dependencies tree/path for #id" variants above (card
-#152), and as `tree:`/`path:` search terms plus card-sheet tap actions in the
-viewer (card #153); the context-menu sugar has no cli equivalent to mirror —
-there's no search box to write a term into. Deliberately not
-mirrored (medium mismatch): drag & drop (typed commands instead), collapse state
-and any `localStorage` persistence (a print is ephemeral), per-column persisted
-sort (on-demand re-print instead), the SVG map (Mermaid instead), the 5s poll
-(re-read disk before every print), search-as-you-type (filter on request), the
-header copy-board-path button (card #55 — a transcript is selectable text; print
-the board path on request).
+rules.** Web's `tree:`/`path:` dependency-focus search terms are mirrored as
+the scoped "Dependencies tree/path for #id" variants above, and as
+`tree:`/`path:` search terms plus card-sheet tap actions in the viewer; the
+context-menu sugar has no cli equivalent to mirror — there's no search box to
+write a term into. Deliberately not mirrored (medium mismatch): drag & drop
+(typed commands instead), collapse state and any `localStorage` persistence (a
+print is ephemeral), per-column persisted sort (on-demand re-print instead), the
+SVG map (Mermaid instead), the 5s poll (re-read disk before every print),
+search-as-you-type (filter on request), the header copy-board-path button (a
+transcript is selectable text; print the board path on request).

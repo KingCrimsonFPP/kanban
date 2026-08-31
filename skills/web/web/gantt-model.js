@@ -1,5 +1,5 @@
 'use strict';
-// Pure row/window/drag math for the gantt view (card #38). No DOM/localStorage
+// Pure row/window/drag math for the gantt view. No DOM/localStorage
 // here on purpose — same dual-environment pattern as calendar-model.js:
 // unit-testable from node --test AND loaded as a plain <script> in the browser
 // (app.js calls these as bare globals).
@@ -29,13 +29,13 @@ const GANTT_MAX_DAYS = 180;
 const GANTT_DAY_PX = 24;
 
 // --- bar span: which days does a card's bar cover? ---------------------------
-// The bar is the WORKING RANGE (card #40), reusing cardSchedule's shapes
-// verbatim: a range bar runs the range inclusive (start->end, or the #36
+// The bar is the WORKING RANGE, reusing cardSchedule's shapes
+// verbatim: a range bar runs the range inclusive (start->end, or the
 // compat pair start->due when end_date is absent); start-only and end-only
 // are 1-day bars on their one date; a REVERSED range is a 1-day bar at the
 // range end — the same collapse the calendar renders, so the two views never
-// disagree. Due is an independent diamond marker now: a due-only card has NO
-// bar (card #40 — that replaces #38's due-only 1-day bar rule).
+// disagree. Due is an independent diamond marker: a due-only card has NO
+// bar.
 
 function barSpan(card) {
   const s = CAL.cardSchedule(card);
@@ -46,8 +46,8 @@ function barSpan(card) {
 
 // --- row grouping --------------------------------------------------------------
 // Only dated cards appear — a card earns a row with a bar span (working
-// range), a dueDay (diamond marker, card #40), or both; startDay/endDay are
-// null on a due-only row. Groups follow board column order — card #31: the
+// range), a dueDay (diamond marker), or both; startDay/endDay are
+// null on a due-only row. Groups follow board column order — the
 // configured `statuses` list when the caller passes one, the built-in four
 // otherwise; a status with no dated cards is omitted entirely (no empty
 // label rows). An unlisted status (legal on disk — cards are never
@@ -88,18 +88,17 @@ function ganttGroups(cards, statuses) {
   }));
 }
 
-// --- archive group (card #98 reopen: "we are missing archived status") ---------
+// --- archive group ---------------------------------------------------------
 // Every dated ARCHIVED card lands in ONE group keyed 'archive', regardless of
 // its own on-disk status field — archive is a LOCATION, not a status (ADR
 // 0002), so it never joins ganttGroups' per-status buckets above. The caller
 // (renderGanttView, app.js) appends this AFTER the live status groups — same
 // "location after live columns" placement as the board's Archive column
-// (card #34) — and ONLY when the gantt's own Archive pill is on (default
-// OFF: the original #98 close narrative said "no Archive pill"; this reopen
-// adds it back opt-in, so the base gantt view stays unchanged). The literal
+// — and ONLY when the gantt's own Archive pill is on (default
+// OFF: archived rows are opt-in, so the base gantt view stays lean). The literal
 // 'archive' status key is deliberate, not a placeholder: the render layer's
 // existing isBuiltinStatus/statusColor/columnLabel lookups already know that
-// exact string (statusColor('archive') mutes to ARCHIVE_COLOR, card #57;
+// exact string (statusColor('archive') mutes to ARCHIVE_COLOR;
 // columnLabel('archive') is 'Archive', column-state.js) — the group needs no
 // special-cased rendering, just this one key. Returns null when there's
 // nothing dated to show — same "no empty label rows" rule ganttGroups
@@ -117,23 +116,23 @@ function ganttArchiveGroup(cards) {
 }
 
 // --- appendArchiveGroup: append-or-merge the archive group into `groups` -------
-// Defect fix: ganttGroups (above) buckets LIVE cards by their raw,
+// ganttGroups (above) buckets LIVE cards by their raw,
 // never-validated on-disk status with no guard against the literal value
 // 'archive' — a card sitting in kanban/ (archived: false) with a hand-typed
 // `status: archive` earns its own group keyed 'archive', same tolerance the
 // "unknown statuses append alphabetically" rule already grants any other
-// unlisted value. The caller used to push ganttArchiveGroup's OWN
-// 'archive'-keyed group unconditionally, which — combined with the above —
-// could produce TWO group rows sharing one key: identical label
+// unlisted value. Pushing ganttArchiveGroup's OWN
+// 'archive'-keyed group unconditionally would — combined with the above —
+// produce TWO group rows sharing one key: identical label
 // (columnLabel('archive')), identical muted color (statusColor('archive')),
 // indistinguishable in the DOM, one of them silently holding a live,
 // draggable card. Merging into an existing 'archive'-keyed group instead of
 // duplicating it matches the mute-everywhere precedent a raw 'archive'
-// status already gets elsewhere (statusColor/statusBadge, card #57): that
+// status already gets elsewhere (statusColor/statusBadge): that
 // card already READS as archived, so one merged row — sorted by id like
 // every other group — is the honest picture, not two adjacent copies of it.
-// Mutates and returns `groups` (same contract the old `groups.push` call
-// had); a null archiveGroup (nothing dated to show) is a no-op.
+// Mutates and returns `groups`;
+// a null archiveGroup (nothing dated to show) is a no-op.
 function appendArchiveGroup(groups, archiveGroup) {
   if (!archiveGroup) return groups;
   const existing = groups.find((g) => g.status === 'archive');
@@ -145,7 +144,7 @@ function appendArchiveGroup(groups, archiveGroup) {
   return groups;
 }
 
-// --- window extents (card #40) ---------------------------------------------------
+// --- window extents ---------------------------------------------------
 // Each row's contribution to the window covers its bar AND its due diamond,
 // so a due far outside the range — or a due-only row with no bar at all —
 // still lands inside the rendered window. Feed the result to ganttWindow.
@@ -162,7 +161,7 @@ function rowWindowSpans(rows) {
 
 // --- window: which day range does the timeline show? ----------------------------
 // Natural window = min(start)-3d .. max(due)+3d across the rendered bars.
-// CLAMP RULE (card #38): when the natural window exceeds GANTT_MAX_DAYS, the
+// CLAMP RULE: when the natural window exceeds GANTT_MAX_DAYS, the
 // window becomes exactly GANTT_MAX_DAYS days, ideally centered on today
 // (today at index floor((max-1)/2)), then slid the minimum distance needed to
 // stay fully inside the natural window. Consequences, all deliberate:
@@ -207,14 +206,14 @@ function weekMarkLabel(day) {
   return `${GANTT_MONTHS_SHORT[m - 1]} ${d}`;
 }
 
-// --- drag math (card #38) ----------------------------------------------------------
+// --- drag math ----------------------------------------------------------
 // Both return the PATCH changes object, or null for "don't PATCH" — a zero
 // delta, a card with no parseable date, or a resize fully swallowed by the
-// clamp. Null means no `updated` bump either (card #35), so an accidental
+// clamp. Null means no `updated` bump either, so an accidental
 // twitch-drag never rewrites the file.
 
 // Dragging the bar BODY shifts the WORKING RANGE by the whole-day delta,
-// writing THE FIELDS THE RANGE ACTUALLY USED (rangeFields, card #40): a real
+// writing THE FIELDS THE RANGE ACTUALLY USED (rangeFields): a real
 // range shifts start_date+end_date, a compat range shifts start_date+due_date
 // — the used pair is KEPT, an end_date is never invented — and one-field
 // ranges shift their one field (duration and times-of-day preserved via
@@ -238,7 +237,7 @@ function barShiftChanges(card, dayDelta) {
   return { [rf.startField]: CAL.shiftValue(card[rf.startField], CAL.addDays(rf.startDay, dayDelta)) };
 }
 
-// Dragging the DUE DIAMOND moves due_date alone (card #40), time-of-day
+// Dragging the DUE DIAMOND moves due_date alone, time-of-day
 // preserved — the range fields are never touched. Same null contract as the
 // other drag functions: zero delta or no parseable due = no PATCH.
 function dueShiftChanges(card, dayDelta) {
@@ -251,13 +250,12 @@ function dueShiftChanges(card, dayDelta) {
 // Dragging an EDGE moves that RANGE endpoint alone: 'start' writes
 // start_date, 'end' writes end_date — EXCEPT compat ranges (start+due, no
 // end_date), where the end handle edits due_date, the field the range
-// actually used (card #40). Time-of-day of the changed field is preserved
+// actually used. Time-of-day of the changed field is preserved
 // (shiftValue on a field the card doesn't have yields a plain date — that's
 // how an end-only bar's start handle CREATES a start_date, and a start-only
-// bar's end handle an end_date; under #38 the latter created a due_date, but
-// a start-only card is NOT a compat range, so the triad's "to" is what the
-// end handle writes now).
-// CLAMP RULE (card #38): deltas apply to the RENDERED bar's edges (barSpan),
+// bar's end handle an end_date: a start-only card is NOT a compat range, so
+// the triad's "to" is what the end handle writes).
+// CLAMP RULE: deltas apply to the RENDERED bar's edges (barSpan),
 // and the moved edge stops at the other rendered edge — a 1-day bar is the
 // minimum, so any inward resize of a 1-day bar clamps to a no-op (null).
 // Notable corners, all tested:
@@ -300,13 +298,13 @@ if (typeof module !== 'undefined' && module.exports) {
   window.GANTT_DAY_PX = GANTT_DAY_PX;
   window.barSpan = barSpan;
   window.ganttGroups = ganttGroups;
-  window.ganttArchiveGroup = ganttArchiveGroup; // pre-existing gap: called bare in app.js (renderGanttView) but never exposed here — every Archive-pill toggle threw ReferenceError in a real browser
+  window.ganttArchiveGroup = ganttArchiveGroup; // called bare in app.js (renderGanttView) — without this export every Archive-pill toggle throws ReferenceError in a real browser
   window.appendArchiveGroup = appendArchiveGroup;
-  window.rowWindowSpans = rowWindowSpans; // card #40
+  window.rowWindowSpans = rowWindowSpans;
   window.ganttWindow = ganttWindow;
   window.isMonday = isMonday;
   window.weekMarkLabel = weekMarkLabel;
   window.barShiftChanges = barShiftChanges;
   window.barResizeChanges = barResizeChanges;
-  window.dueShiftChanges = dueShiftChanges; // card #40
+  window.dueShiftChanges = dueShiftChanges;
 }

@@ -1,6 +1,6 @@
 'use strict';
-// Waiting vs blocked/review predicates (epic #137, web card #139; review is
-// ADR 0009, card #181) — the ONE place both `doing`-gate semantics AND the
+// Waiting vs blocked/review predicates (review is ADR
+// 0009) — the ONE place both `doing`-gate semantics AND the
 // two sticker fields live, shared by the store AND the UI. Pure and
 // dual-environment, same pattern as calendar-model.js: required directly by
 // scripts/card-store.js and node --test, loaded as a plain <script> in the
@@ -43,7 +43,7 @@ function stickerText(value) {
 function isBlockedValue(value) { return isStickerValue(value); }
 function blockedReason(value) { return stickerText(value); }
 
-// The refusal/tooltip label the epic fixes: "blocked: <reason>", or the bare
+// The refusal/tooltip label: "blocked: <reason>", or the bare
 // "blocked" when the reason is unspecified. One writer so every surface
 // (server 422 message, board pill tooltip, map pill tooltip, toasts) names
 // the sticker identically.
@@ -64,8 +64,8 @@ function reviewLabel(value) {
 // The waiting predicate's working half: the cards a `waiting_for` list is
 // still waiting ON — every listed id whose card exists and is not `done`,
 // in list order. Dangling ids drop out (non-blocking by contract). `byId` is
-// the caller's full active+archived lookup (waiting is location-independent,
-// same as the old blocked_by check). Returns the card objects so callers can
+// the caller's full active+archived lookup (waiting is
+// location-independent). Returns the card objects so callers can
 // format "#3 (todo)" refusals and unresolved-only tooltips.
 function unresolvedWaits(waitingFor, byId) {
   return (waitingFor || [])

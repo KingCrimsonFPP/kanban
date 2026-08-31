@@ -8,12 +8,12 @@ const cfg = require('./config-store');
 
 const WEB = path.join(__dirname, '..', 'web');
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
-// card #31: no server-side status whitelist anymore — free-text statuses are
-// legal input end to end (the SPA parks unlisted values in the first column).
-// The doing entry gate (waiting + blocked, epic #137) stays pinned to the
-// literal 'doing' inside card-store.
+// No server-side status whitelist — free-text statuses are legal input end to
+// end (the SPA parks unlisted values in the first column). The doing entry
+// gate (waiting + blocked) stays pinned to the literal 'doing' inside
+// card-store.
 
-// card #49: the SPA ships no inline script/style anywhere (every script is a
+// The SPA ships no inline script/style anywhere (every script is a
 // separate <script src>, every rule lives in app.css) — so the strictest CSP
 // costs nothing. Sent only on the served HTML; the app has no images/fonts to
 // widen img-src/font-src for.
@@ -21,9 +21,9 @@ const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; " +
   "img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; " +
   "base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
-// card #49: CSRF + DNS-rebinding guard for every request, reads included —
-// GET was exempted in the first pass (mutations only), which left DNS
-// rebinding's read/exfiltration half wide open: a rebound hostile origin is
+// CSRF + DNS-rebinding guard for every request, reads included — exempting
+// GET (mutations only) would leave DNS rebinding's read/exfiltration half
+// wide open: a rebound hostile origin is
 // same-origin to the browser once resolved to 127.0.0.1, so `fetch('/api/board')`
 // from that tab would return the full board with zero write ever attempted.
 // The board's real trust boundary is the FILES, not this header check
@@ -62,9 +62,9 @@ function serveStatic(res, file) {
   const body = fs.readFileSync(file);
   const isHtml = path.extname(file) === '.html';
   // no-store: localhost + tiny files — heuristic caching once served a stale
-  // app.html against new scripts and silently broke the form (card #30)
+  // app.html against new scripts and silently broke the form
   const headers = { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'content-length': body.length, 'cache-control': 'no-store' };
-  if (isHtml) headers['content-security-policy'] = CSP; // card #49
+  if (isHtml) headers['content-security-policy'] = CSP;
   res.writeHead(200, headers);
   res.end(body);
 }
@@ -83,7 +83,7 @@ function createServer(dir) {
     const url = new URL(req.url, 'http://localhost');
     const p = url.pathname;
     try {
-      // card #49: reject every request — reads included — carrying a
+      // Reject every request — reads included — carrying a
       // disallowed Origin/Referer/Host before touching any route below.
       if (!originAllowed(req)) {
         return sendJSON(res, 403, { error: 'Forbidden: disallowed Origin/Referer/Host header' });
@@ -94,10 +94,10 @@ function createServer(dir) {
         const archived = cs.listArchived(dir);
         const bad = [...active, ...archived].filter((c) => c.unparseable);
         if (bad.length) console.warn(`[kanban-app] skipping ${bad.length} unparseable card(s): ${bad.map((c) => path.basename(c.file)).join(', ')}`);
-        const config = cfg.readConfig(dir); // card #30: one read carries assignees + official lists
+        const config = cfg.readConfig(dir); // one read carries assignees + official lists
         return sendJSON(res, 200, {
           projectName: cs.projectName(dir),
-          // card #55: the header copy button copies the board dir's ABSOLUTE
+          // the header copy button copies the board dir's ABSOLUTE
           // path — resolve()d because the CLI defaults dir to the relative
           // 'kanban', and a relative path is useless pasted elsewhere.
           boardDir: path.resolve(dir),
@@ -107,7 +107,7 @@ function createServer(dir) {
           assignees: config.assignees,
           priorities: config.priorities,
           tags: config.tags,
-          statuses: config.statuses, // card #31: ordered column list; [] = built-in four
+          statuses: config.statuses, // ordered column list; [] = built-in four
         });
       }
       if (req.method === 'GET' && p === '/') return serveStatic(res, path.join(WEB, 'app.html'));
@@ -115,7 +115,7 @@ function createServer(dir) {
         return serveStatic(res, path.join(WEB, path.basename(p)));
       }
 
-      // notifications (card #22): the file protocol's app-side mutations
+      // notifications: the file protocol's app-side mutations
       if (req.method === 'POST' && p === '/api/notifications/mark-read') {
         const body = await readBody(req);
         return sendJSON(res, 200, { notifications: ns.markRead(dir, Array.isArray(body.ids) ? body.ids : undefined) });
@@ -133,7 +133,7 @@ function createServer(dir) {
         try {
           return sendJSON(res, 201, cs.toJSON(cs.createCard(dir, body)));
         } catch (e) {
-          // epic #137: the 422 names WHICH gate refused — waiting carries the
+          // the 422 names WHICH gate refused — waiting carries the
           // unresolved deps, blocked carries the sticker's reason.
           if (e.name === 'WaitingError') return sendJSON(res, 422, { error: e.message, waiting: e.waiting });
           if (e.name === 'BlockedError') return sendJSON(res, 422, { error: e.message, reason: e.reason });
@@ -146,7 +146,7 @@ function createServer(dir) {
         if (!cs.findCardFile(dir, id)) return sendJSON(res, 404, { error: `no card #${id}` });
         if (req.method === 'GET' && m[2] === '/detail') {
           const detail = cs.cardDetail(dir, id);
-          // card #35: file mtime for the popup's "Last modified" fallback when
+          // file mtime for the popup's "Last modified" fallback when
           // the card predates the `updated` frontmatter field.
           const mtime = fs.statSync(detail.path).mtime.toISOString();
           return sendJSON(res, 200, { ...detail, mtime });

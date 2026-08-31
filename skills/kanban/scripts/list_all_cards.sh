@@ -4,7 +4,7 @@
 #   waiting_for — raw dependency ids from frontmatter (edges only; whether the
 #     card is actually waiting is derived — see show_waiting.sh / view_board.sh)
 #   blocked — the impediment reason when the manual `blocked:` sticker passes
-#     the epic #137 predicate, empty otherwise
+#     the blocked predicate (show_blocked.sh), empty otherwise
 
 KANBAN_DIR="${1:-.}"
 

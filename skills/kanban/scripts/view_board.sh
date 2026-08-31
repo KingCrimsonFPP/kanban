@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Display kanban cards grouped by status.
-# Card #31: column set + order follow config.yaml's `statuses:` list when
+# Column set + order follow config.yaml's `statuses:` list when
 # present. Supported here: the INLINE flow form only — `statuses: [a, b, c]`
 # (quotes/comments tolerated, single-word statuses only). The block (`- item`)
 # form is NOT parsed by this bash script and falls back to the default four —
 # use the inline form if the CLI board print should follow a custom list.
 # A card whose status isn't in the list groups under the FIRST column
 # (the catch-all) with its raw status shown inline as [status: <raw>].
-# Epic #137 flags:
+# Flags:
 #   [waiting: #x #y] — UNRESOLVED `waiting_for` ids only: a listed card that
 #     exists (live or archived) and is not `done`. Dangling ids are
 #     non-blocking; no flag at all when every dep is done.
 #   [blocked: <reason>] — the manual `blocked:` sticker passes the predicate
 #     (trimmed value contains >=1 alphanumeric; false/no -> not blocked; true
 #     -> blocked, reason unspecified).
-#   [review: <text>] — the `review:` sticker (ADR 0009, card #181), blocked's
+#   [review: <text>] — the `review:` sticker (ADR 0009), blocked's
 #     sibling — same predicate, applied to `review`. Does NOT gate `doing`.
 # Usage: bash view_board.sh [kanban-directory]
 
@@ -35,7 +35,7 @@ title() {
     awk '/^---$/{fm++;next} fm==2 && /^# /{sub("^# ","");print;exit}' "$1"
 }
 
-# Blocked predicate (epic #137): trimmed value has >=1 alphanumeric char;
+# Blocked predicate: trimmed value has >=1 alphanumeric char;
 # YAML boolean special-case: false/no -> not blocked, true -> blocked.
 # Prints the reason and returns 0 when blocked; returns 1 otherwise.
 blocked_reason() {
@@ -58,7 +58,7 @@ blocked_reason() {
 }
 
 # review's sibling of blocked_reason — same predicate, applied to the
-# `review` field (ADR 0009, card #181).
+# `review` field (ADR 0009).
 review_text() {
     local v="$1"
     v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"
@@ -139,14 +139,14 @@ for f in "$KANBAN_DIR"/*.card.md; do
         line="$line [blocked: $reason]"
     fi
 
-    # Review flag: blocked's sibling sticker (ADR 0009, card #181) — same
+    # Review flag: blocked's sibling sticker (ADR 0009) — same
     # inline shape, own text, never affects the doing-gate above.
     if text=$(review_text "$review_raw"); then
         line="$line [review: $text]"
     fi
 
-    # Unknown status -> first column, raw status shown (card #31's promotion
-    # mechanic: the human adds it to config.yaml; the file is never rewritten).
+    # Unknown status -> first column, raw status shown (promotion mechanic:
+    # the human adds it to config.yaml; the file is never rewritten).
     case " $STATUSES " in
         *" $status "*) col="$status" ;;
         *) col="$FIRST"; line="$line [status: $status]" ;;
@@ -165,8 +165,8 @@ for s in $STATUSES; do
     echo
 done
 
-# Archive trailer kept for output compatibility (pre-#31 always printed it;
-# archived/ is listed by the app, not this script)
+# Archive trailer kept for output compatibility (archived/ is listed by the
+# app, not this script)
 echo ""
 echo "=== ARCHIVE ==="
 echo "(see kanban/archived/ — not scanned by this script)"

@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- kanban.proj #207: equal-length board columns + fixed page header + a
+// --- equal-length board columns + fixed page header + a
 // scrolling card list per column -----------------------------------------
 // Three independent CSS-only requirements pinned as structure tests (same
 // convention as status-colors.test.js): (1) every board column fills the
@@ -15,7 +15,7 @@ const path = require('node:path');
 // keeping main#board's height in sync with the page header's real height)
 // is pinned as a JS structure test since jsdom isn't wired into this suite.
 //
-// The bug these tests guard (kanban.proj #207): the original cut of
+// The bug these tests guard: the original cut of
 // these tests was regex-only against source text, so `.column-header { ...
 // position: sticky ... }` read as "passing" even though the column headers
 // never actually stuck — main#board's pre-existing `overflow-x: auto` forces

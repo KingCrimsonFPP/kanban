@@ -135,7 +135,7 @@ test('cardDetail returns the raw frontmatter block, absolute path, title, and bo
   assert.ok(d.body.includes('A para.'));
 });
 
-// kanban.proj #211: the detail popup's own title fallback needs `prompt`
+// the detail popup's own title fallback needs `prompt`
 // alongside title — cardDetail only carried title/body/epic/etc before.
 test('cardDetail carries prompt so the popup can fall back to it for a titleless card', () => {
   const dir = tmpBoard();
@@ -150,10 +150,10 @@ test('cardDetail surfaces a genuinely unrecognized frontmatter key verbatim', ()
   fs.writeFileSync(path.join(dir, 'ext.card.md'),
     `---\nid: 5\nstatus: backlog\npriority: Normal\nwaiting_for: []\ntags: []\nsprint: 5\n---\n\n# Extension field card\n\nbody\n`);
   const d = cs.cardDetail(dir, 5);
-  assert.match(d.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store gives special handling (parent stopped qualifying - card #151 parses it)
+  assert.match(d.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store gives special handling (parent stopped qualifying once the store parsed it)
 });
 
-test('cardDetail carries updated: null when absent, and the value once set (card #35)', () => {
+test('cardDetail carries updated: null when absent, and the value once set', () => {
   const dir = tmpBoard(); // card 1 (REAL_CARD) has no updated field
   assert.strictEqual(cs.cardDetail(dir, 1).updated, null);
   const created = cs.createCard(dir, { title: 'Stamped Detail', status: 'todo' });
@@ -172,7 +172,7 @@ test('cardDetail flags archived: false for an active card, true for an archived 
   assert.strictEqual(cs.cardDetail(dir, 1).archived, true);
 });
 
-test('cardDetail carries epic: false for a plain card, true for one flagged epic (kanban.proj #196: the detail popup wash)', () => {
+test('cardDetail carries epic: false for a plain card, true for one flagged epic (the detail popup wash)', () => {
   const dir = tmpBoard();
   assert.strictEqual(cs.cardDetail(dir, 1).epic, false);
   const wayfinder = cs.createCard(dir, { title: 'Wayfinder', status: 'todo', epic: true });
@@ -218,7 +218,7 @@ test('createCard past id 9999 skips the numeric prefix (avoids breaking lexicogr
   assert.ok(!fs.existsSync(path.join(dir, '10000.over-the-line.card.md')));
 });
 
-// kanban.proj #211: AI-prompt cards may save with no title at all — the
+// AI-prompt cards may save with no title at all — the
 // server must accept it (no forced "Untitled") and the filename's slug
 // component degrades to nothing, leaving the bare id prefix.
 test('createCard accepts an empty title — no "Untitled" fallback, filename is the bare id prefix', () => {
@@ -239,9 +239,9 @@ test('createCard treats a missing title field the same as an explicit empty one'
   assert.strictEqual(path.basename(card.file), `${String(card.id).padStart(4, '0')}.card.md`);
 });
 
-// kanban.proj #211: neither title nor prompt is no data at
+// neither title nor prompt is no data at
 // all — nothing left for cardTitleDisplay to fall back to on any view.
-// Restore the pre-#211 "Untitled" safety net for exactly that case (the
+// The "Untitled" safety net survives for exactly that case (the
 // browser's `required` toggle is not the only path in — curl, kanban-afk
 // dispatch, any direct POST /api/cards caller bypasses it entirely).
 test('createCard falls back to "Untitled" when both title and prompt are empty', () => {
@@ -290,9 +290,9 @@ test('atomic write leaves no .tmp file behind', () => {
   assert.ok(!fs.readdirSync(dir).some((f) => f.endsWith('.tmp')), 'no leftover .tmp');
 });
 
-// --- card #86: NTFS caps a filename COMPONENT at 255 chars. A monster title
+// --- NTFS caps a filename COMPONENT at 255 chars. A monster title
 // slugified past it (~270 chars), writeAtomic's `.tmp` open died with ENOENT,
-// and the save failed (burning an id per retry, card #77). Filenames built
+// and the save failed (burning an id per retry). Filenames built
 // from slugs must cap the slug (~160) with headroom for the `NNNN.` prefix,
 // `.card.md`, `.tmp`, and uniqueFilePath's `-N` dedup suffix. The filename is
 // cosmetic — frontmatter id is identity, readers glob *.card.md — so
@@ -304,7 +304,7 @@ const MONSTER_TITLE = 'the minimalistic create card pop up should show title and
 // and a "-NN" dedup still clear 255 with >70 chars to spare.
 const MAX_BASENAME = 5 + 160 + 8;
 
-test('createCard survives the exact live-failure monster title — capped filename, full title preserved (card #86)', () => {
+test('createCard survives the exact live-failure monster title — capped filename, full title preserved', () => {
   const dir = tmpBoard();
   assert.ok(cs.slugify(MONSTER_TITLE).length > 255 - '0082..card.md.tmp'.length,
     'precondition: uncapped slug really blows the NTFS component budget');
@@ -323,7 +323,7 @@ test('createCard survives the exact live-failure monster title — capped filena
   assert.strictEqual(reread.id, card.id);
 });
 
-test('capSlug trims at a hyphen boundary, never mid-word, never a trailing hyphen (card #86)', () => {
+test('capSlug trims at a hyphen boundary, never mid-word, never a trailing hyphen', () => {
   // short slugs pass through byte-identical — the cap only exists for filenames
   assert.strictEqual(cs.capSlug('new-thing'), 'new-thing');
   const slug160 = 'x'.repeat(155) + '-tail'; // exactly 160: untouched
@@ -342,13 +342,13 @@ test('capSlug trims at a hyphen boundary, never mid-word, never a trailing hyphe
   assert.ok(cs.slugify(MONSTER_TITLE).length > 160);
 });
 
-test('updateCard title-change to another monster title keeps the on-disk filename within the cap budget (card #86)', () => {
+test('updateCard title-change to another monster title keeps the on-disk filename within the cap budget', () => {
   // updateCard has no re-slug/rename path today (verified: none in this file's
   // entire history) — a title edit rewrites the same file, so the basename set
   // at create time is the only name that ever needs to fit. This test is the
   // tripwire: if a title-change rename is ever added, an uncapped slug would
   // balloon the basename past the budget and fail here — any future rename
-  // MUST route its slug through capSlug (card #86).
+  // MUST route its slug through capSlug.
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Short And Sweet', status: 'todo' });
   const monster2 = 'please rename this card to an absurdly detailed novella of a title that spells out every micro decision the implementer could possibly make including the column the assignee the priority the tags the dates and the phase of the moon under which the work should ideally commence for maximum productivity';
@@ -362,7 +362,7 @@ test('updateCard title-change to another monster title keeps the on-disk filenam
   assert.ok(base.length + '.tmp'.length <= 255, 'the rewrite .tmp sibling fits too');
 });
 
-test('createCard short-title filenames stay byte-identical to the pre-cap behavior (card #86)', () => {
+test('createCard short-title filenames stay byte-identical to the pre-cap behavior', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Fix The Save Path', status: 'todo' });
   assert.strictEqual(path.basename(card.file), '0003.fix-the-save-path.card.md');
@@ -375,7 +375,7 @@ test('updateCard changes only the touched frontmatter key; body preserved verbat
   const updated = cs.updateCard(dir, 1, { status: 'doing' });
   assert.strictEqual(updated.status, 'doing');
   const after = fs.readFileSync(path.join(dir, '1.card.md'), 'utf8');
-  // only the status line changed (plus card #35's appended `updated:` bump);
+  // only the status line changed (plus the appended `updated:` bump);
   // body (incl ## Narrative) and every other key identical
   const afterMinusUpdatedLine = after.replace(/\nupdated: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?=\n---\n)/, '');
   assert.strictEqual(afterMinusUpdatedLine, before.replace('status: done', 'status: doing'));
@@ -391,7 +391,7 @@ test('updateCard edits title via targeted H1 + body, keeps frontmatter', () => {
   assert.strictEqual(c.priority, 'High');
 });
 
-test('updateCard to doing is refused while WAITING (a waiting_for dep not done) — epic #137', () => {
+test('updateCard to doing is refused while WAITING (a waiting_for dep not done)', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 1, { status: 'todo' }); // card 2 waits on card 1; now not done
   assert.throws(() => cs.updateCard(dir, 2, { status: 'doing' }), (e) => {
@@ -480,12 +480,12 @@ test('toJSON exposes the public card shape without internal underscores', () => 
   const dir = tmpBoard();
   const j = cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md')));
   assert.deepStrictEqual(Object.keys(j).sort(), [
-    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'prompt', 'review', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape (card #59); waiting_for replaced blocked_by and blocked joined (epic #137); parent joined (card #151); review joined (ADR 0009, card #181); prompt joined (kanban.proj #200)
+    'archived', 'assignee', 'blocked', 'body', 'due_date', 'end_date', 'epic', 'file', 'id', 'parent', 'priority', 'prompt', 'review', 'start_date', 'status', 'tags', 'title', 'updated', 'waiting_for', // epic joined the shape; waiting_for replaced blocked_by and blocked joined; parent joined; review joined (ADR 0009); prompt joined
   ]);
   assert.strictEqual(j._order, undefined);
 });
 
-test('toJSON exposes file as the basename, not the full path (card #17 file: search)', () => {
+test('toJSON exposes file as the basename, not the full path (file: search)', () => {
   const dir = tmpBoard();
   const j = cs.toJSON(cs.readCardFile(path.join(dir, 'two.card.md')));
   assert.strictEqual(j.file, 'two.card.md');
@@ -533,7 +533,7 @@ test('parseFrontmatter is first-occurrence-wins for duplicate keys', () => {
   assert.ok(!/status: doing/.test(out), 'no duplicate status line emitted');
 });
 
-// --- card #32: clearing optional fields — PATCH assignee: "" / due_date: ""
+// --- clearing optional fields — PATCH assignee: "" / due_date: ""
 // removes the frontmatter line (bulk unassign needs it; the edit form's
 // blank-means-clear now actually clears instead of being silently ignored)
 
@@ -557,7 +557,7 @@ test('updateCard with due_date "" removes the due_date line, and a real value st
   assert.strictEqual(set.assignee, '@ai');
 });
 
-// --- card #35: machine-maintained "updated" frontmatter — createCard sets it,
+// --- machine-maintained "updated" frontmatter — createCard sets it,
 // updateCard bumps it on every call, archive/restore (file-location moves) never
 // touch it.
 
@@ -627,17 +627,17 @@ test('toJSON carries updated (null when absent, ISO string once set)', () => {
   assert.match(cs.toJSON(created).updated, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
 });
 
-// --- card #36: start_date — optional, pairs with due_date as a from-to range.
+// --- start_date — optional, pairs with due_date as a from-to range.
 // Both accept a plain date (YYYY-MM-DD) or a local datetime (YYYY-MM-DDTHH:MM);
 // NEITHER is validated (house style: tolerate, never reject), and no
 // start<=due ordering is enforced — semantics live in the docs, not in code.
 
-test('readCardFile exposes start_date: null when absent (card #36)', () => {
+test('readCardFile exposes start_date: null when absent', () => {
   const dir = tmpBoard(); // neither seed card has start_date
   assert.strictEqual(cs.readCardFile(path.join(dir, '1.card.md')).start_date, null);
 });
 
-test('readCardFile exposes start_date verbatim — date and datetime forms (card #36)', () => {
+test('readCardFile exposes start_date verbatim — date and datetime forms', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-start-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: []\nstart_date: 2026-07-10\ntags: []\n---\n\n# A\n\nbody\n`);
@@ -647,7 +647,7 @@ test('readCardFile exposes start_date verbatim — date and datetime forms (card
   assert.strictEqual(cs.readCardFile(path.join(dir, '0002.b.card.md')).start_date, '2026-07-10T09:30');
 });
 
-test('updateCard sets start_date, empty string clears the line, undefined preserves it (card #36)', () => {
+test('updateCard sets start_date, empty string clears the line, undefined preserves it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-start-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'), REAL_CARD);
   const set = cs.updateCard(dir, 1, { start_date: '2026-07-10' });
@@ -656,13 +656,13 @@ test('updateCard sets start_date, empty string clears the line, undefined preser
   // unrelated change leaves it alone
   const untouched = cs.updateCard(dir, 1, { priority: 'High' });
   assert.strictEqual(untouched.start_date, '2026-07-10');
-  // empty string removes the line (same clear pattern as assignee/due_date, card #32)
+  // empty string removes the line (same clear pattern as assignee/due_date)
   const cleared = cs.updateCard(dir, 1, { start_date: '' });
   assert.strictEqual(cleared.start_date, null);
   assert.doesNotMatch(fs.readFileSync(path.join(dir, '0001.one.card.md'), 'utf8'), /start_date:/);
 });
 
-test('updateCard with a full modal-style payload does NOT inject a blank start_date line (card #36)', () => {
+test('updateCard with a full modal-style payload does NOT inject a blank start_date line', () => {
   const dir = tmpBoard(); // card 2 has no start_date
   cs.updateCard(dir, 2, {
     title: 'Second', status: 'todo', priority: 'High',
@@ -671,7 +671,7 @@ test('updateCard with a full modal-style payload does NOT inject a blank start_d
   assert.ok(!/^start_date:/m.test(fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8')), 'no blank start_date line added');
 });
 
-test('updateCard accepts a datetime in start_date AND due_date, verbatim round-trip (card #36)', () => {
+test('updateCard accepts a datetime in start_date AND due_date, verbatim round-trip', () => {
   const dir = tmpBoard();
   const c = cs.updateCard(dir, 2, { start_date: '2026-07-10T09:30', due_date: '2026-07-12T17:00' });
   assert.strictEqual(c.start_date, '2026-07-10T09:30');
@@ -681,7 +681,7 @@ test('updateCard accepts a datetime in start_date AND due_date, verbatim round-t
   assert.strictEqual(reread.due_date, '2026-07-12T17:00');
 });
 
-test('updateCard bumps updated on a start_date-only change (card #36)', () => {
+test('updateCard bumps updated on a start_date-only change', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-start-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: []\ntags: []\nupdated: 2000-01-01T00:00:00\n---\n\n# One\n\nbody\n`);
@@ -690,7 +690,7 @@ test('updateCard bumps updated on a start_date-only change (card #36)', () => {
   assert.match(c.updated, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
 });
 
-test('createCard accepts start_date the same way it accepts due_date (card #36)', () => {
+test('createCard accepts start_date the same way it accepts due_date', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Ranged', status: 'todo', start_date: '2026-07-10', due_date: '2026-07-12' });
   assert.strictEqual(card.start_date, '2026-07-10');
@@ -698,36 +698,36 @@ test('createCard accepts start_date the same way it accepts due_date (card #36)'
   const raw = fs.readFileSync(cs.findCardFile(dir, card.id), 'utf8');
   assert.match(raw, /^start_date: 2026-07-10$/m);
   // omitted start_date writes no line (status backlog: creating INTO todo
-  // now auto-stamps start_date — deliberate contract change, card #52)
+  // now auto-stamps start_date — deliberate contract change)
   const plain = cs.createCard(dir, { title: 'No Range', status: 'backlog' });
   assert.strictEqual(plain.start_date, null);
   assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, plain.id), 'utf8'), /start_date:/);
 });
 
-test('createCard accepts a reversed range without complaint — no start<=due validation (card #36)', () => {
+test('createCard accepts a reversed range without complaint — no start<=due validation', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Reversed', status: 'todo', start_date: '2026-08-01', due_date: '2026-07-01' });
   assert.strictEqual(card.start_date, '2026-08-01');
   assert.strictEqual(card.due_date, '2026-07-01');
 });
 
-test('toJSON carries start_date (null when absent, verbatim once set) (card #36)', () => {
+test('toJSON carries start_date (null when absent, verbatim once set)', () => {
   const dir = tmpBoard();
   assert.strictEqual(cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md'))).start_date, null);
   const created = cs.createCard(dir, { title: 'Ranged JSON', status: 'todo', start_date: '2026-07-10T09:30' });
   assert.strictEqual(cs.toJSON(created).start_date, '2026-07-10T09:30');
 });
 
-// --- card #40: end_date — optional "to" of the working range (date triad:
+// --- end_date — optional "to" of the working range (date triad:
 // from = start_date, to = end_date, due = due_date). Mirrors start_date
 // everywhere: verbatim, never validated, empty string clears.
 
-test('readCardFile exposes end_date: null when absent (card #40)', () => {
+test('readCardFile exposes end_date: null when absent', () => {
   const dir = tmpBoard(); // neither seed card has end_date
   assert.strictEqual(cs.readCardFile(path.join(dir, '1.card.md')).end_date, null);
 });
 
-test('readCardFile exposes end_date verbatim — date and datetime forms (card #40)', () => {
+test('readCardFile exposes end_date verbatim — date and datetime forms', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-end-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: []\nend_date: 2026-07-14\ntags: []\n---\n\n# A\n\nbody\n`);
@@ -737,7 +737,7 @@ test('readCardFile exposes end_date verbatim — date and datetime forms (card #
   assert.strictEqual(cs.readCardFile(path.join(dir, '0002.b.card.md')).end_date, '2026-07-14T18:00');
 });
 
-test('updateCard sets end_date, empty string clears the line, undefined preserves it (card #40)', () => {
+test('updateCard sets end_date, empty string clears the line, undefined preserves it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-end-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'), REAL_CARD);
   const set = cs.updateCard(dir, 1, { end_date: '2026-07-14' });
@@ -752,7 +752,7 @@ test('updateCard sets end_date, empty string clears the line, undefined preserve
   assert.doesNotMatch(fs.readFileSync(path.join(dir, '0001.one.card.md'), 'utf8'), /end_date:/);
 });
 
-test('updateCard with a full modal-style payload does NOT inject a blank end_date line (card #40)', () => {
+test('updateCard with a full modal-style payload does NOT inject a blank end_date line', () => {
   const dir = tmpBoard(); // card 2 has no end_date
   cs.updateCard(dir, 2, {
     title: 'Second', status: 'todo', priority: 'High',
@@ -761,7 +761,7 @@ test('updateCard with a full modal-style payload does NOT inject a blank end_dat
   assert.ok(!/^end_date:/m.test(fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8')), 'no blank end_date line added');
 });
 
-test('updateCard bumps updated on an end_date-only change (card #40)', () => {
+test('updateCard bumps updated on an end_date-only change', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-end-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: []\ntags: []\nupdated: 2000-01-01T00:00:00\n---\n\n# One\n\nbody\n`);
@@ -770,7 +770,7 @@ test('updateCard bumps updated on an end_date-only change (card #40)', () => {
   assert.match(c.updated, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/);
 });
 
-test('createCard accepts end_date; the triad writes in start, end, due order (card #40)', () => {
+test('createCard accepts end_date; the triad writes in start, end, due order', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, {
     title: 'Triad', status: 'todo',
@@ -787,7 +787,7 @@ test('createCard accepts end_date; the triad writes in start, end, due order (ca
   assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, plain.id), 'utf8'), /end_date:/);
 });
 
-test('updateCard adding the whole triad at once appends start, end, due in that order (card #40)', () => {
+test('updateCard adding the whole triad at once appends start, end, due in that order', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-end-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'), REAL_CARD);
   cs.updateCard(dir, 1, { start_date: '2026-07-10', end_date: '2026-07-14', due_date: '2026-07-16' });
@@ -795,30 +795,30 @@ test('updateCard adding the whole triad at once appends start, end, due in that 
   assert.match(raw, /^start_date: 2026-07-10\nend_date: 2026-07-14\ndue_date: 2026-07-16$/m);
 });
 
-test('createCard accepts a reversed end-range without complaint — no ordering validation (card #40)', () => {
+test('createCard accepts a reversed end-range without complaint — no ordering validation', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Reversed End', status: 'todo', start_date: '2026-08-01', end_date: '2026-07-01' });
   assert.strictEqual(card.start_date, '2026-08-01');
   assert.strictEqual(card.end_date, '2026-07-01');
 });
 
-test('toJSON carries end_date (null when absent, verbatim once set) (card #40)', () => {
+test('toJSON carries end_date (null when absent, verbatim once set)', () => {
   const dir = tmpBoard();
   assert.strictEqual(cs.toJSON(cs.readCardFile(path.join(dir, '1.card.md'))).end_date, null);
   const created = cs.createCard(dir, { title: 'End JSON', status: 'todo', end_date: '2026-07-14T18:00' });
   assert.strictEqual(cs.toJSON(created).end_date, '2026-07-14T18:00');
 });
 
-// --- card #51: no-data frontmatter fields are OMITTED — a field whose value is
+// --- no-data frontmatter fields are OMITTED — a field whose value is
 // null/undefined, an empty string, or an empty array writes NO line (no more
 // `tags: []` / `waiting_for: []` boilerplate). Applies uniformly to the managed
 // optional fields (tags, waiting_for, assignee, start/end/due) on BOTH create and
-// update — clearing via the edit form removes the line, exactly the blank-date
-// behavior cards #32/#36/#40 already established. id, status, and the
+// update — clearing via the edit form removes the line, exactly the established
+// blank-date behavior. id, status, and the
 // machine-managed updated are ALWAYS written; any real value (including a chosen
 // priority "Normal") is data and stays. Readers already default missing fields.
 
-test('createCard omits tags/waiting_for lines when the arrays are empty (card #51)', () => {
+test('createCard omits tags/waiting_for lines when the arrays are empty', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Lean', status: 'todo' });
   const raw = fs.readFileSync(cs.findCardFile(dir, card.id), 'utf8');
@@ -836,7 +836,7 @@ test('createCard omits tags/waiting_for lines when the arrays are empty (card #5
   assert.strictEqual(card.assignee, null);
 });
 
-test('createCard explicitly given empty tags/waiting_for ([] is no data) still omits the lines (card #51)', () => {
+test('createCard explicitly given empty tags/waiting_for ([] is no data) still omits the lines', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Explicit Empty', status: 'todo', tags: [], waiting_for: [], assignee: '' });
   const raw = fs.readFileSync(cs.findCardFile(dir, card.id), 'utf8');
@@ -845,7 +845,7 @@ test('createCard explicitly given empty tags/waiting_for ([] is no data) still o
   assert.doesNotMatch(raw, /^assignee:/m);
 });
 
-test('createCard still writes tags/waiting_for when they hold data (card #51)', () => {
+test('createCard still writes tags/waiting_for when they hold data', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Loaded', status: 'todo', tags: ['x', 'y'], waiting_for: [1] });
   const raw = fs.readFileSync(cs.findCardFile(dir, card.id), 'utf8');
@@ -855,7 +855,7 @@ test('createCard still writes tags/waiting_for when they hold data (card #51)', 
   assert.deepStrictEqual(card.waiting_for, [1]);
 });
 
-test('updateCard clearing tags/waiting_for to [] removes their lines; unmanaged keys survive (card #51)', () => {
+test('updateCard clearing tags/waiting_for to [] removes their lines; unmanaged keys survive', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: [2]\ntags: [a, b]\nsprint: 5\n---\n\n# One\n\nbody\n`);
@@ -869,7 +869,7 @@ test('updateCard clearing tags/waiting_for to [] removes their lines; unmanaged 
   assert.match(raw, /# One/, 'body untouched');
 });
 
-test('updateCard treats null tags/waiting_for like empty — line removed, no crash (card #51)', () => {
+test('updateCard treats null tags/waiting_for like empty — line removed, no crash', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: [2]\ntags: [a]\n---\n\n# One\n\nbody\n`);
@@ -881,7 +881,7 @@ test('updateCard treats null tags/waiting_for like empty — line removed, no cr
   assert.doesNotMatch(raw, /^waiting_for:/m);
 });
 
-test('updateCard keeps tags/waiting_for lines that still hold data (card #51)', () => {
+test('updateCard keeps tags/waiting_for lines that still hold data', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nwaiting_for: [2]\ntags: [a]\n---\n\n# One\n\nbody\n`);
@@ -891,7 +891,7 @@ test('updateCard keeps tags/waiting_for lines that still hold data (card #51)', 
   assert.match(raw, /^waiting_for: \[3, 4\]$/m);
 });
 
-test('updateCard full modal-style payload strips pre-existing empty-list lines (card #51)', () => {
+test('updateCard full modal-style payload strips pre-existing empty-list lines', () => {
   const dir = tmpBoard(); // card 2 carries legacy `tags: []` and `waiting_for: [1]` lines
   cs.updateCard(dir, 2, {
     title: 'Second', status: 'todo', priority: 'High',
@@ -904,14 +904,14 @@ test('updateCard full modal-style payload strips pre-existing empty-list lines (
   assert.match(raw, /^updated: /m, 'machine-managed updated always written');
 });
 
-test('updateCard leaves an existing empty-list line alone when the field is not in the patch (card #51)', () => {
+test('updateCard leaves an existing empty-list line alone when the field is not in the patch', () => {
   const dir = tmpBoard(); // card 2 carries a legacy `tags: []` line
   cs.updateCard(dir, 2, { priority: 'Low' }); // tags not part of the change
   const raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
   assert.match(raw, /^tags: \[\]$/m, 'untouched field is not rewritten (only managed changes apply the rule)');
 });
 
-test('readCardFile defaults a card missing tags/waiting_for/priority/assignee entirely (card #51 reader regression guard)', () => {
+test('readCardFile defaults a card missing tags/waiting_for/priority/assignee entirely (reader regression guard)', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.min.card.md'),
     `---\nid: 1\nstatus: todo\nupdated: 2026-07-10T00:00:00\n---\n\n# Minimal\n\nbody\n`);
@@ -925,7 +925,7 @@ test('readCardFile defaults a card missing tags/waiting_for/priority/assignee en
   assert.strictEqual(c.unparseable, false);
 });
 
-test('updateCard clearing priority (empty string or null) removes the line — no `priority: ` boilerplate (card #51)', () => {
+test('updateCard clearing priority (empty string or null) removes the line — no `priority: ` boilerplate', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-lean-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: High\n---\n\n# One\n\nbody\n`);
@@ -941,7 +941,7 @@ test('updateCard clearing priority (empty string or null) removes the line — n
   assert.doesNotMatch(raw, /^priority:/m, 'null clears too — never a literal `priority: null` line');
 });
 
-test('blank list entries are no data: tags [\'\'] / waiting_for [\'\', \' \'] write no line on create or update (card #51)', () => {
+test('blank list entries are no data: tags [\'\'] / waiting_for [\'\', \' \'] write no line on create or update', () => {
   // the web form can't produce these (parseTags/parseIds filter) — this pins
   // the raw-API path, where the length gate alone would pass [''] through
   // formatList and serialize the exact `tags: []` boilerplate the card bans.
@@ -963,7 +963,7 @@ test('blank list entries are no data: tags [\'\'] / waiting_for [\'\', \' \'] wr
   assert.match(raw3, /^waiting_for: \[3\]$/m);
 });
 
-test('whitespace-only assignee is no data — no empty `assignee: ` line on create or update (card #51)', () => {
+test('whitespace-only assignee is no data — no empty `assignee: ` line on create or update', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Ghost Owner', status: 'todo', assignee: ' ' });
   assert.strictEqual(card.assignee, null);
@@ -974,7 +974,7 @@ test('whitespace-only assignee is no data — no empty `assignee: ` line on crea
   assert.doesNotMatch(raw1, /^assignee:/m, 'whitespace clears, same as the empty string already does');
 });
 
-// --- card #52: a card LANDING in 'todo' stamps start_date, landing in 'done'
+// --- a card LANDING in 'todo' stamps start_date, landing in 'done'
 // stamps end_date — the working range builds itself from how cards flow across
 // the board. Stamps only on a transition INTO the literal lowercase status
 // (same literal pin as the 'doing' blocked-gate), date-only local YYYY-MM-DD,
@@ -991,18 +991,18 @@ function localToday() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-test('updateCard transitioning into todo stamps start_date with local today, date-only (card #52)', () => {
+test('updateCard transitioning into todo stamps start_date with local today, date-only', () => {
   const dir = tmpBoard(); // card 1 is done, no start_date
   const before = localToday();
   const c = cs.updateCard(dir, 1, { status: 'todo' });
   const after = localToday();
   assert.ok([before, after].includes(c.start_date), `stamped ${c.start_date}`);
   assert.match(c.start_date, /^\d{4}-\d{2}-\d{2}$/, 'date-only, no time tail');
-  // card #51 interaction: a stamped date is real data — the line is written
+  // lean-rule interaction: a stamped date is real data — the line is written
   assert.match(fs.readFileSync(path.join(dir, '1.card.md'), 'utf8'), /^start_date: \d{4}-\d{2}-\d{2}$/m);
 });
 
-test('updateCard transitioning into done stamps end_date, and only end_date (card #52)', () => {
+test('updateCard transitioning into done stamps end_date, and only end_date', () => {
   const dir = tmpBoard(); // card 2 is todo, no dates
   const before = localToday();
   const c = cs.updateCard(dir, 2, { status: 'done' });
@@ -1012,7 +1012,7 @@ test('updateCard transitioning into done stamps end_date, and only end_date (car
   assert.match(fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8'), /^end_date: \d{4}-\d{2}-\d{2}$/m);
 });
 
-test('updateCard never clobbers an existing start_date/end_date (card #52)', () => {
+test('updateCard never clobbers an existing start_date/end_date', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-stamp-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: backlog\npriority: Normal\nstart_date: 2001-01-01\nend_date: 2002-02-02\n---\n\n# One\n\nbody\n`);
@@ -1022,7 +1022,7 @@ test('updateCard never clobbers an existing start_date/end_date (card #52)', () 
   assert.strictEqual(toDone.end_date, '2002-02-02');
 });
 
-test('updateCard whose status is unchanged stamps nothing (card #52)', () => {
+test('updateCard whose status is unchanged stamps nothing', () => {
   const dir = tmpBoard(); // card 2 is already todo
   const same = cs.updateCard(dir, 2, { status: 'todo' });
   assert.strictEqual(same.start_date, null, 'todo -> todo is not a transition in');
@@ -1030,7 +1030,7 @@ test('updateCard whose status is unchanged stamps nothing (card #52)', () => {
   assert.strictEqual(noStatus.start_date, null, 'a statusless write stamps nothing');
 });
 
-test('updateCard into other statuses never stamps (card #52)', () => {
+test('updateCard into other statuses never stamps', () => {
   const dir = tmpBoard();
   const toDoing = cs.updateCard(dir, 2, { status: 'doing' }); // gate passes while blocker #1 is still done
   assert.strictEqual(toDoing.start_date, null);
@@ -1040,21 +1040,21 @@ test('updateCard into other statuses never stamps (card #52)', () => {
   assert.strictEqual(toBacklog.end_date, null);
 });
 
-test('stamping is pinned to the literal lowercase values — Todo/Done do not stamp (card #52)', () => {
+test('stamping is pinned to the literal lowercase values — Todo/Done do not stamp', () => {
   const dir = tmpBoard();
-  const c1 = cs.updateCard(dir, 1, { status: 'Todo' }); // free-text status, card #31
+  const c1 = cs.updateCard(dir, 1, { status: 'Todo' }); // free-text status
   assert.strictEqual(c1.start_date, null);
   const c2 = cs.updateCard(dir, 1, { status: 'Done' });
   assert.strictEqual(c2.end_date, null);
 });
 
-test('an explicit date in the same PATCH wins over the stamp (card #52)', () => {
+test('an explicit date in the same PATCH wins over the stamp', () => {
   const dir = tmpBoard();
   const c = cs.updateCard(dir, 1, { status: 'todo', start_date: '2001-01-01' });
   assert.strictEqual(c.start_date, '2001-01-01');
 });
 
-test('a form-style blank date field does not defeat the stamp on its own move into todo (card #52)', () => {
+test('a form-style blank date field does not defeat the stamp on its own move into todo', () => {
   const dir = tmpBoard(); // card 1 is done, no dates — the modal sends '' for empty fields
   const before = localToday();
   const c = cs.updateCard(dir, 1, {
@@ -1065,7 +1065,7 @@ test('a form-style blank date field does not defeat the stamp on its own move in
   assert.ok([before, after].includes(c.start_date), 'the blank cleared, then the transition stamped');
 });
 
-test('createCard directly into todo stamps start_date; into done stamps end_date; backlog stamps nothing (card #52)', () => {
+test('createCard directly into todo stamps start_date; into done stamps end_date; backlog stamps nothing', () => {
   const dir = tmpBoard();
   const before = localToday();
   const born = cs.createCard(dir, { title: 'Born In Todo', status: 'todo' });
@@ -1078,11 +1078,11 @@ test('createCard directly into todo stamps start_date; into done stamps end_date
   assert.strictEqual(done.start_date, null);
   assert.strictEqual(idle.start_date, null);
   assert.strictEqual(idle.end_date, null);
-  // the stamp is real data (card #51) and keeps the triad's natural line order
+  // the stamp is real data and keeps the triad's natural line order
   assert.match(fs.readFileSync(cs.findCardFile(dir, born.id), 'utf8'), /^start_date: \d{4}-\d{2}-\d{2}$/m);
 });
 
-test('createCard with an explicit date is never clobbered by the stamp (card #52)', () => {
+test('createCard with an explicit date is never clobbered by the stamp', () => {
   const dir = tmpBoard();
   const c = cs.createCard(dir, { title: 'Explicit', status: 'todo', start_date: '2001-01-01' });
   assert.strictEqual(c.start_date, '2001-01-01');
@@ -1090,7 +1090,7 @@ test('createCard with an explicit date is never clobbered by the stamp (card #52
   assert.strictEqual(d.end_date, '2002-02-02');
 });
 
-test('a compat range (start + due, no end) landing in done gains a real end_date (card #52)', () => {
+test('a compat range (start + due, no end) landing in done gains a real end_date', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-stamp-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: doing\npriority: Normal\nstart_date: 2026-07-01\ndue_date: 2026-07-20\n---\n\n# One\n\nbody\n`);
@@ -1102,14 +1102,14 @@ test('a compat range (start + due, no end) landing in done gains a real end_date
   assert.strictEqual(c.due_date, '2026-07-20');
 });
 
-// --- card #59: `epic: true` — the optional epic/wayfinder flag. A MANAGED
-// boolean field under the #51 lean rule: set writes exactly `epic: true`,
+// --- `epic: true` — the optional epic/wayfinder flag. A MANAGED
+// boolean field under the lean rule: set writes exactly `epic: true`,
 // unset writes NO line (never a literal `epic: false`). Never validated —
 // the reader is tolerant (any-case 'true' reads epic; anything else doesn't),
 // and the writer normalizes API-shaped junk ('true'/'false' strings) so a
 // JSON string can't sneak a truthy-but-false line onto disk.
 
-test('createCard with epic: true writes the `epic: true` line; reader and toJSON carry it (card #59)', () => {
+test('createCard with epic: true writes the `epic: true` line; reader and toJSON carry it', () => {
   const dir = tmpBoard();
   const card = cs.createCard(dir, { title: 'Wayfinder', status: 'todo', epic: true });
   assert.strictEqual(card.epic, true);
@@ -1118,7 +1118,7 @@ test('createCard with epic: true writes the `epic: true` line; reader and toJSON
   assert.match(raw, /^epic: true$/m);
 });
 
-test('createCard without epic (or epic: false) writes NO epic line — the #51 lean rule (card #59)', () => {
+test('createCard without epic (or epic: false) writes NO epic line — the lean rule', () => {
   const dir = tmpBoard();
   const plain = cs.createCard(dir, { title: 'Plain', status: 'todo' });
   const unchecked = cs.createCard(dir, { title: 'Unchecked', status: 'todo', epic: false });
@@ -1130,7 +1130,7 @@ test('createCard without epic (or epic: false) writes NO epic line — the #51 l
   }
 });
 
-test('updateCard epic: true adds the line; epic: false removes it — round-trip (card #59)', () => {
+test('updateCard epic: true adds the line; epic: false removes it — round-trip', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 2, { epic: true });
   let raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
@@ -1141,7 +1141,7 @@ test('updateCard epic: true adds the line; epic: false removes it — round-trip
   assert.doesNotMatch(raw, /^epic:/m, 'unchecking on edit removes the line entirely');
 });
 
-test('updateCard leaves an existing epic line alone when epic is not in the patch (card #59)', () => {
+test('updateCard leaves an existing epic line alone when epic is not in the patch', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-epic-'));
   fs.writeFileSync(path.join(dir, '0001.one.card.md'),
     `---\nid: 1\nstatus: todo\npriority: Normal\nepic: true\n---\n\n# One\n\nbody\n`);
@@ -1150,7 +1150,7 @@ test('updateCard leaves an existing epic line alone when epic is not in the patc
     'only managed CHANGES apply the rule — an untouched field is not rewritten');
 });
 
-test('reader is tolerant: any-case `epic: True` reads epic; other values do not (card #59 — never validated)', () => {
+test('reader is tolerant: any-case `epic: True` reads epic; other values do not (never validated)', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-epic-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\nepic: True\n---\n\n# A\n\nbody\n`);
@@ -1163,10 +1163,10 @@ test('reader is tolerant: any-case `epic: True` reads epic; other values do not 
   assert.strictEqual(cs.readCardFile(path.join(dir, '0003.c.card.md')).epic, false, 'missing line defaults false');
 });
 
-test('a form-style PATCH over a hand-typed non-true value REMOVES the line — deliberate: epic is managed, junk cannot round-trip the form (card #59)', () => {
+test('a form-style PATCH over a hand-typed non-true value REMOVES the line — deliberate: epic is managed, junk cannot round-trip the form', () => {
   // `epic: yes` reads as not-epic, so the edit form opens with the checkbox
   // unchecked and submits epic: false alongside any unrelated change — the
-  // junk line is then cleared by the #51 lean rule. That's the CHOSEN
+  // junk line is then cleared by the lean rule. That's the CHOSEN
   // behavior (unlike priority/dates, whose free-text inputs re-emit junk
   // verbatim, the checkbox has no way to carry it): pin it so the data-loss
   // edge stays a decision, not an accident. Documented in the web SKILL.md's
@@ -1180,7 +1180,7 @@ test('a form-style PATCH over a hand-typed non-true value REMOVES the line — d
   assert.match(raw, /^# A retitled$/m, 'the unrelated edit itself landed');
 });
 
-test('API-shaped junk: string \'true\' sets, string \'false\'/empty/null clear — no truthy-string trap (card #59)', () => {
+test('API-shaped junk: string \'true\' sets, string \'false\'/empty/null clear — no truthy-string trap', () => {
   const dir = tmpBoard();
   const viaString = cs.createCard(dir, { title: 'Stringly', status: 'todo', epic: 'true' });
   assert.strictEqual(viaString.epic, true);
@@ -1196,10 +1196,10 @@ test('API-shaped junk: string \'true\' sets, string \'false\'/empty/null clear �
   assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, falseString.id), 'utf8'), /^epic:/m, 'null clears too');
 });
 
-// --- epic #137: the blocked sticker in the store — parse, serialize (lean
+// --- the blocked sticker in the store — parse, serialize (lean
 // rule judged by the shared predicate), and its half of the doing entry gate.
 
-test('readCardFile parses the blocked sticker verbatim (quotes stripped) and defaults it to null (epic #137)', () => {
+test('readCardFile parses the blocked sticker verbatim (quotes stripped) and defaults it to null', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-blk-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\nblocked: "legal sign-off pending"\n---\n\n# A\n\nbody\n`);
@@ -1213,7 +1213,7 @@ test('readCardFile parses the blocked sticker verbatim (quotes stripped) and def
   assert.strictEqual(byId.get(3).blocked, 'false', 'a hand-written false round-trips for display; the predicate says not blocked');
 });
 
-test('updateCard writes a valid blocked reason and strips an invalid/clear one — the lean rule via the predicate (epic #137)', () => {
+test('updateCard writes a valid blocked reason and strips an invalid/clear one — the lean rule via the predicate', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 2, { blocked: '  vendor outage  ' });
   let raw = fs.readFileSync(path.join(dir, 'two.card.md'), 'utf8');
@@ -1232,7 +1232,7 @@ test('updateCard writes a valid blocked reason and strips an invalid/clear one �
   assert.match(raw, /^blocked: true$/m, 'an API boolean true writes the bare sticker — blocked, reason unspecified');
 });
 
-test('updateCard leaves an on-disk blocked line alone when the PATCH does not mention it (epic #137)', () => {
+test('updateCard leaves an on-disk blocked line alone when the PATCH does not mention it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-blk-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\nblocked: needs the grill\n---\n\n# A\n\nbody\n`);
@@ -1240,7 +1240,7 @@ test('updateCard leaves an on-disk blocked line alone when the PATCH does not me
   assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^blocked: needs the grill$/m);
 });
 
-test('createCard writes a valid blocked sticker and drops an invalid one (epic #137)', () => {
+test('createCard writes a valid blocked sticker and drops an invalid one', () => {
   const dir = tmpBoard();
   const stickered = cs.createCard(dir, { title: 'Stickered', status: 'todo', blocked: 'spec unclear' });
   assert.strictEqual(stickered.blocked, 'spec unclear');
@@ -1250,7 +1250,7 @@ test('createCard writes a valid blocked sticker and drops an invalid one (epic #
   assert.doesNotMatch(fs.readFileSync(cs.findCardFile(dir, clear.id), 'utf8'), /^blocked:/m);
 });
 
-test('updateCard to doing is refused while BLOCKED, naming the reason (epic #137)', () => {
+test('updateCard to doing is refused while BLOCKED, naming the reason', () => {
   const dir = tmpBoard(); // card 1 is done — never waiting
   cs.updateCard(dir, 1, { blocked: 'legal sign-off pending' });
   assert.throws(() => cs.updateCard(dir, 1, { status: 'doing' }), (e) => {
@@ -1261,7 +1261,7 @@ test('updateCard to doing is refused while BLOCKED, naming the reason (epic #137
   });
 });
 
-test('a bare `blocked: true` refuses doing entry with the reason unspecified (epic #137)', () => {
+test('a bare `blocked: true` refuses doing entry with the reason unspecified', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 1, { blocked: true });
   assert.throws(() => cs.updateCard(dir, 1, { status: 'doing' }), (e) => {
@@ -1272,7 +1272,7 @@ test('a bare `blocked: true` refuses doing entry with the reason unspecified (ep
   });
 });
 
-test('blocked: false / whitespace-only / junk on disk never gate doing entry (epic #137 acceptance)', () => {
+test('blocked: false / whitespace-only / junk on disk never gate doing entry', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-blk-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\nblocked: false\n---\n\n# A\n\nbody\n`);
@@ -1282,7 +1282,7 @@ test('blocked: false / whitespace-only / junk on disk never gate doing entry (ep
   assert.strictEqual(cs.updateCard(dir, 2, { status: 'doing' }).status, 'doing');
 });
 
-test('no eviction: blocking (or adding a dep to) a card already in doing goes through and keeps its column — entry-only gate (epic #137)', () => {
+test('no eviction: blocking (or adding a dep to) a card already in doing goes through and keeps its column — entry-only gate', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 1, { status: 'doing' }); // done card, no deps — enters freely
   // form-style same-status save carrying the new sticker AND status: 'doing'
@@ -1295,7 +1295,7 @@ test('no eviction: blocking (or adding a dep to) a card already in doing goes th
   assert.deepStrictEqual(waiting.waiting_for, [2]);
 });
 
-test('the gate uses the EFFECTIVE blocked value — clearing the sticker in the same PATCH allows doing (epic #137)', () => {
+test('the gate uses the EFFECTIVE blocked value — clearing the sticker in the same PATCH allows doing', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 1, { blocked: 'stale sticker' });
   const ok = cs.updateCard(dir, 1, { status: 'doing', blocked: '' });
@@ -1307,7 +1307,7 @@ test('the gate uses the EFFECTIVE blocked value — clearing the sticker in the 
     (e) => e.name === 'BlockedError');
 });
 
-test('hard cutover: a legacy blocked_by line carries no edges but survives verbatim as unmanaged frontmatter (epic #137; migration = card #141)', () => {
+test('hard cutover: a legacy blocked_by line carries no edges but survives verbatim as unmanaged frontmatter', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-legacy-'));
   fs.writeFileSync(path.join(dir, '0001.a.card.md'),
     `---\nid: 1\nstatus: todo\nblocked_by: [2]\n---\n\n# A\n\nbody\n`);
@@ -1317,10 +1317,10 @@ test('hard cutover: a legacy blocked_by line carries no edges but survives verba
   assert.deepStrictEqual(card.waiting_for, [], 'no reader honors the old name');
   assert.strictEqual(cs.updateCard(dir, 1, { status: 'doing' }).status, 'doing', 'legacy edges never gate');
   assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^blocked_by: \[2\]$/m,
-    'the unmanaged line is preserved verbatim for card #141 to migrate');
+    'the unmanaged line is preserved verbatim for a later migration');
 });
 
-// --- ADR 0009 (card #181): the review sticker — blocked's sibling, no gate --
+// --- ADR 0009: the review sticker — blocked's sibling, no gate --
 
 test('readCardFile parses the review sticker verbatim (quotes stripped) and defaults it to null (ADR 0009)', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-rev-'));
@@ -1384,7 +1384,7 @@ test('review does NOT gate doing entry, unlike blocked — updateCard and create
   assert.strictEqual(born.review, 'PR #9');
 });
 
-// --- kanban.proj #200: the `prompt` field — a signal FOR the AI, opposite --
+// --- the `prompt` field — a signal FOR the AI, opposite --
 // polarity to blocked/review (signals FROM the card TO a human). Joins their
 // family in the store (same lean rule) but is not a sticker: no predicate, no
 // doing-gate involvement. Always single-line-quoted, unlike blocked/review's
@@ -1406,7 +1406,7 @@ test('readCardFile tolerates a hand-typed unquoted prompt line (never validated)
   assert.strictEqual(cs.listActive(dir)[0].prompt, 'rerun the tests');
 });
 
-test('updateCard writes a prompt quoted (colons/hashes/quotes survive) and a blank clears the line (#51 lean rule)', () => {
+test('updateCard writes a prompt quoted (colons/hashes/quotes survive) and a blank clears the line (lean rule)', () => {
   const dir = tmpBoard();
   cs.updateCard(dir, 2, { prompt: '  investigate #6: is the fix "done"?  ' });
   let raw = fs.readFileSync(cs.findCardFile(dir, 2), 'utf8');
@@ -1436,7 +1436,7 @@ test('updateCard leaves an on-disk prompt line alone when the PATCH does not men
   assert.match(fs.readFileSync(path.join(dir, '0001.a.card.md'), 'utf8'), /^prompt: "keep me"$/m);
 });
 
-test('createCard writes a quoted prompt and omits the line when blank (#51 lean rule)', () => {
+test('createCard writes a quoted prompt and omits the line when blank (lean rule)', () => {
   const dir = tmpBoard();
   const withPrompt = cs.createCard(dir, { title: 'Queued', status: 'todo', prompt: 'apply the review feedback' });
   assert.strictEqual(withPrompt.prompt, 'apply the review feedback');
@@ -1462,9 +1462,9 @@ test('toJSON carries prompt in the public card shape', () => {
   assert.strictEqual(j.prompt, 'do the thing');
 });
 
-// --- card #151: `parent` — epic membership id -------------------------------
+// --- `parent` — epic membership id -------------------------------
 
-test('readCardFile parses parent as a number, null when absent or non-numeric; toJSON carries it (card #151)', () => {
+test('readCardFile parses parent as a number, null when absent or non-numeric; toJSON carries it', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
   fs.writeFileSync(path.join(dir, '0001.child.card.md'), '---\nid: 1\nstatus: todo\nparent: 42\n---\n\n# Child\n');
   fs.writeFileSync(path.join(dir, '0002.plain.card.md'), '---\nid: 2\nstatus: todo\n---\n\n# Plain\n');
@@ -1478,7 +1478,7 @@ test('readCardFile parses parent as a number, null when absent or non-numeric; t
   assert.strictEqual(cs.toJSON(byId.get(2)).parent, null);
 });
 
-test('updateCard preserves a parent line verbatim — form-unmanaged frontmatter, #51 lean rule untouched (card #151)', () => {
+test('updateCard preserves a parent line verbatim — form-unmanaged frontmatter, lean rule untouched', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-'));
   fs.writeFileSync(path.join(dir, '0001.child.card.md'), '---\nid: 1\nstatus: todo\nparent: 42\n---\n\n# Child\n');
   cs.updateCard(dir, 1, { priority: 'High' });

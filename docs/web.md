@@ -46,7 +46,7 @@ column. The search box up top filters every view at once.
 
 ![Dependency map](images/web-map.png)
 
-The **🕸 Map view** lays out `waiting_for` edges as a graph — arrows point from
+The **Map view** lays out `waiting_for` edges as a graph — arrows point from
 the card you depend on to the card that's waiting. An **epic** is the sink: it
 sits *below* its children and closes only when they do, with its membership
 edges tinted orange. Cards with no dependencies drop into a separate row below.
@@ -57,7 +57,7 @@ search box both prune the graph.
 
 ![Gantt timeline](images/web-gantt.png)
 
-The **📊 Gantt** view is a day-granular timeline grouped by status: each dated
+The **Gantt** view is a day-granular timeline grouped by status: each dated
 card is a **bar** for its working range (`start_date → end_date`) and/or an
 amber **diamond** for its `due_date`. Drag a bar to reschedule, drag an edge to
 resize, drag the diamond to move the deadline. The Archive pill (off by
@@ -67,9 +67,9 @@ default) folds dated archived cards in as a trailing group.
 
 ![Calendar month](images/web-calendar.png)
 
-The **📅 Calendar** view is a Monday-start month grid (with Week / 3-day / Day
+The **Calendar** view is a Monday-start month grid (with Week / 3-day / Day
 sub-views). Working ranges render as linked chips; a `due_date` is its own
-amber ⚑ deadline chip. Drag a chip to move the range or the deadline. Same
+amber deadline chip. Drag a chip to move the range or the deadline. Same
 status-filter pills and search as the other views.
 
 ## More on the board

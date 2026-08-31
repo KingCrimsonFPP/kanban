@@ -14,8 +14,8 @@ control of the board. The server just gives that same access an HTTP face.
 Follow that through: **anything that can run code as your OS user is already
 a full compromise.** It can edit the card files directly, no HTTP involved.
 It can also run `claude -p` (or any other tool) with your credentials. An
-auth token in front of `kanban-web` would only gate one of many equivalent
-paths to the same files — security theater, not a real boundary. So this app
+auth token in front of `kanban-web` would gate exactly one of many equivalent
+paths to the same files and leave the rest open. So this app
 adds **no HTTP authentication**. The real boundary is the OS: keep untrusted
 code (a sandboxed agent, a downloaded script, a browser tab you don't trust)
 from running as your user or reading your filesystem in the first place. If
@@ -63,8 +63,8 @@ directly."
 
 ## What's deliberately out of scope
 
-- **HTTP auth tokens** — theater in front of a boundary that isn't actually
-  there (see above).
+- **HTTP auth tokens** — a gate on one of many equivalent paths to the same
+  files (see above).
 - **TLS** — this only ever serves `http://127.0.0.1`; traffic never leaves
   the loopback interface.
 - **Rate limiting** — there's no multi-tenant resource to protect; you're the

@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- card #60: one browser global scope, unique top-level names ---------------
+// --- one browser global scope, unique top-level names ---------------
 // Every web/*.js loads as a plain <script> into ONE page scope (app.html), so
 // two files declaring the same top-level const/let/class kill the LATER file
 // at parse ("Identifier 'X' has already been declared") and a duplicate
@@ -97,7 +97,7 @@ function blankNonCode(src) {
 // function/class EXPRESSIONS (const f = function g() {...}) out — g is not a
 // global. Top-level destructuring throws loudly rather than being silently
 // missed: gantt-model.js documents why shared-scope scripts avoid it, and a
-// scanner blind spot is this card's whole disease.
+// scanner blind spot is the exact failure this guard exists to prevent.
 function topLevelDeclarations(src) {
   const code = blankNonCode(src);
   const tokens = code.match(/[A-Za-z_$][A-Za-z0-9_$]*|[(){}[\]]|[;,=]|[^\sA-Za-z_$(){}[\];,=]+/g) || [];
@@ -152,7 +152,7 @@ const readWeb = (f) => fs.readFileSync(path.join(webDir, f), 'utf8');
 
 // --- scanner self-tests: quoted/nested "declarations" must not fool it --------
 
-test('scanner sees only real top-level declarations — not comments, strings, templates, regexes, expressions, or nested scopes (card #60)', () => {
+test('scanner sees only real top-level declarations — not comments, strings, templates, regexes, expressions, or nested scopes', () => {
   const src = [
     "'use strict';",
     'const REAL = 1;',
@@ -178,12 +178,12 @@ test('scanner sees only real top-level declarations — not comments, strings, t
     ['REAL', 'S', 'T', 'R', 'F', 'A', 'x', 'y', 'af', 'real2', 'RealClass']);
 });
 
-test('scanner refuses top-level destructuring instead of silently missing names (card #60)', () => {
+test('scanner refuses top-level destructuring instead of silently missing names', () => {
   assert.throws(() => topLevelDeclarations('const { a, b } = thing;'), /destructuring/);
   assert.throws(() => topLevelDeclarations('let [p, q] = pair;'), /destructuring/);
 });
 
-// --- card #60 review: vars inside top-level blocks — the scan's one hoisting hole
+// --- vars inside top-level blocks — the scan's one hoisting hole
 
 // The depth gate keeps function/block bodies out, which is right for const/let
 // (block-scoped, never page globals) but WRONG for `var`: in a classic script a
@@ -197,14 +197,14 @@ test('scanner refuses top-level destructuring instead of silently missing names 
 // top-level block also hoists; banning the keyword would flag every ordinary
 // nested helper, and none exist in blocks today.)
 
-test('the no-var rule catches the export-tail blind spot the declaration scan cannot (card #60)', () => {
+test('the no-var rule catches the export-tail blind spot the declaration scan cannot', () => {
   const src = 'if (typeof module !== "undefined") { module.exports = 1; } else { var SNEAKY = 1; }';
   assert.ok(!topLevelDeclarations(src).includes('SNEAKY'), 'depth-gated scan misses a var in a block — why the ban exists');
   const tokens = blankNonCode(src).match(/[A-Za-z_$][A-Za-z0-9_$]*/g) || [];
   assert.ok(tokens.includes('var'), 'the raw token scan does see it');
 });
 
-test('web/*.js never declare with `var` — inside a top-level block it hoists to page scope, invisibly to the uniqueness scan (card #60)', () => {
+test('web/*.js never declare with `var` — inside a top-level block it hoists to page scope, invisibly to the uniqueness scan', () => {
   for (const file of webFiles) {
     const tokens = blankNonCode(readWeb(file)).match(/[A-Za-z_$][A-Za-z0-9_$]*/g) || [];
     assert.ok(!tokens.includes('var'),
@@ -214,7 +214,7 @@ test('web/*.js never declare with `var` — inside a top-level block it hoists t
 
 // --- canary: an empty or broken scan must never pass the uniqueness test ------
 
-test('scanner finds the known declarations in real files — every web/*.js yields at least one (card #60)', () => {
+test('scanner finds the known declarations in real files — every web/*.js yields at least one', () => {
   const dp = topLevelDeclarations(readWeb('date-picker.js'));
   assert.ok(dp.includes('pickDay') && dp.includes('initialMonth'), `date-picker.js scan: ${dp}`);
   const gm = topLevelDeclarations(readWeb('gantt-model.js'));
@@ -228,7 +228,7 @@ test('scanner finds the known declarations in real files — every web/*.js yiel
 
 // --- the real guard: cross-file uniqueness -------------------------------------
 
-test('top-level declaration names are unique across ALL web/*.js — shared page scope, one namespace (card #60)', () => {
+test('top-level declaration names are unique across ALL web/*.js — shared page scope, one namespace', () => {
   const owners = new Map(); // name -> [file, ...]
   for (const file of webFiles) {
     for (const name of topLevelDeclarations(readWeb(file))) {

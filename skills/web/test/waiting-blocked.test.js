@@ -6,7 +6,7 @@ const {
   unresolvedWaits,
 } = require('../web/waiting-blocked');
 
-// epic #137 / card #139: the ONE shared home of both doing-gate predicates.
+// the ONE shared home of both doing-gate predicates.
 // card-store.js (the store) and app.js/dependency-graph.js (the UI) all call
 // these — pinned here once so the two sides can never drift.
 
@@ -107,7 +107,7 @@ test('unresolvedWaits: lists exactly the not-done deps, in list order', () => {
   assert.deepStrictEqual(unresolvedWaits(null, byId), [], 'missing list tolerated');
 });
 
-test('unresolvedWaits: a dangling id (no matching card) is non-blocking — codified from web\'s behavior (epic #137)', () => {
+test('unresolvedWaits: a dangling id (no matching card) is non-blocking — codified from web\'s behavior', () => {
   const byId = byIdOf([{ id: 1, status: 'done' }]);
   assert.deepStrictEqual(unresolvedWaits([1, 999], byId), [], 'the dangling 999 never makes the card waiting');
 });

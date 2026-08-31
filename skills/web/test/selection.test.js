@@ -20,7 +20,7 @@ test('pruneSelection of an empty set stays empty', () => {
   assert.deepStrictEqual([...pruneSelection(new Set(), [1, 2])], []);
 });
 
-// --- card #144: shift+click adds a RANGE between the anchor and the target,
+// --- shift+click adds a RANGE between the anchor and the target,
 // in the active view's rendered order. Additive (union), never replacing —
 // the card's grammar is "shift to ADD a range".
 
@@ -59,7 +59,7 @@ test('rangeSelection with a target not in the rendered order returns the input s
   assert.strictEqual(rangeSelection(s0, [10, 20], 10, 99), s0);
 });
 
-// --- cards #33/#39: right-click selection semantics, shared by every view.
+// --- right-click selection semantics, shared by every view.
 
 test('contextSelection replaces the selection with an unselected id, without mutating input', () => {
   const s0 = new Set([1, 2]);
@@ -77,7 +77,7 @@ test('contextSelection on an empty selection selects exactly the target', () => 
   assert.deepStrictEqual([...contextSelection(new Set(), 7)], [7]);
 });
 
-test('partitionByMovable: gate-refused cards (waiting or blocked, epic #137) are skipped only for doing; same-status cards are no-ops', () => {
+test('partitionByMovable: gate-refused cards (waiting or blocked) are skipped only for doing; same-status cards are no-ops', () => {
   const byId = new Map([
     [1, { id: 1, status: 'todo' }],
     [2, { id: 2, status: 'todo' }],
@@ -103,7 +103,7 @@ test('partitionByMovable ignores ids with no matching card (deleted mid-selectio
   assert.deepStrictEqual(r.unchanged, []);
 });
 
-// --- card #34: archive column parity — one plan for any drag batch.
+// --- archive column parity — one plan for any drag batch.
 // Cards carry `archived: true|false`; dest is 'archive' or a live column.
 
 const REFUSES_NONE = () => false;
@@ -122,7 +122,7 @@ test('dragPlan to archive: a non-done live card archives with a confirm, an alre
   assert.match(p.confirmMessage, /Archive 1 card/);
 });
 
-// --- card #92: a fully-done batch is the natural completion flow, not a
+// --- a fully-done batch is the natural completion flow, not a
 // destructive act — the confirm is skipped when EVERY card being archived
 // has status 'done'. One non-done card in the batch keeps the confirm.
 
@@ -186,7 +186,7 @@ test('dragPlan drops unknown ids and same-status live cards stay unchanged', () 
   assert.strictEqual(p.confirmMessage, null);
 });
 
-// --- card #92: the shared "does this archive batch need a confirm" rule,
+// --- the shared "does this archive batch need a confirm" rule,
 // reused by the tile Archive button, drag-to-Archive, and bulk Archive
 // selected — one place decides, all three callers agree.
 

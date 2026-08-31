@@ -1,5 +1,5 @@
 'use strict';
-// Pure query parser + matcher for the board search box (card #17). No DOM here —
+// Pure query parser + matcher for the board search box. No DOM here —
 // same dual-environment pattern as refresh-policy.js/column-state.js: loaded as a
 // plain <script> in the browser (app.js calls these as bare globals) AND required
 // directly by node --test.
@@ -12,27 +12,27 @@
 //   priority:high substring on priority
 //   tags:ui       substring on any one tag
 //   file:0011     substring on the card's filename (basename)
-//   assignee:@afk substring on the card's assignee handle. `A:`/`a:` (kanban.proj
-//                 #186) is a thin alias for this same scope — resolved to
+//   assignee:@afk substring on the card's assignee handle. `A:`/`a:` is a
+//                 thin alias for this same scope — resolved to
 //                 'assignee' at parse time, before the KNOWN_FIELDS value/
 //                 lowercasing logic runs, so it shares every rule below with
 //                 the long form (case-insensitive substring, dropped when
 //                 valueless mid-typing).
-//   review: / blocked:   sticker scopes (ADR 0009, card #181) — UNLIKE every
+//   review: / blocked:   sticker scopes (ADR 0009) — UNLIKE every
 //                 KNOWN_FIELDS scope above, a bare `review:`/`blocked:` (no
 //                 value) is a COMPLETE term meaning "the sticker is present"
 //                 (the shared isReviewValue/isBlockedValue predicate), never
 //                 dropped as mid-typing. `review:PR` / `blocked:vendor` is a
 //                 case-insensitive substring match on the sticker's text.
-//   epic:         kanban.proj #222 — bare `epic:` is a COMPLETE term, same
+//   epic:         bare `epic:` is a COMPLETE term, same
 //                 never-dropped shape as review:/blocked: above, meaning
 //                 "card.epic is true". UNLIKE review:/blocked:, epic: has NO
-//                 value form (v1) — anything typed after the colon is parsed
+//                 value form — anything typed after the colon is parsed
 //                 but ignored, so `epic:foo` matches exactly what `epic:`
 //                 does. No negation either.
 //   tree:74 / tree:#74   card #74's dependency tree — the connected component
 //                 (undirected) reachable from card 74 over the SAME edges the
-//                 map draws (waiting_for + #151 parent: membership).
+//                 map draws (waiting_for + parent: membership).
 //   path:74 / path:#74   card #74's dependency path — the directed cone:
 //                 everything transitively upstream + downstream through card
 //                 74, over the same edges. Narrower than tree: (excludes
@@ -55,24 +55,24 @@
 // card) pair doesn't have — see filterCards below for where that happens.
 const DG = (typeof module !== 'undefined' && module.exports) ? require('./dependency-graph') : window;
 // Named WBS (not WB) — dependency-graph.js already claims WB in this shared
-// page scope (card #60: every web/*.js top-level name must be unique).
+// page scope (every web/*.js top-level name must be unique).
 const WBS = (typeof module !== 'undefined' && module.exports) ? require('./waiting-blocked') : window;
 
 const KNOWN_FIELDS = ['title', 'body', 'status', 'priority', 'tags', 'file', 'assignee'];
 // tree:/path: are deliberately NOT in KNOWN_FIELDS — that array drives the
 // lowercased-substring value semantics, which don't apply to a numeric id.
 const GRAPH_FIELDS = ['tree', 'path'];
-// ADR 0009 / card #181: review:/blocked: are their own field family — a
+// ADR 0009: review:/blocked: are their own field family — a
 // bare value is a valid presence term (unlike KNOWN_FIELDS, where a bare
 // scope is dropped as mid-typing), so they're parsed separately below.
 const STICKER_FIELDS = ['review', 'blocked'];
-// kanban.proj #222: epic: is its own single-field family — bare presence,
+// epic: is its own single-field family — bare presence,
 // never dropped (same shape as STICKER_FIELDS), but with NO value form:
 // unlike review:/blocked:, whatever follows the colon is discarded rather
 // than kept for a substring match, since "epic" is a plain boolean flag with
 // no text of its own to search.
 const EPIC_FIELDS = ['epic'];
-// kanban.proj #186: `A:`/`a:` is a thin alias for `assignee:` — resolved here,
+// `A:`/`a:` is a thin alias for `assignee:` — resolved here,
 // before the KNOWN_FIELDS check, so the alias falls through the exact same
 // value/lowercasing path as the long form rather than duplicating it.
 const FIELD_ALIASES = { a: 'assignee' };
@@ -89,7 +89,7 @@ function parseTerm(token) {
       return value ? { field: 'id', value } : null;
     }
     if (GRAPH_FIELDS.includes(key)) {
-      // card #74: id accepts an optional leading '#' (tree:74 and tree:#74
+      // id accepts an optional leading '#' (tree:74 and tree:#74
       // are the same term) — kept case-verbatim like id:, no lowercasing.
       const value = prefixed[2].trim().replace(/^#/, '');
       return value ? { field: key, value } : null;
@@ -103,9 +103,9 @@ function parseTerm(token) {
     if (STICKER_FIELDS.includes(key)) {
       return { field: key, value: prefixed[2].trim().toLowerCase() };
     }
-    // kanban.proj #222: bare epic: is itself a complete "epic-marked" term —
+    // Bare epic: is itself a complete "epic-marked" term —
     // always returned like the sticker fields above, but the value is never
-    // kept (no value form in v1): `epic:` and `epic:anything` parse
+    // kept (no value form): `epic:` and `epic:anything` parse
     // identically.
     if (EPIC_FIELDS.includes(key)) {
       return { field: key, value: '' };
@@ -138,11 +138,11 @@ function termMatchesCard(term, card) {
     // substring term matches, exactly mirroring the pill's own label).
     case 'review': return term.value ? WBS.reviewReason(card.review).toLowerCase().includes(term.value) : WBS.isReviewValue(card.review);
     case 'blocked': return term.value ? WBS.blockedReason(card.blocked).toLowerCase().includes(term.value) : WBS.isBlockedValue(card.blocked);
-    // kanban.proj #222: epic: is a pure presence check on the boolean flag —
+    // epic: is a pure presence check on the boolean flag —
     // term.value is always '' (parseTerm discards it), so there's no
     // substring branch to mirror review:/blocked:'s.
     case 'epic': return card.epic === true;
-    // card #74: pre-resolved by filterCards (below) into an id Set — a raw,
+    // pre-resolved by filterCards (below) into an id Set — a raw,
     // unresolved 'tree'/'path' term has no graph to resolve against here (a
     // single (term, card) pair isn't enough), so it matches nothing rather
     // than throwing. Always goes through filterCards in practice.
@@ -158,12 +158,12 @@ function cardMatchesQuery(card, terms) {
   return terms.every((term) => termMatchesCard(term, card));
 }
 
-// card #74: tree:/path: terms need the FULL card graph to resolve (connected
+// tree:/path: terms need the FULL card graph to resolve (connected
 // component / directed cone), not just the one card being tested — so they're
 // resolved ONCE here, up front, against `cards` (the same array filterCards
 // was called with), via dependency-graph.js's treeIds/pathIds — which in turn
 // build their adjacency from buildDependencyGraph(cards, null).edges, the
-// exact edge set (waiting_for + #151 membership) the map draws. Each 'tree'/
+// exact edge set (waiting_for + membership) the map draws. Each 'tree'/
 // 'path' term becomes an 'ids' term (an already-resolved Set) before the
 // per-card cardMatchesQuery pass runs, so termMatchesCard's 'ids' case stays a
 // pure, cheap Set.has() with no graph access of its own.
@@ -172,7 +172,7 @@ function cardMatchesQuery(card, terms) {
 // when a tree:/path: term is present) "the universe to build the graph from".
 // Every filterCards call site MUST pass the full board (active + archived),
 // never a pre-filtered subset — traversal is always over live + archived
-// cards, per card #74's design. A subset would silently produce a
+// cards, by design. A subset would silently produce a
 // wrong/smaller graph with no error.
 function resolveGraphTerms(cards, terms) {
   if (!terms.some((t) => t.field === 'tree' || t.field === 'path')) return terms;
@@ -190,7 +190,7 @@ function filterCards(cards, terms) {
   return cards.filter((card) => cardMatchesQuery(card, resolved));
 }
 
-// kanban.proj #187: the search box's autocomplete dropdown. Pure candidate
+// The search box's autocomplete dropdown. Pure candidate
 // generation — no DOM, mirrors every other module here. Only the LAST
 // whitespace-separated segment of the query is ever completed (the terms
 // before it are query grammar the parser already accepted; re-suggesting

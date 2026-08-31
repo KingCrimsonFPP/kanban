@@ -96,13 +96,12 @@ map and viewer expose.
 
 ## Parity with the web editor
 
-Same behavior, same rules for full CRUD, the `doing` gate, bulk actions,
-speedbumps, notifications, the dependency view, and `config.yaml` suggestions.
-What the medium can't carry is deliberately swapped, not dropped: drag & drop →
-typed commands, the SVG map → Mermaid, the 5-second poll → re-reading disk
-before every print, search-as-you-type → filter on request, and the
-`localStorage`-backed collapse/sort state → on-demand re-prints (a transcript is
-ephemeral). See [`CONTEXT.md`](../CONTEXT.md) for the full parity table.
+The shared rules and the full parity table live in
+[`CONTEXT.md`](../CONTEXT.md). What this medium can't carry is swapped, not
+dropped: drag & drop → typed commands, the SVG map → Mermaid, the 5-second
+poll → re-reading disk before every print, search-as-you-type → filter on
+request, and the `localStorage`-backed collapse/sort state → on-demand
+re-prints (a transcript is ephemeral).
 
 ---
 

@@ -29,7 +29,7 @@ test('unseenUnread returns unread entries not already seen this session', () => 
   assert.deepStrictEqual(unseenUnread(LIST, new Set([1, 2])), []);
 });
 
-// --- card #133: TLDR-first message shape --------------------------------------
+// --- TLDR-first message shape --------------------------------------
 
 test('splitTldr splits on the FIRST "; more: " — TLDR before, detail after', () => {
   assert.deepStrictEqual(splitTldr('Card #7 closed; more: 3 files touched, 12 tests added'),
@@ -55,7 +55,7 @@ test('splitTldr does not split on near-misses of the separator', () => {
   assert.deepStrictEqual(splitTldr('a; more:b'), { tldr: 'a; more:b', more: '' });
 });
 
-// --- card #133: levels ---------------------------------------------------------
+// --- levels ---------------------------------------------------------
 
 test('notificationLevel returns the entry level for the four legal values', () => {
   for (const level of ['debug', 'info', 'warning', 'error']) {
@@ -70,7 +70,7 @@ test('notificationLevel defaults absent/unknown/nullish to info (back-compat)', 
   assert.strictEqual(notificationLevel(null), 'info');
 });
 
-// --- card #133 render guard: the tray builds DOM nodes, never string HTML ------
+// --- render guard: the tray builds DOM nodes, never string HTML ---------------
 // renderNotifList lives in app.js (DOM code, not require-able), so this pins
 // the mechanism at source level: the TLDR goes through splitTldr into a
 // <strong> node via textContent, and no notification field rides innerHTML.

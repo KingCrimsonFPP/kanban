@@ -1,6 +1,6 @@
 # 0005. Archive column gets full UI parity; archive stays a location
 
-Date: 2026-07-09 · Status: accepted · Card: #34 · Amends: 0002's presentation
+Date: 2026-07-09 · Status: accepted · Amends: 0002's presentation
 
 ## Context
 

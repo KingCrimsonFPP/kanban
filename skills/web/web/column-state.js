@@ -1,23 +1,23 @@
 'use strict';
-// Pure helpers for per-column collapse state (card #15). No DOM/localStorage
+// Pure helpers for per-column collapse state. No DOM/localStorage
 // access here on purpose — same dual-environment pattern as refresh-policy.js,
 // so this is unit-testable from node --test AND loaded as a plain <script> in
 // the browser (app.js calls these as bare globals).
 //
-// localStorage discipline (established here; #18 sort choices and #20
+// localStorage discipline (established here; sort choices and
 // fullscreen prefs follow the same scheme): one key per board+feature,
 // `kanban.<projectName>.<feature>`, via storageKey() below — so unrelated UI
 // state never collides even though it all lives under one localStorage origin.
 
-// card #31: the live columns are the board's configured `statuses` list
+// The live columns are the board's configured `statuses` list
 // (config.yaml, ordered = column order); the built-in four are only the
 // DEFAULT when no list is configured. Archive stays a location-column pinned
-// at the far right, never part of the list. The pre-#31 constants below are
+// at the far right, never part of the list. The constants below are
 // kept as the default shape (and for back-compat with existing callers).
 const DEFAULT_STATUSES = ['backlog', 'todo', 'doing', 'done'];
 const COLUMN_IDS = ['backlog', 'todo', 'doing', 'done', 'archive'];
 const COLUMN_LABELS = { backlog: 'Backlog', todo: 'Todo', doing: 'Doing', done: 'Done', archive: 'Archive' };
-// Suggested defaults from the card: four live columns expanded, Archive collapsed.
+// Defaults: four live columns expanded, Archive collapsed.
 const DEFAULT_COLLAPSED = { backlog: false, todo: false, doing: false, done: false, archive: true };
 
 // The live status list a configured value resolves to. Tolerance (same
@@ -25,7 +25,7 @@ const DEFAULT_COLLAPSED = { backlog: false, todo: false, doing: false, done: fal
 // dropped — archive is a location-column, never a status — and an
 // empty/absent list falls back to the built-in four.
 function liveStatuses(statuses) {
-  const list = [...new Set((statuses || []).filter((s) => s !== 'archive'))]; // dedupe: repeated config entries would render duplicate columns + duplicate cards (card #31 verify finding)
+  const list = [...new Set((statuses || []).filter((s) => s !== 'archive'))]; // dedupe: repeated config entries would render duplicate columns + duplicate cards
   return list.length ? list : DEFAULT_STATUSES;
 }
 
@@ -36,7 +36,7 @@ function columnIdsFor(statuses) {
 }
 
 // Which column a card's on-disk status renders in: itself when listed, else
-// the list's FIRST column — the catch-all (card #31's "unknown status lands
+// the list's FIRST column — the catch-all ("unknown status lands
 // in backlog": backlog IS the first column of the default list). The file is
 // never rewritten; promotion = the human adds the status to config.yaml.
 function columnForStatus(status, statuses) {
@@ -50,7 +50,7 @@ function columnLabel(id) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// card #54: whether a column header shows the + quick-create button. Live
+// Whether a column header shows the + quick-create button. Live
 // columns only — you can't create an archived card (ADR 0002: archive is a
 // LOCATION, not a status) — and never on a collapsed strip (no room next to
 // the stacked toggle + count, and expanding is one click away anyway).
@@ -62,7 +62,7 @@ function storageKey(projectName, feature) {
   return `kanban.${projectName || 'default'}.${feature}`;
 }
 
-// --- card #56: map view status-filter ----------------------------------------
+// --- map view status-filter ----------------------------------------
 // One show/hide toggle per column (the configured statuses in column order +
 // archive, the location pseudo-column — the map always includes archived
 // cards, see renderMapView). Same shape and merge discipline as the collapse
@@ -89,7 +89,7 @@ function mergeMapStatusFilter(saved, ids) {
 
 // Which toggle governs a card: archive for archived cards (a LOCATION beats
 // the parked pre-archive status, same precedence as the board's fifth column
-// and the map's grey .archived stroke — card #57), else the card's board
+// and the map's grey .archived stroke), else the card's board
 // column via columnForStatus — so an unlisted on-disk status follows its
 // catch-all FIRST column's toggle, exactly where the board files the card.
 function mapFilterColumn(card, statuses) {
@@ -107,17 +107,15 @@ function mapFilterVisibleIds(cards, filter, statuses) {
   return new Set((cards || []).filter((c) => f[mapFilterColumn(c, statuses)] !== false).map((c) => c.id));
 }
 
-// --- card #98 reopen ("we are missing archived status"): the gantt's own
-// default-filter shape ----------------------------------------------------------
+// --- the gantt's own default-filter shape ----------------------------------------------------------
 // Same merge discipline as defaultMapStatusFilter/mergeMapStatusFilter above,
 // but the Archive id defaults OFF instead of ON: every live status pill
-// keeps defaulting ON (unchanged #98 behavior), while the NEW Archive pill
-// starts OFF so an unconfigured/fresh board's gantt renders exactly as
-// before this reopen until a human opts in. This is the one thing that
-// differs from the map's Archive pill (#56, always ON by default — the map
-// has always included archived cards); reusing mergeMapStatusFilter directly
-// would have defaulted the new key to true, flipping the gantt's default
-// view the moment the pill existed.
+// defaults ON, while the Archive pill starts OFF so an unconfigured/fresh
+// board's gantt shows live work only until a human opts in. This is the one
+// thing that differs from the map's Archive pill (always ON by default — the
+// map has always included archived cards); reusing mergeMapStatusFilter
+// directly would default the archive key to true and flip the gantt's
+// default view.
 
 function defaultGanttStatusFilter(ids) {
   const out = {};
@@ -136,13 +134,13 @@ function mergeGanttStatusFilter(saved, ids) {
   return result;
 }
 
-// --- card #98 verify finding: the gantt's own visibility rule -----------------
+// --- the gantt's own visibility rule -----------------
 // mapFilterVisibleIds (above) folds an unlisted on-disk status into the FIRST
 // column's toggle — correct for the map/board, where that catch-all column is
 // literally where the card renders. The gantt does NOT share that semantics:
 // gantt-model.js's ganttGroups buckets by the RAW status and gives an unlisted
 // one its own separate, labeled group row, entirely unrelated to any board
-// column. Reusing mapFilterVisibleIds there let an unrelated pill (e.g. the
+// column. Reusing mapFilterVisibleIds there would let an unrelated pill (e.g. the
 // first column's) silently hide a group it doesn't represent, with no pill of
 // its own to control it directly. Here, a status absent from `statuses` (no
 // pill exists for it — buildGanttFilterRow only emits one per board status)
@@ -157,11 +155,11 @@ function ganttFilterVisibleIds(cards, filter, statuses) {
     .map((c) => c.id));
 }
 
-// --- card #101: pill interaction grammar — left toggle (flips one pill,
-// unchanged above), right SOLO. Right-click a pill: that status on, every
+// --- pill interaction grammar — left toggle (flips one
+// pill), right SOLO. Right-click a pill: that status on, every
 // other off. Right-click again on an already-soloed pill (the only one ON):
 // restore ALL on ("viceversa"). One pure rule shared by all three
-// status-filter rows (map #56, gantt #98, calendar #99) — app.js's
+// status-filter rows (map, gantt, calendar) — app.js's
 // solo*StatusFilter wrappers each feed it their own loaded filter + id list,
 // same as the existing toggle*StatusFilter wrappers do for the left-click
 // rule. A missing filter key counts as ON, same defensive convention as
@@ -201,9 +199,9 @@ function defaultCollapsed(columnIds) {
 // object, or carry stale/unknown keys from a prior column set) with the
 // defaults, so a partial/corrupt saved value never crashes the board or
 // silently drops a column's state — unknown keys are dropped, missing keys
-// fall back to the default, and only real booleans are trusted. card #31:
-// pass the board's current column ids to merge against a dynamic column set;
-// omitting them keeps the built-in five (existing callers unchanged).
+// fall back to the default, and only real booleans are trusted. Pass
+// the board's current column ids to merge against a dynamic column set;
+// omitting them keeps the built-in five.
 function mergeCollapsedState(saved, ids) {
   const columnIds = ids || COLUMN_IDS;
   const result = defaultCollapsed(columnIds);
@@ -215,7 +213,7 @@ function mergeCollapsedState(saved, ids) {
   return result;
 }
 
-// --- card #97: map view section collapse (the graph + the "No dependencies"
+// --- map view section collapse (the graph + the "No dependencies"
 // list) --------------------------------------------------------------------
 // A fixed small key set — not a dynamic column set like the collapse/
 // status-filter state above — so the merge needs no `ids` param. Same
