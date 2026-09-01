@@ -174,11 +174,20 @@ payload, or action grammar, only how much of the screen the board uses:
 Of `#scroll`'s other descendants at this tier: the map and gantt views'
 SVG canvases size themselves from data inside their own
 `overflow-x:auto` scroller, so an uncapped `#scroll` never stretches
-them — no cap needed. The calendar's 7-column month grid and the
-pending-changes tray both read badly stretched edge to edge on an
-uncapped `#scroll` instead, so `#calview` (centered, ~900px cap) and
-`.pend` (~640px cap) get their own readable caps at this tier, independent
-of `#scroll`'s width.
+them — no cap needed. The calendar's 7-column month grid reads badly
+stretched edge to edge on an uncapped `#scroll`, so `#calview` gets its
+own readable cap (centered, ~900px), independent of `#scroll`'s width.
+The pending-changes tray (`#pend`) leaves the document flow entirely at
+this tier and floats as a fixed bottom-left overlay (~380px wide, capped
+at 45vh tall with its own internal scroll) so it stays reachable on tall
+boards instead of sitting below the fold — it's still gated by the exact
+same "any ops queued, or a note to show" check `render()` always used, so
+it only appears while there's something to show, and board content stays
+scrollable underneath it. It floats clear of the scroll-button stack
+(bottom-right, no horizontal overlap at this width) and above ordinary
+board content but below an open card sheet's backdrop. Below 900px the
+tray is untouched — just an ordinary block at the bottom of the page, like
+before.
 
 `hnav` (the horizontal-scroll step buttons on the Map view's dependency
 graph) hides on `(hover:hover) and (pointer:fine)` — a **capability** query,
@@ -217,6 +226,19 @@ layout. Font/tap sizing is untouched by width tiers.
   always also visible in a selectable text box under the Copy button.
 - All card text is rendered via `textContent` (never string-built HTML) — card
   titles and bodies are user data; keep it XSS-safe by construction.
+- Desktop right-click card menu (not the mobile scroll-button stack above,
+  despite both being called "the context menu" — this one is a real
+  right-click): on `(hover:hover) and (pointer:fine)` devices, right-clicking
+  a live board card opens a hand-rolled menu at the cursor — Open, Archive,
+  Delete (arms red with "Delete?" on the first click, fires on the second,
+  same two-tap shape as the mobile stack's own delete arm), Dependency tree,
+  Dependency path — every action routes through the same `queue()`/
+  `graphFocus()` machinery the detail sheet's own buttons use, no parallel
+  path. It closes on click-away, Esc, scroll, or switching views. The gate is
+  checked per-event off a live `MediaQueryList`, so it never registers any
+  behavior for a coarse-pointer device — no `preventDefault`, no menu; native
+  long-press is untouched there. Archived cards are excluded for now — right-
+  clicking one still shows the browser's native menu.
 
 ## What the editor deliberately does not do
 

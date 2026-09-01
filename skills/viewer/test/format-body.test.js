@@ -225,9 +225,28 @@ test('tier 2: the calendar view gets its own readable, centered cap — its 7-co
   assert.match(block, /#calview\{[^}]*max-width:900px[^}]*margin:0 auto[^}]*\}/);
 });
 
-test('tier 2: the pending-changes tray gets a readable cap — its rows push "remove" to the far edge (margin-left:auto) and its payload textarea is width:100%', () => {
+test('tier 2: the pending-changes tray (#pend, id-scoped — .pend never names any other element) floats as a fixed bottom-left overlay, capped and internally scrollable', () => {
   const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
-  assert.match(block, /\.pend\{[^}]*max-width:640px[^}]*\}/);
+  assert.match(block, /#pend\{[^}]*position:fixed[^}]*\}/);
+  assert.match(block, /#pend\{[^}]*left:24px[^}]*\}/);
+  assert.match(block, /#pend\{[^}]*bottom:18px[^}]*\}/);
+  assert.match(block, /#pend\{[^}]*max-height:45vh[^}]*\}/);
+  assert.match(block, /#pend\{[^}]*overflow-y:auto[^}]*\}/);
+});
+
+test('tier 2: the tray sits above ordinary board content but below #modal\'s backdrop, so an open card sheet still wins', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  const modalZ = /#modal\{[^}]*z-index:(\d+)/.exec(nonMediaCss) || /#modal\{[^}]*z-index:(\d+)/.exec(css);
+  const pendZ = /#pend\{[^}]*z-index:(\d+)/.exec(block);
+  assert.ok(modalZ, '#modal must declare a z-index');
+  assert.ok(pendZ, '#pend must declare a z-index inside the tier-2 block');
+  assert.ok(Number(pendZ[1]) < Number(modalZ[1]), '#pend z-index must be below #modal\'s backdrop z-index');
+});
+
+test('the base (unconditional) #pend/.pend rule never floats — no position:fixed outside the >=900px block, so phone stays an ordinary flow block', () => {
+  assert.match(nonMediaCss, /\.pend\{[^}]*\}/);
+  assert.ok(!/\.pend\{[^}]*position:fixed/.test(nonMediaCss), '.pend must not be position:fixed at the base tier');
+  assert.ok(!/#pend\{/.test(nonMediaCss), '#pend must only be styled inside the >=900px media block');
 });
 
 test('tier 2: the map and gantt SVG canvases are NOT capped — they size themselves from data inside their own overflow-x:auto scroller, so widening #scroll never stretches them', () => {
@@ -266,4 +285,80 @@ test("render() wraps each board section (header + cards) in a .boardcol containe
   const matches = src.match(/el\("div","boardcol"/g) || [];
   assert.strictEqual(matches.length, 2, 'expected one .boardcol wrapper for status columns and one for the archive section');
   assert.match(src, /el\("div","colcards"\)/);
+});
+
+// --- right-click card menu: desktop-only capability gate ---------------------
+// (hover:hover) and (pointer:fine) — same gate hnav hides on above — checked
+// per-event off a live MediaQueryList, so a coarse-pointer device's listener
+// is a true no-op: no preventDefault, no menu, native long-press untouched.
+
+test('the fineMQ capability gate uses the same (hover: hover) and (pointer: fine) media query as hnav', () => {
+  assert.match(src, /const fineMQ=window\.matchMedia\("\(hover: hover\) and \(pointer: fine\)"\);/);
+});
+
+test('the contextmenu listener checks fineMQ.matches FIRST, before resolving a card or calling preventDefault — a coarse-pointer device never runs any of that', () => {
+  const start = src.indexOf('document.body.addEventListener("contextmenu"');
+  assert.ok(start !== -1, 'no contextmenu listener found');
+  const end = src.indexOf('});', start);
+  const body = src.slice(start, end);
+  const gateIdx = body.indexOf('if(!fineMQ.matches)return;');
+  const preventIdx = body.indexOf('e.preventDefault()');
+  assert.ok(gateIdx !== -1, 'contextmenu listener must check fineMQ.matches');
+  assert.ok(preventIdx !== -1, 'contextmenu listener must call preventDefault for a resolved live card');
+  assert.ok(gateIdx < preventIdx, 'the fineMQ gate must run before preventDefault, not after');
+});
+
+test('preventDefault is called exactly once in the whole template, and only inside the gated contextmenu listener — no unconditional contextmenu interception exists anywhere', () => {
+  const matches = src.match(/\.preventDefault\(\)/g) || [];
+  assert.strictEqual(matches.length, 1, 'expected exactly one preventDefault() call in the whole template');
+  const ctxStart = src.indexOf('document.body.addEventListener("contextmenu"');
+  const ctxEnd = src.indexOf('});', ctxStart);
+  assert.ok(src.indexOf('.preventDefault()') > ctxStart && src.indexOf('.preventDefault()') < ctxEnd,
+    'the sole preventDefault() call must live inside the contextmenu listener');
+});
+
+test('the contextmenu listener resolves the target to a live (non-archived) board card before doing anything — archived cards and non-card targets fall through untouched', () => {
+  const start = src.indexOf('document.body.addEventListener("contextmenu"');
+  const end = src.indexOf('});', start);
+  const body = src.slice(start, end);
+  assert.match(body, /e\.target\.closest\("#board \[data-card\]"\)/, 'must scope to live board card tiles under #board, not the detail sheet');
+  assert.match(body, /if\(!c\|\|c\.arch\)/, 'archived cards (and unresolved targets) must be excluded — v1 leaves them to the native menu');
+});
+
+test('the menu is built with el()/textContent only, never string-built HTML, and positions itself solely via CSSOM (style.left/top)', () => {
+  const start = src.indexOf('function openCtxMenu(');
+  const end = src.indexOf('\nfunction ', start + 1);
+  const body = src.slice(start, end);
+  assert.match(body, /el\("div","ctxmenu"\)/);
+  assert.match(body, /el\("button","ctxitem",label\)/);
+  assert.ok(!body.includes('innerHTML'), 'the context menu must never be string-built HTML');
+  assert.match(body, /m\.style\.left=/);
+  assert.match(body, /m\.style\.top=/);
+});
+
+test('Delete arms red on the first click ("Delete?" + .armed) and only fires the delete op on a second click on the same still-open menu — mirrors the stack\'s delArm two-tap pattern', () => {
+  const start = src.indexOf('function openCtxMenu(');
+  const end = src.indexOf('\nfunction ', start + 1);
+  const body = src.slice(start, end);
+  assert.match(body, /if\(!armed\)\{armed=true;delBtn\.textContent="Delete\?";delBtn\.classList\.add\("armed"\);return\}/);
+  assert.match(body, /closeCtxMenu\(\);ctxDelete\(id\)/);
+});
+
+test('Open/Archive/Delete queue through the SAME queue() ops machinery the detail sheet uses — no parallel write path', () => {
+  assert.match(src, /function ctxArchive\(id\)\{const c=find\(id\);if\(!c\|\|c\.arch\)return;queue\(\{op:"archive",id:id\}\);/);
+  assert.match(src, /function ctxDelete\(id\)\{queue\(\{op:"delete",id:id\}\);/);
+});
+
+test('the menu\'s "Dependency tree"/"Dependency path" items and the detail sheet\'s own buttons call the SAME graphFocus() helper — one tree:/path: implementation, not two', () => {
+  assert.match(src, /function graphFocus\(gk,id\)\{/);
+  assert.match(src, /if\(act==="graphfocus"\)\{graphFocus\(t\.dataset\.gk,id\);return\}/);
+  assert.match(src, /item\("Dependency tree",\(\)=>\{closeCtxMenu\(\);graphFocus\("tree",id\)\}\)/);
+  assert.match(src, /item\("Dependency path",\(\)=>\{closeCtxMenu\(\);graphFocus\("path",id\)\}\)/);
+});
+
+test('the menu closes on click-away, Esc, scroll, and view switch', () => {
+  assert.match(src, /if\(ctxMenuEl&&!e\.target\.closest\("#ctxmenu"\)\)closeCtxMenu\(\);/, 'click elsewhere (delegated body click listener) must close the menu');
+  assert.match(src, /if\(e\.key==="Escape"\)\{if\(ctxMenuEl\)\{closeCtxMenu\(\);return\}/, 'Esc must close the menu (and take priority over closing the card sheet)');
+  assert.match(src, /sc\.addEventListener\("scroll",\(\)=>\{if\(ctxMenuEl\)closeCtxMenu\(\)\},\{passive:true\}\);/, 'scrolling #scroll must close the menu');
+  assert.match(src, /function switchView\(v\)\{\s*if\(activeView===v\)return;\s*if\(ctxMenuEl\)closeCtxMenu\(\);/, 'switching views must close the menu');
 });
