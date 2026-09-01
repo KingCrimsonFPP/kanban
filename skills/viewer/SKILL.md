@@ -142,6 +142,38 @@ tree"/"Dependency path" buttons described above.
    SKILL.md), then regenerate and redeliver a fresh editor with a new base
    stamp so the loop continues.
 
+## Width tiers
+
+The viewer is tap-first at every size — no layout tier changes the queue,
+payload, or action grammar, only how much of the screen the board uses:
+
+- **<560px (phone):** the baseline single centered column, unchanged.
+- **560-899px:** the column (`#scroll`) widens to ~720px; nothing else about
+  the layout changes.
+- **>=900px (desktop/tablet landscape):** the board renders as a side-by-side
+  column strip instead of a stacked accordion — each visible status section
+  (board order) becomes a flex column, min-width ~260px, flex-grow, with its
+  own independent vertical scroll, mirroring kanban-web's
+  `main#board`/`.column` mechanism (`skills/web/web/app.css`); a
+  tap-collapsed section narrows into a slim strip rather than holding the
+  full column width. The card detail sheet, new-card form, and
+  notifications pop-up center as a dialog capped at ~640px instead of
+  sheeting up from the bottom — same content, same behavior. `render()`
+  wraps every board section (header + its cards) in a `.boardcol` container
+  at every width so this tier's CSS can column-ize the existing DOM without
+  a different render path below 900px, where `.boardcol` renders as a plain
+  unstyled block, identical to the old flat sibling layout.
+
+`hnav` (the horizontal-scroll step buttons on the Map view's dependency
+graph) hides on `(hover:hover) and (pointer:fine)` — a **capability** query,
+not a width breakpoint, so a touch device keeps the buttons regardless of
+screen size and a mouse/trackpad loses them regardless of screen size
+(scrollbars and shift-wheel cover it there). The scroll-button stack
+(`#scrollbtns`, see below) sits outside every width tier and every media
+query — it's the swipe-down insurance and context menu, unrelated to
+layout. Calendar scaling, font/tap sizing, and pending-tray placement are
+untouched by width tiers.
+
 ## Mobile viewer notes (learned the hard way)
 
 - The Claude mobile app dismisses the HTML viewer on swipe-down, so the editor

@@ -398,6 +398,22 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .epicchip.on{border-color:#f0883e;color:#f0883e;background:rgba(240,136,62,.12)}
 .card.archcard{opacity:.55}
 .pill{cursor:pointer}
+/* Tier 1 (560-899px): the single column just grows — nothing else
+   changes, so phone widths below 560px stay pixel-identical (unreached
+   base rule above still says max-width:560px). Tier 2 (>=900px): the board
+   goes side-by-side (each .boardcol a flex column, min-width ~260px,
+   collapsed ones a narrow strip) and modals center instead of sheeting up
+   from the bottom, mirroring the web app's main#board/.column mechanism
+   (skills/web/web/app.css ~lines 80-136) on top of this template's own DOM.
+   The scroll-button stack (#scrollbtns and its children) stays OUTSIDE
+   every media query in this file, at every tier — it is the swipe-down
+   insurance + context menu, unrelated to width. */
+@media(min-width:560px){#scroll{max-width:720px}}
+@media(min-width:900px){#scroll{max-width:1200px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 260px}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}}
+/* Capability query, not width: touch devices (no hover, coarse
+   pointer) keep the hnav step buttons exactly as today at every size;
+   mouse/trackpad users get scrollbars + shift-wheel instead. */
+@media(hover:hover) and (pointer:fine){.hnav{display:none}}
 </style></head><body>
 <div id="scroll">
 <div class="hdr"><b>kanban</b><span class="base">editor · base: __BASE_LABEL__</span><span class="pill" id="pill"></span><button id="bell" aria-label="Notifications">&#128276;<span id="bellcnt" style="display:none"></span></button></div>
@@ -721,28 +737,42 @@ return row}
 function render(){
 const board=$("board");board.replaceChildren();
 board.appendChild(statusPills());
+// Each section (header + its cards) wraps in a .boardcol container at
+// EVERY width — a plain block box below 900px (identical to the old flat
+// sibling list), a flex column strip at >=900px (see the tier-2 media
+// query above). Collapsed sections skip .colcards entirely and render as
+// just the header, which the same media query narrows into a strip.
 COLS.filter(col=>isVis(col)).forEach(col=>{
 const cs=view.filter(c=>qMatch(c)&&!c.arch&&(c.s===col||(col===COLS[0]&&!COLS.includes(c.s))));
 const open=!!colOpen[col];
+const wrap=el("div","boardcol"+(open?"":" collapsed"));
 const h=el("div","colh");
 h.dataset.coltoggle=col;
 h.appendChild(el("span","chev",open?"\\u25be":"\\u25b8"));
 const dot=el("span","dot");dot.style.background=ccol(col);
 h.appendChild(dot);h.appendChild(document.createTextNode(cname(col)));h.appendChild(el("span","cnt",String(cs.length)));
-board.appendChild(h);
-if(!open)return;
-if(cs.length)cs.forEach(c=>board.appendChild(cardNode(c,false)));
-else{const e=el("div",null,"no cards");e.style.cssText="font-size:12px;color:var(--muted);padding:8px 2px";board.appendChild(e)}});
+wrap.appendChild(h);
+if(open){
+const cc=el("div","colcards");
+if(cs.length)cs.forEach(c=>cc.appendChild(cardNode(c,false)));
+else{const e=el("div",null,"no cards");e.style.cssText="font-size:12px;color:var(--muted);padding:8px 2px";cc.appendChild(e)}
+wrap.appendChild(cc)}
+board.appendChild(wrap)});
 if(isVis("archive")){
 const acs=view.filter(c=>c.arch&&qMatch(c));
 const open=!!colOpen["archive"];
+const wrap=el("div","boardcol"+(open?"":" collapsed"));
 const h=el("div","colh");
 h.dataset.coltoggle="archive";
 h.appendChild(el("span","chev",open?"\\u25be":"\\u25b8"));
 const dot=el("span","dot");dot.style.background=ARCHC;
 h.appendChild(dot);h.appendChild(document.createTextNode("Archive"));h.appendChild(el("span","cnt",String(acs.length)));
-board.appendChild(h);
-if(open)acs.forEach(c=>{const n=cardNode(c,false);n.classList.add("archcard");board.appendChild(n)})}
+wrap.appendChild(h);
+if(open){
+const cc=el("div","colcards");
+acs.forEach(c=>{const n=cardNode(c,false);n.classList.add("archcard");cc.appendChild(n)});
+wrap.appendChild(cc)}
+board.appendChild(wrap)}
 const mc=(!creating&&!notifView&&sel!==null)?find(sel):null;
 if(creating){$("modalscroll").replaceChildren(newFormNode());$("modal").style.display=""}
 else if(notifView){$("modalscroll").replaceChildren(notifListNode());$("modal").style.display=""}
