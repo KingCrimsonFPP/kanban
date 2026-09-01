@@ -413,20 +413,45 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
    mechanism (skills/web/web/app.css ~lines 80-136) on top of this
    template's own DOM. Of #scroll's other descendants: the map/gantt SVGs
    size themselves from data inside their own overflow-x:auto scroller
-   (nothing to stretch); the calendar's 7-column month grid and the
-   pending-changes tray (its "remove" buttons push-right via margin-left:
-   auto, its payload textarea is width:100%) both read badly stretched
-   edge to edge at this width, so #calview and .pend each get a readable
-   cap, independent of #scroll's now-uncapped width.
+   (nothing to stretch); the calendar's 7-column month grid reads badly
+   stretched edge to edge at this width, so #calview gets a readable cap,
+   independent of #scroll's now-uncapped width. #pend (the pending-changes
+   tray — id-scoped, not .pend, since #pend is the only element that class
+   ever names) leaves the document flow entirely and floats bottom-left as
+   a fixed overlay, clear of #scrollbtns' bottom-RIGHT stack (right:10px,
+   no horizontal overlap at this tier's widths) and above ordinary board
+   content but BELOW #modal's backdrop (z-index:40) so an open card sheet
+   still wins; its own scroll (max-height + overflow-y:auto) keeps a long
+   op queue from ever growing past ~45% of the viewport, and render()'s
+   existing display:none/"block" gate (unchanged) still decides whether it
+   floats at all — it only appears while ops are queued (or a note is
+   showing). Phone stays exactly as before: this rule only exists inside
+   the >=900px block, so the tray is still just an ordinary flow block below
+   560px.
    The scroll-button stack (#scrollbtns and its children) stays OUTSIDE
    every media query in this file, at every tier — it is the swipe-down
    insurance + context menu, unrelated to width. */
 @media(min-width:560px){#scroll{max-width:720px}}
-@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}.pend{max-width:640px}}
+@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}#pend{position:fixed;left:24px;bottom:18px;top:auto;width:380px;max-width:calc(100vw - 48px);max-height:45vh;overflow-y:auto;margin:0;z-index:30}}
 /* Capability query, not width: touch devices (no hover, coarse
    pointer) keep the hnav step buttons exactly as today at every size;
-   mouse/trackpad users get scrollbars + shift-wheel instead. */
+   mouse/trackpad users get scrollbars + shift-wheel instead. The
+   right-click card menu below is gated the same way, in JS (matchMedia),
+   since "hover:hover and pointer:fine" isn't itself a thing a contextmenu
+   listener can be scoped to without a media query hook — a coarse-pointer
+   device never has the listener DO anything (checked first, before any
+   preventDefault), so native long-press/contextmenu stays untouched there. */
 @media(hover:hover) and (pointer:fine){.hnav{display:none}}
+/* Hand-rolled right-click card menu (desktop only, see the JS gate
+   above): a plain fixed-position list, positioned at the cursor and
+   clamped into the viewport by openCtxMenu(). z-index sits above #modal's
+   backdrop (40) so it's reachable even with a card sheet open, below
+   #scrollbtns (50) so the swipe-down stack still wins in the corner it
+   never actually shares with this menu. */
+.ctxmenu{position:fixed;display:flex;flex-direction:column;gap:1px;min-width:172px;background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:5px;box-shadow:0 4px 18px rgba(0,0,0,.22);z-index:45}
+.ctxitem{width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:8px 10px;font-size:13px;color:var(--ink)}
+.ctxitem:hover{background:var(--page)}
+.ctxitem.armed{color:var(--high)}
 </style></head><body>
 <div id="scroll">
 <div class="hdr"><b>kanban</b><span class="base">editor · base: __BASE_LABEL__</span><span class="pill" id="pill"></span><button id="bell" aria-label="Notifications">&#128276;<span id="bellcnt" style="display:none"></span></button></div>
@@ -481,7 +506,7 @@ function ahash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i
 function acol(a){const t=(a||"").trim();if(!t)return null;if(ASGCOL[t])return ASGCOL[t];return APALETTE[ahash(t.toLowerCase())%APALETTE.length]}
 const DATA=__DATA__;
 const NOTIFS=__NOTIFS__;
-let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false;
+let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false,ctxMenuEl=null;
 // Wide screens open live sections by default (Archive stays collapsed) —
 // the collapsed compact overview is a phone affordance. Evaluated once at load.
 if(matchMedia("(min-width:900px)").matches)COLS.forEach(c=>colOpen[c]=true);
@@ -494,6 +519,11 @@ let focusRoot=null;
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
 const btn=(label,act,data)=>{const b=el("button",null,label);b.dataset.act=act;if(data)Object.assign(b.dataset,data);return b};
+// Desktop-only capability gate for the right-click card menu — same
+// query hnav hides on above. A live MediaQueryList (not a one-shot check)
+// so a hybrid device's .matches reflects reality at the moment of each
+// contextmenu event, not just at page load.
+const fineMQ=window.matchMedia("(hover: hover) and (pointer: fine)");
 // Minimal inline formatting for card bodies —
 // **bold** and `code`, nothing else (no headings/lists/links, no nesting
 // inside a matched span). Pure segment splitter, no DOM: scans left to
@@ -874,6 +904,7 @@ return nav}
 const MW=150,MH=54,GX=14,GY=36,MPAD=14;
 function switchView(v){
 if(activeView===v)return;
+if(ctxMenuEl)closeCtxMenu();
 activeView=v;
 document.querySelectorAll("#viewtabs button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
 $("boardview").style.display=v==="board"?"":"none";
@@ -1375,6 +1406,60 @@ $("sdn").addEventListener("click",()=>step(1));
 $("stop").addEventListener("click",()=>{const t=scTgt();t.scrollTo({top:0,behavior:"smooth"})});
 $("sbot").addEventListener("click",()=>{const t=scTgt();t.scrollTo({top:t.scrollHeight,behavior:"smooth"})});
 function closeCard(){sel=null;creating=false;notifView=false;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}
+// Shared by the sheet's own "Dependency tree"/"Dependency path"
+// buttons (the act==="graphfocus" branch below) AND the right-click card
+// menu's matching items — one path, not two, per the tree:/path: contract:
+// overwrite the query box, focus the graph, close whatever sheet is open.
+function graphFocus(gk,id){
+const term=gk+":"+id;
+$("q").value=term;
+qTerms=resolveGraphTerms(String(term).trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
+focusRoot=id;
+closeCard();
+renderMap();renderGantt();renderCalendar()}
+// Right-click card menu (desktop only — see fineMQ above). Open/Archive/
+// Delete queue through the SAME queue() ops machinery the detail sheet's
+// title tap / $sarch / $sdel buttons use — no parallel write path.
+function closeCtxMenu(){if(ctxMenuEl){ctxMenuEl.remove();ctxMenuEl=null}}
+function ctxOpen(id){sel=id;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}
+function ctxArchive(id){const c=find(id);if(!c||c.arch)return;queue({op:"archive",id:id});
+if(String(sel)===String(id)){sel=null;delArm=null;pillEd=null}render()}
+function ctxDelete(id){queue({op:"delete",id:id});
+if(String(sel)===String(id)){sel=null;delArm=null;pillEd=null}render()}
+function openCtxMenu(id,x,y){
+closeCtxMenu();
+const c=find(id);
+if(!c||c.arch)return;
+const m=el("div","ctxmenu");m.id="ctxmenu";
+let armed=false;
+const item=(label,run)=>{const b=el("button","ctxitem",label);b.type="button";
+b.addEventListener("click",ev=>{ev.stopPropagation();run()});m.appendChild(b);return b};
+item("Open",()=>{closeCtxMenu();ctxOpen(id)});
+item("Archive",()=>{closeCtxMenu();ctxArchive(id)});
+const delBtn=item("Delete",()=>{
+if(!armed){armed=true;delBtn.textContent="Delete?";delBtn.classList.add("armed");return}
+closeCtxMenu();ctxDelete(id)});
+if(!isProv(id)){
+item("Dependency tree",()=>{closeCtxMenu();graphFocus("tree",id)});
+item("Dependency path",()=>{closeCtxMenu();graphFocus("path",id)})}
+document.body.appendChild(m);
+ctxMenuEl=m;
+const r=m.getBoundingClientRect();
+const left=Math.max(4,Math.min(x,window.innerWidth-r.width-4));
+const top=Math.max(4,Math.min(y,window.innerHeight-r.height-4));
+m.style.left=left+"px";m.style.top=top+"px"}
+// Delegated like the click handler above it: one listener, gated per-event
+// on fineMQ so a coarse-pointer device's own contextmenu/long-press is
+// NEVER intercepted (no preventDefault runs unless the gate + a live,
+// non-archived board card both resolve first). Archived cards are excluded
+// v1 — the native menu still shows for them.
+document.body.addEventListener("contextmenu",e=>{
+if(!fineMQ.matches)return;
+const card=e.target.closest("#board [data-card]");
+const c=card?find(card.dataset.card):null;
+if(!c||c.arch){if(ctxMenuEl)closeCtxMenu();return}
+e.preventDefault();
+openCtxMenu(c.id,e.clientX,e.clientY)});
 $("smore").addEventListener("click",()=>{stackMode=(stackMode+1)%3;syncStack()});
 $("mclose").addEventListener("click",closeCard);
 $("sarch").addEventListener("click",()=>{if(!modalOpen()||creating)return;const cc=find(sel);if(!cc||cc.arch)return;queue({op:"archive",id:sel});sel=null;delArm=null;pillEd=null;render()});
@@ -1389,6 +1474,7 @@ focusRoot=null;
 qTerms=resolveGraphTerms(String($("q").value||"").trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
 render();renderMap();renderGantt();renderCalendar()});
 sc.addEventListener("touchmove",e=>e.stopPropagation(),{passive:true});
+sc.addEventListener("scroll",()=>{if(ctxMenuEl)closeCtxMenu()},{passive:true});
 document.body.addEventListener("change",e=>{
 const t=e.target;
 if(t.dataset&&t.dataset.act==="asg"){const card=t.closest("[data-card]");if(card){queue({op:"edit",id:card.dataset.card,assignee:t.value});pillEd=null;render()}}});
@@ -1397,6 +1483,11 @@ const t=e.target;
 if(t.id==="fm-blocked")t.style.borderColor=blkTxt(t.value)!==null?"var(--high)":"";
 if(t.id==="fm-review")t.style.borderColor=blkTxt(t.value)!==null?"var(--rev)":""});
 document.body.addEventListener("click",e=>{
+// Ctx-menu item clicks stopPropagation() before they ever reach here
+// (see openCtxMenu), so any click that DOES reach this listener while the
+// menu is open is by definition "elsewhere" — close it (any click on a
+// non-item part of the menu itself is a no-op, not a close).
+if(ctxMenuEl&&!e.target.closest("#ctxmenu"))closeCtxMenu();
 const t=e.target.closest("button,select,input,textarea,[data-card],[data-mapnode],[data-coltoggle],[data-tap],[data-caldaytoggle],[data-calhrtoggle]");
 if(!t)return;
 if(t.dataset&&t.dataset.view!==undefined){switchView(t.dataset.view);return}
@@ -1455,14 +1546,7 @@ if(act==="caltoday"){const n=new Date();calY=n.getFullYear();calM=n.getMonth();c
 const card=t.closest("[data-card]");
 if(!card)return;
 const id=card.dataset.card;
-if(act==="graphfocus"){
-const term=t.dataset.gk+":"+id;
-$("q").value=term;
-qTerms=resolveGraphTerms(String(term).trim().split(/\\s+/).filter(Boolean).map(parseTerm).filter(Boolean));
-focusRoot=id;
-closeCard();
-renderMap();renderGantt();renderCalendar();
-return}
+if(act==="graphfocus"){graphFocus(t.dataset.gk,id);return}
 if(act==="move"){queue({op:"move",id:id,to:t.dataset.to});delArm=null;pillEd=null;render();return}
 if(act==="prio"){queue({op:"edit",id:id,priority:t.dataset.p});pillEd=null;render();return}
 if(act==="ren"){ren=true;descEd=false;pillEd=null;render();return}
@@ -1475,7 +1559,8 @@ if(act==="descsave"){queue({op:"edit",id:id,body:$("descin").value.trim()});desc
 if(act==="desccancel"){descEd=false;render();return}
 if(!act){if(t.closest("#modal"))return;sel=String(sel)===String(id)?null:id;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}});
 $("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeCard()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&(sel!==null||creating||notifView))closeCard()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(ctxMenuEl){closeCtxMenu();return}
+if(sel!==null||creating||notifView)closeCard()}});
 render();
 renderMap();
 renderGantt();
