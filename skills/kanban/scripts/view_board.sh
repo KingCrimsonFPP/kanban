@@ -80,9 +80,11 @@ review_text() {
 
 # id -> status map across live + archived, so waiting flags are done-aware.
 declare -A dep_status
-shopt -s nullglob
-all_cards=("$KANBAN_DIR"/*.card.md "$KANBAN_DIR"/archived/*.card.md)
-shopt -u nullglob
+# globstar: archived/ is scanned RECURSIVELY (ADR 0010) — cards sit at its
+# root or inside optional archived/<package>/ grouping folders.
+shopt -s nullglob globstar
+all_cards=("$KANBAN_DIR"/*.card.md "$KANBAN_DIR"/archived/**/*.card.md)
+shopt -u nullglob globstar
 if [ "${#all_cards[@]}" -gt 0 ]; then
     while read -r cid cst; do
         [ -n "$cid" ] && dep_status[$cid]="$cst"

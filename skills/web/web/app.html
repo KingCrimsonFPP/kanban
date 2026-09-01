@@ -259,6 +259,26 @@
   </div>
 </div>
 
+<!-- Archive popup — the bulk menu's Archive selected asks WHERE
+     first. The package box completes against the board's existing
+     archived/<package>/ folders; a new name creates that folder, an empty box
+     archives to the archived/ root. -->
+<div id="bulk-archive" class="modal-backdrop hidden">
+  <div class="modal bulk-modal">
+    <div class="modal-header popup-header">
+      <h2 id="bulk-archive-title"></h2>
+      <div class="modal-header-actions">
+        <button type="button" id="bulk-archive-close" class="icon-btn" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+    </div>
+    <p class="bulk-hint">Leave empty to archive to the <code>archived/</code> root. A new name creates <code>archived/&lt;name&gt;/</code>.</p>
+    <label>Package <input id="bulk-archive-input" placeholder="existing or new package folder"></label>
+    <div class="bulk-actions">
+      <button type="button" id="bulk-archive-apply">Archive</button>
+    </div>
+  </div>
+</div>
+
 <!-- Schedule… popup — bulk set/clear the date triad. Each row is
      the form's date-field grammar (free-text input + 📅 picker button, wired
      by the shared .date-pick-btn loop) plus a "clear" checkbox; clear wins

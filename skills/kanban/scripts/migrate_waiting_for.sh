@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # One-shot migration: rename the `blocked_by:` frontmatter field
-# to `waiting_for:` across a board, in place. Covers <dir> and <dir>/archived.
+# to `waiting_for:` across a board, in place. Covers <dir> and <dir>/archived,
+# the latter recursively (ADR 0010: archived/<package>/ folders).
 # Frontmatter lines only — body text (narratives, prose mentioning blocked_by)
 # is never touched. Dry-run by default; pass --apply to rewrite.
 # Deliberate ADR-0008 deviation: `updated` is NOT bumped — a mechanical bulk
@@ -24,29 +25,30 @@ has_blocked_by() {
 migrated=0
 errors=0
 
-for dir in "$KANBAN_DIR" "$KANBAN_DIR/archived"; do
-    [ -d "$dir" ] || continue
-    for f in "$dir"/*.card.md; do
-        [ -f "$f" ] || continue
-        has_blocked_by "$f" || continue
+shopt -s nullglob globstar
+all_cards=("$KANBAN_DIR"/*.card.md "$KANBAN_DIR"/archived/**/*.card.md)
+shopt -u nullglob globstar
 
-        if [ "$MODE" = "--apply" ]; then
-            tmp="$f.migrate.tmp"
-            if awk '/^---$/{fm++}
-                    fm==1 && /^blocked_by:/{sub(/^blocked_by:/, "waiting_for:")}
-                    {print}' "$f" > "$tmp" && mv "$tmp" "$f"; then
-                echo "MIGRATED: $f"
-            else
-                echo "ERROR (left untouched): $f" >&2
-                rm -f "$tmp"
-                errors=$((errors + 1))
-                continue
-            fi
+for f in "${all_cards[@]}"; do
+    [ -f "$f" ] || continue
+    has_blocked_by "$f" || continue
+
+    if [ "$MODE" = "--apply" ]; then
+        tmp="$f.migrate.tmp"
+        if awk '/^---$/{fm++}
+                fm==1 && /^blocked_by:/{sub(/^blocked_by:/, "waiting_for:")}
+                {print}' "$f" > "$tmp" && mv "$tmp" "$f"; then
+            echo "MIGRATED: $f"
         else
-            echo "would migrate: $f"
+            echo "ERROR (left untouched): $f" >&2
+            rm -f "$tmp"
+            errors=$((errors + 1))
+            continue
         fi
-        migrated=$((migrated + 1))
-    done
+    else
+        echo "would migrate: $f"
+    fi
+    migrated=$((migrated + 1))
 done
 
 if [ "$MODE" != "--apply" ]; then

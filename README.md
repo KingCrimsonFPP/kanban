@@ -160,12 +160,13 @@ adding it to the list.
 
 ## More docs
 
-- [`docs/adr/`](docs/adr/) — architecture decision records (ADR 0001–0009),
+- [`docs/adr/`](docs/adr/) — architecture decision records (ADR 0001–0010),
   covering why the CLI is Claude-driven, why `kanban-web` gets a scoped
   local-server exception, hand-rolled widgets, tolerant vocabulary registries,
   archive-column UI parity, the shared interaction grammar, the date triad,
-  the machine-managed `updated` field, and review and human-attention as
-  overlay stickers, not columns.
+  the machine-managed `updated` field, review and human-attention as
+  overlay stickers, not columns, and the recursive `archived/` with optional
+  package folders.
 - [`docs/cross-harness.md`](docs/cross-harness.md) — cross-harness caveats:
   which skills port cleanly outside Claude Code and which carry the
   (Claude Only) tag, and why.
