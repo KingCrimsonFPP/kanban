@@ -235,28 +235,69 @@ test('tier 2: the calendar view gets its own readable, centered cap — its 7-co
   assert.match(block, /#calview\{[^}]*max-width:900px[^}]*margin:0 auto[^}]*\}/);
 });
 
-test('tier 2: the pending-changes tray (#pend, id-scoped — .pend never names any other element) floats as a fixed bottom-left overlay, capped and internally scrollable', () => {
+test('tier 2: the pending-changes tray gets a readable cap — no fixed/floating overlay, the tray stays an ordinary flow block at every width', () => {
   const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
-  assert.match(block, /#pend\{[^}]*position:fixed[^}]*\}/);
-  assert.match(block, /#pend\{[^}]*left:24px[^}]*\}/);
-  assert.match(block, /#pend\{[^}]*bottom:18px[^}]*\}/);
-  assert.match(block, /#pend\{[^}]*max-height:45vh[^}]*\}/);
-  assert.match(block, /#pend\{[^}]*overflow-y:auto[^}]*\}/);
+  assert.match(block, /\.pend\{[^}]*max-width:640px[^}]*\}/);
 });
 
-test('tier 2: the tray sits above ordinary board content but below #modal\'s backdrop, so an open card sheet still wins', () => {
-  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
-  const modalZ = /#modal\{[^}]*z-index:(\d+)/.exec(nonMediaCss) || /#modal\{[^}]*z-index:(\d+)/.exec(css);
-  const pendZ = /#pend\{[^}]*z-index:(\d+)/.exec(block);
-  assert.ok(modalZ, '#modal must declare a z-index');
-  assert.ok(pendZ, '#pend must declare a z-index inside the tier-2 block');
-  assert.ok(Number(pendZ[1]) < Number(modalZ[1]), '#pend z-index must be below #modal\'s backdrop z-index');
+test('the tray never floats — no #pend selector and no position:fixed on .pend anywhere in the stylesheet (a rejected fixed-overlay tray was reverted)', () => {
+  assert.ok(!/#pend\{/.test(css), '#pend must not be styled anywhere — the tray is .pend-scoped only, in normal flow');
+  assert.ok(!/\.pend\{[^}]*position:fixed/.test(css), '.pend must not be position:fixed at any tier');
 });
 
-test('the base (unconditional) #pend/.pend rule never floats — no position:fixed outside the >=900px block, so phone stays an ordinary flow block', () => {
+test('the base (unconditional) .pend rule is present and unstyled by width, phone stays an ordinary flow block', () => {
   assert.match(nonMediaCss, /\.pend\{[^}]*\}/);
-  assert.ok(!/\.pend\{[^}]*position:fixed/.test(nonMediaCss), '.pend must not be position:fixed at the base tier');
-  assert.ok(!/#pend\{/.test(nonMediaCss), '#pend must only be styled inside the >=900px media block');
+});
+
+// --- sticky thin header (all widths) + prominent "N pending" pill -----------
+// Rework: the floating tray is gone; instead .hdr sticks to the top of
+// #scroll at every width and compacts once scrolled, and #pill gets an
+// unmissable accent fill so queued-but-unapplied changes are never missed.
+
+test('.hdr is sticky at the TOP of #scroll (not gated behind any width media query) with a solid background and a z-index below #modal\'s backdrop', () => {
+  assert.match(nonMediaCss, /\.hdr\{[^}]*position:sticky[^}]*\}/);
+  assert.match(nonMediaCss, /\.hdr\{[^}]*top:0[^}]*\}/);
+  const hdrBg = /\.hdr\{[^}]*background:(var\([^)]+\))/.exec(nonMediaCss);
+  assert.ok(hdrBg, '.hdr must declare a solid background so board content cannot bleed through while stuck');
+  mediaBlocks.forEach(block => {
+    assert.ok(!block.includes('.hdr{'), '.hdr must not be re-declared inside any @media block — it is sticky at every width');
+  });
+  const modalZ = /#modal\{[^}]*z-index:(\d+)/.exec(nonMediaCss) || /#modal\{[^}]*z-index:(\d+)/.exec(css);
+  const hdrZ = /\.hdr\{[^}]*z-index:(\d+)/.exec(nonMediaCss);
+  assert.ok(modalZ, '#modal must declare a z-index');
+  assert.ok(hdrZ, '.hdr must declare a z-index');
+  assert.ok(Number(hdrZ[1]) < Number(modalZ[1]), '.hdr z-index must be below #modal\'s backdrop z-index');
+});
+
+test('.hdr.thin compacts vertical padding and shrinks the title once scrolled', () => {
+  assert.match(nonMediaCss, /\.hdr\.thin\{[^}]*padding:[^}]*\}/);
+  assert.match(nonMediaCss, /\.hdr\.thin b\{[^}]*font-size:1[0-4]px[^}]*\}/);
+});
+
+test('a scroll listener on #scroll (sc) toggles .hdr.thin only when crossing the threshold — cheap, no per-tick layout thrash', () => {
+  assert.match(src, /const thin=sc\.scrollTop>\d+;/);
+  assert.match(src, /if\(thin!==hdrThin\)\{hdrThin=thin;\$\("hdr"\)\.classList\.toggle\("thin",thin\)\}/);
+  assert.ok(src.includes('id="hdr"'), '.hdr needs an id for the toggle listener to target it');
+});
+
+test('only the .hdr line is sticky — #searchrow and #viewtabs are not', () => {
+  assert.ok(!/#searchrow\{[^}]*position:sticky/.test(css), '#searchrow must scroll away normally');
+  assert.ok(!/\.viewtabs\{[^}]*position:sticky/.test(css), '.viewtabs must scroll away normally');
+});
+
+test('#pill ("N pending") is an unmissable solid accent fill with bold contrasting text, not just colored text', () => {
+  assert.match(nonMediaCss, /\.pill\{[^}]*background:var\(--accent\)[^}]*\}/);
+  assert.match(nonMediaCss, /\.pill\{[^}]*color:#fff[^}]*\}/);
+  assert.match(nonMediaCss, /\.pill\{[^}]*font-weight:700[^}]*\}/);
+});
+
+test('#pill collapses to nothing when empty (no ops queued) instead of showing a stray colored blob', () => {
+  assert.match(nonMediaCss, /\.pill:empty\{[^}]*\}/);
+  assert.match(src, /\$\("pill"\)\.textContent=ops\.length\?ops\.length\+" pending":""/);
+});
+
+test('#pill stays tappable — jumps to the tray on click, same gate as before', () => {
+  assert.match(src, /\$\("pill"\)\.addEventListener\("click",\(\)=>\{if\(!ops\.length\)return;sc\.scrollTo/);
 });
 
 test('tier 2: the map and gantt SVG canvases are NOT capped — they size themselves from data inside their own overflow-x:auto scroller, so widening #scroll never stretches them', () => {
