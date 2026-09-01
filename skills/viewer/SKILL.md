@@ -240,12 +240,18 @@ tray at the bottom of the page.
 - Desktop right-click card menu (not the mobile scroll-button stack above,
   despite both being called "the context menu" — this one is a real
   right-click): on `(hover:hover) and (pointer:fine)` devices, right-clicking
-  a live board card opens a hand-rolled menu at the cursor — Open, Archive,
-  Delete (arms red with "Delete?" on the first click, fires on the second,
-  same two-tap shape as the mobile stack's own delete arm), Dependency tree,
-  Dependency path — every action routes through the same `queue()`/
-  `graphFocus()` machinery the detail sheet's own buttons use, no parallel
-  path. It closes on click-away, Esc, scroll, or switching views. The gate is
+  a live board card opens a hand-rolled menu at the cursor — Open, one
+  "Move to `<Status>`" row per status in `statuses` order except the card's
+  own, then (below a separator) Archive, Delete (arms red with "Delete?" on
+  the first click, fires on the second, same two-tap shape as the mobile
+  stack's own delete arm), Dependency tree, Dependency path — every action
+  routes through the same `queue()`/`graphFocus()` machinery the detail
+  sheet's own buttons use, no parallel path. Move is the tap-free
+  alternative to drag-and-drop, which this editor deliberately does not
+  offer (see below); because it rides `queue()` it inherits the `doing`
+  entry gate unchanged — moving a card with unresolved `waiting_for` or a
+  `blocked` sticker into `doing` is refused there with the reason left in
+  the tray note, exactly as from the detail sheet's status pill. It closes on click-away, Esc, scroll, or switching views. The gate is
   checked per-event off a live `MediaQueryList`, so it never registers any
   behavior for a coarse-pointer device — no `preventDefault`, no menu; native
   long-press is untouched there. Archived cards are excluded for now — right-
@@ -259,3 +265,19 @@ editable, including dates/tags/`waiting_for` and unknown frontmatter keys
 via the "All fields" grid (raw strings, `edit.fm` op). The payload
 format still has room to grow; extend the op vocabulary in
 `references/apply-protocol.md` first, then the UI.
+
+**No drag-and-drop, at any width.** kanban-web moves cards by drag; this
+editor moves them by the status pill or the right-click menu's "Move to"
+rows. On touch that is a correctness call, not a taste one: the Claude
+mobile app dismisses the HTML viewer on swipe-down, and a card drag is
+indistinguishable from that gesture at gesture-start, so a misfire costs
+the whole unsent op tray — which lives only in page memory until the
+payload is pasted. Horizontal finger-drags were already rejected for the
+weaker version of this problem (see `hscrollNav`, which exists because
+sideways drags "bleed into vertical scroll and the artifact view hijacks
+the gesture"), and native HTML5 DnD — what kanban-web uses — has no touch
+support to reuse anyway. At >=900px the column strip could carry native
+drag safely behind the same `(hover:hover) and (pointer:fine)` query
+`hnav` uses, but that is precisely the tier where kanban-web is available
+and writes straight to disk with no payload round-trip, so the viewer
+leaves drag to it.
