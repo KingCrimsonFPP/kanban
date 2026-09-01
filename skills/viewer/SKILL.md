@@ -218,8 +218,10 @@ layout. Font/tap sizing is untouched by width tiers.
   that field, tap the title to rename — and keeps
   the description dead last. New-card creation happens in the same
   sheet via Accept/Cancel; nothing joins the board until Accept. Board status
-  sections are tap-collapsible and start collapsed —
-  name + count only — so the board opens as a compact overview;
+  sections are tap-collapsible and start collapsed on phone widths —
+  name + count only — so the board opens as a compact overview; at >=900px
+  live sections open by default and only Archive starts collapsed (evaluated
+  once at load), with the status-pill row on its own line above the strip;
   queueing a create auto-expands the section the new card lands in.
 - Inline chat widgets don't render on all clients; the HTML-file route is the
   reliable one. Clipboard access can fail in embedded viewers, so the payload is

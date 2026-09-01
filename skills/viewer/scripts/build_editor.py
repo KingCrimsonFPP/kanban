@@ -464,6 +464,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 </div>
 <div id="boardview">
 <div><button id="newbtn">+ New card</button></div>
+<div id="boardpills"></div>
 <div id="board"></div>
 </div>
 <div id="mapview" style="display:none"></div>
@@ -506,6 +507,9 @@ function acol(a){const t=(a||"").trim();if(!t)return null;if(ASGCOL[t])return AS
 const DATA=__DATA__;
 const NOTIFS=__NOTIFS__;
 let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false,ctxMenuEl=null;
+// Wide screens open live sections by default (Archive stays collapsed) —
+// the collapsed compact overview is a phone affordance. Evaluated once at load.
+if(matchMedia("(min-width:900px)").matches)COLS.forEach(c=>colOpen[c]=true);
 // The tree:/path: query's root card keeps
 // the existing selection glow even after the sheet closes. `sel` can't do
 // double duty here (render() reopens the sheet whenever sel!==null), so
@@ -779,7 +783,7 @@ row.appendChild(b)});
 return row}
 function render(){
 const board=$("board");board.replaceChildren();
-board.appendChild(statusPills());
+$("boardpills").replaceChildren(statusPills());
 // Each section (header + its cards) wraps in a .boardcol container at
 // EVERY width — a plain block box below 900px (identical to the old flat
 // sibling list), a flex column strip at >=900px (see the tier-2 media
