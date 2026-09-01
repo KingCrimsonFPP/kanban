@@ -1508,8 +1508,36 @@ async function onDrop(id, status) {
   }
 }
 
+// ?card=<id>&view=<board|map|gantt|calendar> deep links (deep-link.js owns
+// the pure querystring parse) — consumed exactly ONCE, chained directly onto
+// the very first loadBoard() below. Nothing re-checks location.search after
+// this: the 5s poll goes through autoRefreshTick/applyBoardData, never
+// loadBoard(), and every other loadBoard() call site (manual refresh,
+// post-drag resync) is a separate call this function is never chained onto —
+// so the deep link "wins" on load, then gets out of the way exactly as the
+// poll and the persisted view mode expect. A bad/unknown id never touches
+// viewMode at all: "loads normally" means the persisted view stands.
+function consumeDeepLink() {
+  const link = parseDeepLink(location.search);
+  if (!link) return;
+  if (link.id == null) { toast('Deep link card id is invalid — loaded normally.'); return; }
+  const card = state.active.concat(state.archived).find((c) => c.id === link.id);
+  if (!card) { toast(`Card #${link.id} not found — loaded normally.`); return; }
+  if (link.view) {
+    // Direct assignment, not toggleView/saveViewMode: this override is for
+    // THIS load only (wins ONCE) — it must never overwrite the persisted
+    // choice, so a later plain reload (no querystring) still resumes
+    // wherever the user last left the view via the normal toggle.
+    viewMode = link.view;
+    renderBoard();
+  }
+  const el = document.querySelector(`${VIEW_CONTAINERS[loadViewMode()]} .card-el[data-id="${card.id}"]`);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+  openDetailModal(card.id);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
-  loadBoard().catch((e) => toast('Load failed: ' + e.message));
+  loadBoard().then(consumeDeepLink).catch((e) => toast('Load failed: ' + e.message));
   // click-to-dismiss — wired once since #toast is static markup.
   $('#toast').addEventListener('click', () => {
     clearTimeout(toast._t);
