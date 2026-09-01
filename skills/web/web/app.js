@@ -1866,19 +1866,32 @@ async function doDelete(id, { onSuccess } = {}) {
 // every interpolated value is escaped, and markdown link hrefs are scheme-checked.
 
 // Minimal, dependency-free markdown -> HTML: headings, bold/italic, inline code,
-// fenced code blocks, links, unordered lists (incl. `- [x]` task items), hr, paragraphs.
+// fenced code blocks, links, unordered lists (incl. `- [x]` task items, indent-depth-aware
+// nesting, and lazy continuation lines), hr, paragraphs.
 function mdToHtml(md) {
   const lines = escapeHtml(md).split('\n');
   let html = '';
   let inCode = false, codeBuf = [];
-  let listOpen = false;
+  // listStack tracks open <ul> levels by the indent width that opened them, deepest
+  // last; liOpen is whether that deepest level's last <li> is still unclosed (kept
+  // open so a nested sub-list or a continuation line can land inside it).
+  let listStack = [];
+  let liOpen = false;
   let para = [];
 
   const flushPara = () => {
     if (para.length) { html += `<p>${para.join(' ')}</p>`; para = []; }
   };
+  const closeLi = () => {
+    if (liOpen) { html += '</li>'; liOpen = false; }
+  };
   const closeList = () => {
-    if (listOpen) { html += '</ul>'; listOpen = false; }
+    closeLi();
+    while (listStack.length) {
+      html += '</ul>';
+      listStack.pop();
+      if (listStack.length) html += '</li>'; // closes the ancestor <li> the popped <ul> was nested inside
+    }
   };
   const inline = (s) => s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -1904,22 +1917,44 @@ function mdToHtml(md) {
     const h = line.match(/^(#{1,3})\s+(.*)$/);
     if (h) { flushPara(); closeList(); html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; continue; }
 
-    const task = line.match(/^\s*-\s+\[( |x|X)\]\s+(.*)$/);
-    const item = line.match(/^\s*-\s+(.*)$/);
+    const task = line.match(/^(\s*)-\s+\[( |x|X)\]\s+(.*)$/);
+    const item = !task && line.match(/^(\s*)-\s+(.*)$/);
     if (task || item) {
       flushPara();
-      if (!listOpen) { html += '<ul>'; listOpen = true; }
-      if (task) {
-        const checked = task[1].toLowerCase() === 'x';
-        html += `<li class="task">${checked ? '&#9745;' : '&#9744;'} ${inline(task[2])}</li>`;
-      } else {
-        html += `<li>${inline(item[1])}</li>`;
+      const m = task || item;
+      const indent = m[1].length;
+      // Deeper->shallower: unwind every level this line's indent has dropped below,
+      // closing each level's own <li> (restored "open" for the ancestor left behind).
+      while (listStack.length && indent < listStack[listStack.length - 1].indent) {
+        closeLi();
+        html += '</ul>';
+        listStack.pop();
+        liOpen = listStack.length > 0;
       }
+      if (listStack.length && indent === listStack[listStack.length - 1].indent) {
+        closeLi(); // same-depth sibling: close the previous <li> at this level
+      } else if (!listStack.length || indent > listStack[listStack.length - 1].indent) {
+        listStack.push({ indent }); // deeper indent (or the very first list): open a nested/new <ul>
+        html += '<ul>';
+      }
+      if (task) {
+        const checked = task[2].toLowerCase() === 'x';
+        html += `<li class="task">${checked ? '&#9745;' : '&#9744;'} ${inline(task[3])}`;
+      } else {
+        html += `<li>${inline(item[2])}`;
+      }
+      liOpen = true; // left open: a nested list or a continuation line may still extend it
       continue;
     }
-    closeList();
 
-    if (line.trim() === '') { flushPara(); continue; }
+    if (line.trim() === '') { flushPara(); closeList(); continue; }
+
+    if (listStack.length) {
+      // A wrapped non-`-` line while a list is open is a continuation of the last
+      // <li>, not a new paragraph — joins in place rather than closing the list.
+      html += ' ' + inline(line.trim());
+      continue;
+    }
     para.push(inline(line));
   }
   flushPara();
