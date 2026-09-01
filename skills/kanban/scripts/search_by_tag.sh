@@ -7,7 +7,7 @@ TAG="$1"
 
 if [ -z "$TAG" ]; then
     echo "Usage: $0 [kanban_dir] <tag>"
-    echo "Example: $0 kanban/ ai-discoverability"
+    echo "Example: $0 .kanban/ ai-discoverability"
     exit 1
 fi
 

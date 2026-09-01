@@ -100,11 +100,12 @@ function capSlug(slug, max = FILENAME_SLUG_MAX) {
 
 // Project name for the app heading/tab title: the folder ABOVE the given board dir,
 // whatever the board dir itself is named. resolve() first so a relative arg (the
-// server's default `kanbanDir = 'kanban'`) derives from the real parent, not '.'.
+// server's default — resolveDefaultBoardDir()'s `.kanban`/`kanban` discovery)
+// derives from the real parent, not '.'.
 // Rule is a plain parent-basename, uniformly — including when the board dir isn't
-// literally named "kanban" (e.g. a nested `work/planning/kanban` yields
-// "planning", not "kanban" or "work") — kept plain for simplicity, and because
-// it already satisfies the common layout (my-project/kanban -> "my-project").
+// literally named "kanban" or ".kanban" (e.g. a nested `work/planning/.kanban`
+// yields "planning", not ".kanban" or "work") — kept plain for simplicity, and
+// because it already satisfies the common layout (my-project/.kanban -> "my-project").
 function projectName(dir) {
   return path.basename(path.dirname(path.resolve(dir)));
 }

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const vm = require('node:vm');
-const { createServer, start, originAllowed } = require('../scripts/server');
+const { createServer, start, originAllowed, resolveDefaultBoardDir } = require('../scripts/server');
 
 function tmpBoard() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-srv-'));
@@ -22,6 +22,44 @@ async function withServer(dir, fn) {
   const base = `http://127.0.0.1:${srv.address().port}`;
   try { return await fn(base); } finally { srv.close(); }
 }
+
+// --- board-directory discovery: .kanban/ preferred, kanban/ legacy fallback ---
+
+test('resolveDefaultBoardDir prefers .kanban over kanban when both exist', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-discover-'));
+  fs.mkdirSync(path.join(base, '.kanban'));
+  fs.mkdirSync(path.join(base, 'kanban'));
+  assert.strictEqual(resolveDefaultBoardDir(base), '.kanban');
+});
+
+test('resolveDefaultBoardDir falls back to kanban when only the legacy dir exists', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-discover-'));
+  fs.mkdirSync(path.join(base, 'kanban'));
+  assert.strictEqual(resolveDefaultBoardDir(base), 'kanban');
+});
+
+test('resolveDefaultBoardDir returns .kanban when only it exists', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-discover-'));
+  fs.mkdirSync(path.join(base, '.kanban'));
+  assert.strictEqual(resolveDefaultBoardDir(base), '.kanban');
+});
+
+test('resolveDefaultBoardDir falls back to the preferred name when neither directory exists', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-discover-'));
+  assert.strictEqual(resolveDefaultBoardDir(base), '.kanban');
+});
+
+test('resolveDefaultBoardDir defaults baseDir to the current working directory', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'kanban-discover-'));
+  fs.mkdirSync(path.join(base, 'kanban'));
+  const cwd = process.cwd();
+  process.chdir(base);
+  try {
+    assert.strictEqual(resolveDefaultBoardDir(), 'kanban');
+  } finally {
+    process.chdir(cwd);
+  }
+});
 
 test('GET /api/board returns active + archived', async () => {
   const dir = tmpBoard();

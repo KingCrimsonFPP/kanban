@@ -81,15 +81,15 @@ write them as-is. Refresh `updated:` on any fm write.
      write succeeds — a failed create must never burn an id.**
 4. **Write mechanics:**
    - Local session (board directly on disk): ordinary file writes; archive =
-     move into `kanban/archived/`; delete = actual file deletion, but only with
-     the human's confirmation already given (the editor's two-tap confirm
-     counts).
+     move into the board directory's `archived/` subfolder; delete = actual
+     file deletion, but only with the human's confirmation already given (the
+     editor's two-tap confirm counts).
    - Cowork/remote session (device bridge): write via `device_bash` with
      base64 (`echo <b64> | base64 -d > <mounted-path>`) after an inline mtime
      guard (`stat`) in the same script; archive = `mv` into `archived/`. The
-     bridge cannot `rm` — delete = `mv` into `kanban/_to_delete/` (mkdir -p)
-     and tell the human to empty it. Fallback writer: SendUserFile +
-     device_commit_files with `expectedMtimeMs`.
+     bridge cannot `rm` — delete = `mv` into `_to_delete/` (mkdir -p, alongside
+     `archived/`) and tell the human to empty it. Fallback writer:
+     SendUserFile + device_commit_files with `expectedMtimeMs`.
 5. **Notify:** append one entry to `notifications.md` per applied payload,
    per the notifications contract in the kanban skill's SKILL.md. Payload
    specifics: `from: "cowork:board-editor"` or `"skill:kanban-viewer"`; a

@@ -8,7 +8,7 @@
 # though `review` doesn't gate the literal `doing` entry check).
 # Optional assignee arg filters the result, quote-normalized so `@afk` and
 # `"@afk"` both match the on-disk `assignee: "@afk"`; omitted = all assignees.
-# Output: id|priority|assignee|title, sorted by id. Main kanban/ only —
+# Output: id|priority|assignee|title, sorted by id. Main board dir only —
 # archived/ is excluded (it's only consulted to resolve dependency status).
 # Usage: bash eligible_cards.sh <kanban-directory> [assignee]
 

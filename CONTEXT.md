@@ -8,7 +8,7 @@ plugin must use.
 ## Language
 
 **Board**:
-The whole kanban — every `*.card.md` file in a `kanban/` directory, grouped by status. There is no board file; the board is derived by reading the cards.
+The whole kanban — every `*.card.md` file in a board directory (`.kanban/`, the preferred convention; `kanban/` is a supported legacy fallback — discovery order: `.kanban/` first, then `kanban/`), grouped by status. There is no board file; the board is derived by reading the cards.
 _Avoid_: project, list.
 
 **Card**:
@@ -24,7 +24,7 @@ A card's place in the workflow. The four built-ins — `backlog`, `todo`, `doing
 _Avoid_: stage, state, lane, swimlane.
 
 **Archive**:
-A *location*, not a status — the `kanban/archived/` folder, read **recursively**. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back to `kanban/`. The web app's Archive *column* has full UI parity (drag in/out, selection) — presentation only; on disk archive is still the folder, never a status value.
+A *location*, not a status — the board directory's `archived/` folder, read **recursively**. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back. The web app's Archive *column* has full UI parity (drag in/out, selection) — presentation only; on disk archive is still the folder, never a status value.
 _Avoid_: using "archive" as a status/column value; close, trash.
 
 **Package** (archive package):

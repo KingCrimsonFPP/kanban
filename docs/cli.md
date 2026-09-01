@@ -63,8 +63,8 @@ Everything the web editor does, as a typed command or a guided prompt:
   it's **waiting** (a `waiting_for` id isn't `done`) or **blocked** (a manual
   sticker) — the CLI refuses and names which, the same hard rule as the web
   app's snap-back.
-- **Archive / Restore** — move the file into / out of `kanban/archived/` (a
-  location, not a status).
+- **Archive / Restore** — move the file into / out of the board directory's
+  `archived/` folder (a location, not a status).
 - **Delete** — permanent removal.
 - **Bulk** — commands take id lists: `archive 3,5,7`, `move 3,5 to todo`,
   `assign 3,5 @afk`, `set priority 3,5 Low`, `tag 3,5 design`,
