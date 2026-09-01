@@ -468,6 +468,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .ctxitem{width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:8px 10px;font-size:13px;color:var(--ink)}
 .ctxitem:hover{background:var(--page)}
 .ctxitem.armed{color:var(--high)}
+.ctxsep{height:1px;background:var(--ring);margin:4px 2px}
 </style></head><body>
 <div id="scroll">
 <div class="hdr" id="hdr"><b>kanban</b><span class="base">editor · base: __BASE_LABEL__</span><span class="pill" id="pill"></span><button id="bell" aria-label="Notifications">&#128276;<span id="bellcnt" style="display:none"></span></button></div>
@@ -1433,15 +1434,19 @@ qTerms=resolveGraphTerms(String(term).trim().split(/\\s+/).filter(Boolean).map(p
 focusRoot=id;
 closeCard();
 renderMap();renderGantt();renderCalendar()}
-// Right-click card menu (desktop only — see fineMQ above). Open/Archive/
-// Delete queue through the SAME queue() ops machinery the detail sheet's
-// title tap / $sarch / $sdel buttons use — no parallel write path.
+// Right-click card menu (desktop only — see fineMQ above). Open/Move/
+// Archive/Delete queue through the SAME queue() ops machinery the detail
+// sheet's title tap / $sarch / $sdel buttons use — no parallel write path.
+// Move riding queue() is what gives the menu the doing entry gate for
+// free: queue() refuses a move to doing on an unresolved/blocked card and
+// leaves the reason in note, so the menu never needs its own copy.
 function closeCtxMenu(){if(ctxMenuEl){ctxMenuEl.remove();ctxMenuEl=null}}
 function ctxOpen(id){sel=id;focusRoot=null;ren=false;descEd=false;delArm=null;pillEd=null;fmOpen=false;render()}
 function ctxArchive(id){const c=find(id);if(!c||c.arch)return;queue({op:"archive",id:id});
 if(String(sel)===String(id)){sel=null;delArm=null;pillEd=null}render()}
 function ctxDelete(id){queue({op:"delete",id:id});
 if(String(sel)===String(id)){sel=null;delArm=null;pillEd=null}render()}
+function ctxMove(id,to){queue({op:"move",id:id,to:to});delArm=null;pillEd=null;render()}
 function openCtxMenu(id,x,y){
 closeCtxMenu();
 const c=find(id);
@@ -1451,6 +1456,8 @@ let armed=false;
 const item=(label,run)=>{const b=el("button","ctxitem",label);b.type="button";
 b.addEventListener("click",ev=>{ev.stopPropagation();run()});m.appendChild(b);return b};
 item("Open",()=>{closeCtxMenu();ctxOpen(id)});
+COLS.filter(x=>x!==c.s).forEach(x=>item("Move to "+cname(x),()=>{closeCtxMenu();ctxMove(id,x)}));
+m.appendChild(el("div","ctxsep"));
 item("Archive",()=>{closeCtxMenu();ctxArchive(id)});
 const delBtn=item("Delete",()=>{
 if(!armed){armed=true;delBtn.textContent="Delete?";delBtn.classList.add("armed");return}

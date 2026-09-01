@@ -400,6 +400,25 @@ test('Open/Archive/Delete queue through the SAME queue() ops machinery the detai
   assert.match(src, /function ctxDelete\(id\)\{queue\(\{op:"delete",id:id\}\);/);
 });
 
+test('the menu offers one "Move to <Status>" row per status EXCEPT the card\'s own — same COLS/cname source and same exclusion the detail sheet\'s status pill editor uses', () => {
+  assert.match(src, /COLS\.filter\(x=>x!==c\.s\)\.forEach\(x=>item\("Move to "\+cname\(x\),\(\)=>\{closeCtxMenu\(\);ctxMove\(id,x\)\}\)\);/);
+  assert.match(src, /COLS\.filter\(x=>x!==c\.s\)\.forEach\(x=>slot\.appendChild\(btn\(cname\(x\),"move",\{to:x\}\)\)\)/, 'the detail sheet pill editor must still use the identical filter — two move surfaces, one status list');
+});
+
+test('Move rides queue() like every other menu action, so the doing entry gate is inherited, never re-implemented in the menu', () => {
+  assert.match(src, /function ctxMove\(id,to\)\{queue\(\{op:"move",id:id,to:to\}\);delArm=null;pillEd=null;render\(\)\}/);
+  // The gate lives in queue() alone: a move to doing on an unresolved/blocked
+  // card sets note and returns before any op is pushed.
+  assert.match(src, /if\(o\.to==="doing"\)\{const un=unresolved\(c\),br=blkReason\(c\);/);
+  const menuBody = src.slice(src.indexOf('function openCtxMenu('), src.indexOf('document.body.addEventListener("contextmenu"'));
+  assert.ok(!/unresolved\(|blkReason\(/.test(menuBody), 'openCtxMenu must not carry its own copy of the doing gate');
+});
+
+test('Move rows sit above a separator, keeping Archive/Delete visually grouped away from the routine actions', () => {
+  assert.match(src, /ctxMove\(id,x\)\}\)\);\s*m\.appendChild\(el\("div","ctxsep"\)\);\s*item\("Archive"/);
+  assert.match(src, /\.ctxsep\{[^}]*height:1px/, 'the separator needs a rule in the stylesheet');
+});
+
 test('the menu\'s "Dependency tree"/"Dependency path" items and the detail sheet\'s own buttons call the SAME graphFocus() helper — one tree:/path: implementation, not two', () => {
   assert.match(src, /function graphFocus\(gk,id\)\{/);
   assert.match(src, /if\(act==="graphfocus"\)\{graphFocus\(t\.dataset\.gk,id\);return\}/);
