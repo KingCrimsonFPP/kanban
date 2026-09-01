@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
+const vm = require('node:vm');
 const { createServer, start, originAllowed } = require('../scripts/server');
 
 function tmpBoard() {
@@ -2877,6 +2878,36 @@ test('mdToHtml: a wrapped non-"-" line joins the last open <li> instead of closi
       'while any list is open (any depth), a non-bullet non-blank line extends the currently open <li> in place');
     assert.ok(mdToHtml.includes('para.push(inline(line));'),
       'outside any list the same line still falls through to a normal paragraph — plain-text bodies are unchanged');
+  });
+});
+
+test('mdToHtml behavioral: nested bullets, continuation lines, and an XSS payload through both render to the exact expected HTML (executes the real function — not a source-text pattern match)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const appJs = await (await fetch(`${base}/app.js`)).text();
+    const badgeJs = await (await fetch(`${base}/assignee-badge.js`)).text();
+    const escapeHtmlSrc = badgeJs.match(/function escapeHtml\([\s\S]*?\n\}/)[0];
+    const mdToHtmlSrc = appJs.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(`${escapeHtmlSrc}\n${mdToHtmlSrc}`, sandbox);
+    const mdToHtml = sandbox.mdToHtml;
+
+    assert.strictEqual(mdToHtml('- a\n  - b\n- c'),
+      '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+      'a sub-bullet nests inside its parent <li>; the next same-depth sibling closes the nested <ul> first');
+    assert.strictEqual(mdToHtml('- a\n  - b\n    - c\n- d'),
+      '<ul><li>a<ul><li>b<ul><li>c</li></ul></li></ul></li><li>d</li></ul>',
+      'three levels deep unwinds every open <li>/<ul> cleanly back to the root on the next top-level item');
+    assert.strictEqual(mdToHtml('- a\n  more of a\n- b'),
+      '<ul><li>a more of a</li><li>b</li></ul>',
+      'a wrapped continuation line joins the open <li> in place instead of stranding a <p>');
+    assert.strictEqual(mdToHtml('- a\n  - b\n    more of b\n- c'),
+      '<ul><li>a<ul><li>b more of b</li></ul></li><li>c</li></ul>',
+      'a continuation line under a nested item joins the innermost open <li>, not an outer ancestor');
+    assert.strictEqual(mdToHtml('- <img src=x onerror=alert(1)>\n  more <script>evil</script>'),
+      '<ul><li>&lt;img src=x onerror=alert(1)&gt; more &lt;script&gt;evil&lt;/script&gt;</li></ul>',
+      'nesting/continuation never opens a second unescaped path — the payload stays escaped end to end');
   });
 });
 
