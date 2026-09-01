@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { comboboxSuggestions, applyChoice, nextHighlightIndex } = require('../web/combobox');
 
-// card #30 follow-up: native <datalist> misrenders inside VSCode's Simple
+// native <datalist> misrenders inside VSCode's Simple
 // Browser (popup at wrong coordinates, filter-by-current-value hides all),
 // so the form uses a hand-rolled menu. These are its pure rules.
 
@@ -60,7 +60,7 @@ test('applyChoice never duplicates a tag already present', () => {
   assert.strictEqual(applyChoice('design, des', 'design', { tagMode: true }), 'design'); // typed completion of an existing tag collapses too
 });
 
-// card #95: keyboard grammar for the menu — Up/Down move a highlight, wrapping.
+// keyboard grammar for the menu — Up/Down move a highlight, wrapping.
 test('nextHighlightIndex moves Down from none-highlighted to the first row', () => {
   assert.strictEqual(nextHighlightIndex(3, -1, 1), 0);
 });

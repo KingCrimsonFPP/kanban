@@ -31,7 +31,7 @@ test('parseConfig reads nextId scalar and the assignees list', () => {
   assert.strictEqual(c.assignees[1].kind, 'ai-afk');
 });
 
-// --- card #183: OPTIONAL reserved color, same suggest-never-validate field ----
+// --- OPTIONAL reserved color, same suggest-never-validate field ----
 
 test('parseConfig reads an assignee\'s optional color field; absent defaults to empty string', () => {
   const withColor = cfg.parseConfig('assignees:\n  - handle: "@alex"\n    color: "#a371f7"\n');
@@ -79,7 +79,7 @@ test('readConfig returns defaults when config.yaml is absent', () => {
   assert.deepStrictEqual(cfg.readConfig(dir), { nextId: null, assignees: [], priorities: [], tags: [], statuses: [] });
 });
 
-// --- card #31: `statuses` joins LIST_KEYS — the official column list ----------
+// --- `statuses` joins LIST_KEYS — the official column list ----------
 
 test('parseConfig reads an inline statuses list, order preserved (= column order)', () => {
   const c = cfg.parseConfig('statuses: [triage, doing, review, done]   # column order\n');
@@ -155,7 +155,7 @@ test('parseConfig tolerates inline # comments — the SKILL.md example parses as
   assert.strictEqual(c.assignees[0].kind, 'human');
 });
 
-// --- card #30: official priorities/tags lists — suggest, never validate ---
+// --- official priorities/tags lists — suggest, never validate ---
 
 test('parseConfig reads an inline flow list for priorities and tags', () => {
   const c = cfg.parseConfig('nextId: 5\npriorities: [High, Normal, Low]\ntags: [skills, config, design]\n');

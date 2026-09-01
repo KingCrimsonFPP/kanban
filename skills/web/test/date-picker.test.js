@@ -20,7 +20,7 @@ test('pickDay preserves a THH:MM:SS tail verbatim', () => {
   assert.strictEqual(pickDay('2026-07-09T14:30:59', '2026-08-01'), '2026-08-01T14:30:59');
 });
 
-test('pickDay treats garbage/missing current values as empty — just the day (tolerant, card #36: no validation)', () => {
+test('pickDay treats garbage/missing current values as empty — just the day (tolerant: no validation)', () => {
   assert.strictEqual(pickDay('soon', '2026-08-01'), '2026-08-01');
   assert.strictEqual(pickDay('9/7/2026', '2026-08-01'), '2026-08-01');
   assert.strictEqual(pickDay('soonT14:30', '2026-08-01'), '2026-08-01'); // a time tail only counts after a real date
@@ -51,13 +51,13 @@ test('initialMonth falls back to today\'s month for empty/garbage current values
 });
 
 // impossible months are legal on disk (never-validate) but must not render a
-// broken grid — fall back to today (card #41 verify finding)
+// broken grid — fall back to today
 test('initialMonth falls back to today for impossible months', () => {
   assert.deepStrictEqual(initialMonth('2026-13-05', '2026-07-09'), { year: 2026, monthIndex: 6 });
   assert.deepStrictEqual(initialMonth('2026-00-15', '2026-07-09'), { year: 2026, monthIndex: 6 });
 });
 
-// --- clock toggle (card #197): hasTime/withTime/withoutTime ------------------
+// --- clock toggle: hasTime/withTime/withoutTime ------------------
 
 test('hasTime is false for a plain date, empty, or garbage value', () => {
   assert.strictEqual(hasTime('2026-07-09'), false);
@@ -70,7 +70,7 @@ test('hasTime is false for a plain date, empty, or garbage value', () => {
 test('hasTime is true whenever a T-tail is present, however garbage', () => {
   assert.strictEqual(hasTime('2026-07-09T14:30'), true);
   assert.strictEqual(hasTime('2026-07-09T14:30:59'), true);
-  assert.strictEqual(hasTime('2026-07-09Tnonsense'), true); // never-validate, card #36
+  assert.strictEqual(hasTime('2026-07-09Tnonsense'), true); // never-validate
 });
 
 test('withTime attaches the given HH:MM to a plain date', () => {

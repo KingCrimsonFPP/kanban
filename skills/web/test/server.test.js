@@ -34,7 +34,7 @@ test('GET /api/board returns active + archived', async () => {
   });
 });
 
-test('GET /api/board exposes projectName — the folder above the board dir (card #16)', async () => {
+test('GET /api/board exposes projectName — the folder above the board dir', async () => {
   const dir = tmpBoard();
   const expected = path.basename(path.dirname(dir));
   await withServer(dir, async (base) => {
@@ -44,7 +44,7 @@ test('GET /api/board exposes projectName — the folder above the board dir (car
   });
 });
 
-test('GET /api/board exposes boardDir — the board directory\'s ABSOLUTE path (card #55)', async () => {
+test('GET /api/board exposes boardDir — the board directory\'s ABSOLUTE path', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/api/board`);
@@ -56,7 +56,7 @@ test('GET /api/board exposes boardDir — the board directory\'s ABSOLUTE path (
   });
 });
 
-test('GET /api/board exposes each active card\'s file as its basename (card #17 file: search)', async () => {
+test('GET /api/board exposes each active card\'s file as its basename (file: search)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/api/board`);
@@ -103,7 +103,7 @@ test('index html loads refresh-policy.js, column-state.js, column-sort.js, and s
   });
 });
 
-test('GET /column-state.js serves the per-column collapse-state helpers (card #15)', async () => {
+test('GET /column-state.js serves the per-column collapse-state helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/column-state.js`);
@@ -113,7 +113,7 @@ test('GET /column-state.js serves the per-column collapse-state helpers (card #1
   });
 });
 
-test('GET /column-sort.js serves the per-column sort comparator/state helpers (card #18)', async () => {
+test('GET /column-sort.js serves the per-column sort comparator/state helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/column-sort.js`);
@@ -125,7 +125,7 @@ test('GET /column-sort.js serves the per-column sort comparator/state helpers (c
   });
 });
 
-test('GET /search.js serves the query parser/matcher (card #17)', async () => {
+test('GET /search.js serves the query parser/matcher', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/search.js`);
@@ -137,7 +137,7 @@ test('GET /search.js serves the query parser/matcher (card #17)', async () => {
   });
 });
 
-test('GET /dependency-graph.js serves the graph-builder/layout helpers (card #19)', async () => {
+test('GET /dependency-graph.js serves the graph-builder/layout helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/dependency-graph.js`);
@@ -149,7 +149,7 @@ test('GET /dependency-graph.js serves the graph-builder/layout helpers (card #19
   });
 });
 
-test('GET /waiting-blocked.js serves the shared waiting/blocked predicates (epic #137)', async () => {
+test('GET /waiting-blocked.js serves the shared waiting/blocked predicates', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/waiting-blocked.js`);
@@ -174,7 +174,7 @@ test('index html loads waiting-blocked.js before dependency-graph.js and app.js 
   });
 });
 
-test('the edit form carries the waiting_for ids input AND the blocked reason input, wired to the red-border predicate (epic #137)', async () => {
+test('the edit form carries the waiting_for ids input AND the blocked reason input, wired to the red-border predicate', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -190,7 +190,7 @@ test('the edit form carries the waiting_for ids input AND the blocked reason inp
   });
 });
 
-test('the edit form carries the review text input, wired to the gold-border predicate (ADR 0009, card #181)', async () => {
+test('the edit form carries the review text input, wired to the gold-border predicate (ADR 0009)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -203,7 +203,7 @@ test('the edit form carries the review text input, wired to the gold-border pred
   });
 });
 
-test('the board tile renders the waiting badge with UNRESOLVED ids only, and the blocked pill via textContent/title only (epic #137)', async () => {
+test('the board tile renders the waiting badge with UNRESOLVED ids only, and the blocked pill via textContent/title only', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -221,7 +221,7 @@ test('the board tile renders the waiting badge with UNRESOLVED ids only, and the
   });
 });
 
-test('the board tile renders the review pill via textContent/title only, same XSS discipline as blocked (ADR 0009, card #181)', async () => {
+test('the board tile renders the review pill via textContent/title only, same XSS discipline as blocked (ADR 0009)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -234,7 +234,7 @@ test('the board tile renders the review pill via textContent/title only, same XS
   });
 });
 
-test('clicking the blocked or review pill appends the bare presence term to the search box (card #189\'s click-to-filter mechanism)', async () => {
+test('clicking the blocked or review pill appends the bare presence term to the search box (the click-to-filter mechanism)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -244,7 +244,7 @@ test('clicking the blocked or review pill appends the bare presence term to the 
   });
 });
 
-test('index html loads dependency-graph.js before app.js (card #19, app.js calls it as a bare global)', async () => {
+test('index html loads dependency-graph.js before app.js (app.js calls it as a bare global)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -255,7 +255,7 @@ test('index html loads dependency-graph.js before app.js (card #19, app.js calls
   });
 });
 
-test('GET /calendar-model.js serves the calendar date-math/grid helpers (card #37)', async () => {
+test('GET /calendar-model.js serves the calendar date-math/grid helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/calendar-model.js`);
@@ -268,7 +268,7 @@ test('GET /calendar-model.js serves the calendar date-math/grid helpers (card #3
   });
 });
 
-test('index html loads calendar-model.js before app.js (card #37, app.js calls it as a bare global)', async () => {
+test('index html loads calendar-model.js before app.js (app.js calls it as a bare global)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -279,7 +279,7 @@ test('index html loads calendar-model.js before app.js (card #37, app.js calls i
   });
 });
 
-test('GET /gantt-model.js serves the gantt window/row/drag math (card #38)', async () => {
+test('GET /gantt-model.js serves the gantt window/row/drag math', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/gantt-model.js`);
@@ -292,7 +292,7 @@ test('GET /gantt-model.js serves the gantt window/row/drag math (card #38)', asy
   });
 });
 
-test('index html loads gantt-model.js before app.js (card #38, app.js calls it as a bare global)', async () => {
+test('index html loads gantt-model.js before app.js (app.js calls it as a bare global)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -303,7 +303,7 @@ test('index html loads gantt-model.js before app.js (card #38, app.js calls it a
   });
 });
 
-test('index html has a top-bar gantt toggle button and a gantt view container (card #38)', async () => {
+test('index html has a top-bar gantt toggle button and a gantt view container', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -312,7 +312,7 @@ test('index html has a top-bar gantt toggle button and a gantt view container (c
   });
 });
 
-test('GET /modal-fullscreen.js serves the per-modal-type fullscreen state helpers (card #20)', async () => {
+test('GET /modal-fullscreen.js serves the per-modal-type fullscreen state helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/modal-fullscreen.js`);
@@ -324,7 +324,7 @@ test('GET /modal-fullscreen.js serves the per-modal-type fullscreen state helper
   });
 });
 
-test('index html loads modal-fullscreen.js before app.js (card #20, app.js calls it as a bare global)', async () => {
+test('index html loads modal-fullscreen.js before app.js (app.js calls it as a bare global)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -335,7 +335,7 @@ test('index html loads modal-fullscreen.js before app.js (card #20, app.js calls
   });
 });
 
-test('GET /assignee-badge.js serves the assignee badge/escapeHtml helpers (card #21)', async () => {
+test('GET /assignee-badge.js serves the assignee badge/escapeHtml helpers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/assignee-badge.js`);
@@ -347,7 +347,7 @@ test('GET /assignee-badge.js serves the assignee badge/escapeHtml helpers (card 
   });
 });
 
-test('index html loads assignee-badge.js before app.js (card #21, app.js calls assigneeBadge/escapeHtml as bare globals)', async () => {
+test('index html loads assignee-badge.js before app.js (app.js calls assigneeBadge/escapeHtml as bare globals)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -358,18 +358,18 @@ test('index html loads assignee-badge.js before app.js (card #21, app.js calls a
   });
 });
 
-test('index html has a fullscreen toggle button in the edit/create modal header (card #20)', async () => {
+test('index html has a fullscreen toggle button in the edit/create modal header', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
-    // class list loosened for card #87/#90's shared .popup-header (added
+    // class list loosened for the shared .popup-header (added
     // alongside .modal-header, not instead of it) — the exact class STRING
     // isn't the contract here, .modal-header being present is
     assert.match(html, /<div class="modal-header[^"]*">[\s\S]*?<h2 id="modal-title">New card<\/h2>[\s\S]*?<button type="button" id="modal-fullscreen-btn"/);
   });
 });
 
-test('index html has a fullscreen toggle button in the detail popup\'s action row (card #20)', async () => {
+test('index html has a fullscreen toggle button in the detail popup\'s action row', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -377,7 +377,7 @@ test('index html has a fullscreen toggle button in the detail popup\'s action ro
   });
 });
 
-test('both fullscreen toggle buttons start with the "Expand to full screen" tooltip/aria-label and aria-pressed=false (card #20\'s #9 convention)', async () => {
+test('both fullscreen toggle buttons start with the "Expand to full screen" tooltip/aria-label and aria-pressed=false', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -388,12 +388,12 @@ test('both fullscreen toggle buttons start with the "Expand to full screen" tool
   });
 });
 
-test('app.css fills the viewport for a fullscreen modal (fixed + inset:0, not the browser Fullscreen API) and hands the description the leftover height (card #47\'s flex chain superseded #20\'s fixed 60vh floor)', async () => {
+test('app.css fills the viewport for a fullscreen modal (fixed + inset:0, not the browser Fullscreen API) and hands the description the leftover height', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const css = await (await fetch(`${base}/app.css`)).text();
     assert.match(css, /\.modal\.fullscreen\s*\{[^}]*position:\s*fixed[^}]*inset:\s*0/s);
-    // card #47: flex-grow down the form → .modal-desc label → textarea chain
+    // flex-grow down the form → .modal-desc label → textarea chain
     // gives the description the REAL remaining height at any viewport size
     // (a static 60vh share dead-spaced tall viewports, overflowed short ones)
     assert.match(css, /\.modal\.fullscreen\s+\.modal-desc\s*\{[^}]*flex:\s*1 1 auto/);
@@ -401,7 +401,7 @@ test('app.css fills the viewport for a fullscreen modal (fixed + inset:0, not th
   });
 });
 
-test('edit form fields track the modal width: rows wrap and the intrinsic min-width floors are lifted (card #47)', async () => {
+test('edit form fields track the modal width: rows wrap and the intrinsic min-width floors are lifted', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const css = await (await fetch(`${base}/app.css`)).text();
@@ -412,19 +412,19 @@ test('edit form fields track the modal width: rows wrap and the intrinsic min-wi
     assert.match(css, /#card-form\s+\.row\s+label\s*\{[^}]*flex:\s*1 1 170px[^}]*min-width:\s*0/);
     assert.match(css, /#card-form input, #card-form select, #card-form textarea, #card-form \.date-field\s*\{[^}]*min-width:\s*0/);
     // the description label carries the class the fullscreen flex chain
-    // targets (card #50 stacked modal-extra alongside it — match the class,
+    // targets (modal-extra is stacked alongside it — match the class,
     // not the whole attribute)
     const html = await (await fetch(`${base}/`)).text();
     assert.match(html, /<label class="modal-desc[^"]*">Description \(markdown\)/);
   });
 });
 
-// card #61 (superseded): icons shared the title's row, merely reordered to
-// lead it via order:-1. card #87/#90 keep that order:-1 mechanism (it still
+// An earlier cut shared the title's row, icons merely reordered to
+// lead it via order:-1. The shared popup-header keeps that order:-1 mechanism (it still
 // moves each icon group first without touching DOM/tab order) but the
 // container is no longer a single row — see the next test for the two-row
 // contract that replaced "headers drop space-between".
-test('popup header control icons still ride order:-1 (card #61\'s mechanism, reused unchanged by #87/#90 below)', async () => {
+test('popup header control icons still ride order:-1 (the mechanism the shared popup-header reuses below)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const css = await (await fetch(`${base}/app.css`)).text();
@@ -438,18 +438,18 @@ test('popup header control icons still ride order:-1 (card #61\'s mechanism, reu
   });
 });
 
-test('every popup header is its OWN two rows — icons alone on row 1, title/content on row 2, one shared .popup-header class, not per-popup one-offs (card #87/#90)', async () => {
+test('every popup header is its OWN two rows — icons alone on row 1, title/content on row 2, one shared .popup-header class, not per-popup one-offs', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const css = await (await fetch(`${base}/app.css`)).text();
-    // flex-direction:column is what turns order:-1's "leads the row" (#61)
-    // into "owns row 1" (#87/#90): the action group and the title/content
+    // flex-direction:column is what turns order:-1's "leads the row"
+    // into "owns row 1": the action group and the title/content
     // block become two stacked flex lines instead of two items on one line.
     assert.match(css, /\.popup-header\s*\{[^}]*flex-direction:\s*column/);
     const popupHeader = css.match(/\.popup-header\s*\{[^}]*\}/s);
     assert.ok(popupHeader && !/space-between/.test(popupHeader[0]),
       '.popup-header must not keep space-between — it would shove row 2 to the bottom of the container instead of snug under row 1');
-    // full-width row 2 (card #87's "heading and fields start on the next
+    // full-width row 2 (the "heading and fields start on the next
     // row, full width"): align-items:stretch (explicit, not just the flex
     // default) is what makes the title/content block span the container.
     assert.match(css, /\.popup-header\s*\{[^}]*align-items:\s*stretch/);
@@ -466,19 +466,19 @@ test('every popup header is its OWN two rows — icons alone on row 1, title/con
     // the edit/create form, the three bulk popups (single/tags/schedule),
     // the detail popup, and notifications — carry .popup-header. The
     // right-click context menu has no header controls and carries neither
-    // this class nor an action group (card #90: "stays as-is").
+    // this class nor an action group ("stays as-is").
     const html = await (await fetch(`${base}/`)).text();
     assert.strictEqual((html.match(/class="[^"]*\bpopup-header\b[^"]*"/g) || []).length, 6);
     assert.doesNotMatch(html, /<div id="context-menu"[^>]*class="[^"]*popup-header/);
     // position only: DOM stays title/content-before-actions everywhere (the
-    // order:-1 CSS flip is what visually leads with the icons) — same #20/#61
-    // tab-order contract, now re-checked against the .popup-header wrapper.
+    // order:-1 CSS flip is what visually leads with the icons) — the same
+    // tab-order contract, re-checked against the .popup-header wrapper.
     assert.match(html, /<div class="modal-header popup-header">\s*<h2 id="modal-title">New card<\/h2>[\s\S]*?<div class="modal-header-actions">/);
     assert.match(html, /<div class="detail-header popup-header">\s*<div>[\s\S]*?<div class="detail-actions">/);
   });
 });
 
-test('detail popup title never hops between opens: archived cards RESERVE the hidden Edit/Archive slots (card #61)', async () => {
+test('detail popup title never hops between opens: archived cards RESERVE the hidden Edit/Archive slots', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     // With the icons leading (order:-1 above), the title's x-position IS the
@@ -496,7 +496,7 @@ test('detail popup title never hops between opens: archived cards RESERVE the hi
   });
 });
 
-test('openDetailModal washes the popup panel for an epic card — card #45\'s tile treatment mirrored on the detail modal (kanban.proj #196)', async () => {
+test('openDetailModal washes the popup panel for an epic card — the board tile\'s wash treatment mirrored on the detail modal', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -507,7 +507,7 @@ test('openDetailModal washes the popup panel for an epic card — card #45\'s ti
   });
 });
 
-test('create form ships the minimal-first pieces: show-more button, .modal-extra groups, and the .minimal hide rule (card #50)', async () => {
+test('create form ships the minimal-first pieces: show-more button, .modal-extra groups, and the .minimal hide rule', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -515,8 +515,8 @@ test('create form ships the minimal-first pieces: show-more button, .modal-extra
     assert.match(html, /<button type="button" id="show-more-btn">Show more fields<\/button>/);
     // three groups still hide wholesale: status/priority/epic,
     // tags/waiting/blocked, description. The fourth (assignee+dates) no longer wholesale-hides —
-    // card #85 pulled Assignee out of it (see the #85 test below) the way
-    // #50 itself loosened #47's modal-desc regex.
+    // Assignee was pulled out of it (see the minimal-form test below), and
+    // the modal-desc regex is deliberately loose.
     assert.strictEqual((html.match(/class="row modal-extra"/g) || []).length, 2);
     assert.match(html, /<label class="modal-desc modal-extra">/);
     const css = await (await fetch(`${base}/app.css`)).text();
@@ -527,7 +527,7 @@ test('create form ships the minimal-first pieces: show-more button, .modal-extra
   });
 });
 
-test('card #85: Assignee joins Title in the minimal create form', async () => {
+test('Assignee joins Title in the minimal create form', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -544,16 +544,16 @@ test('card #85: Assignee joins Title in the minimal create form', async () => {
   });
 });
 
-test('kanban.proj #199: Assignee is the DOM/tab order\'s second focusable field after Title, in EVERY form state', async () => {
+test('Assignee is the DOM/tab order\'s second focusable field after Title, in EVERY form state', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
-    // card #47's assignee+dates row now sits right after Title as its one
+    // the assignee+dates row now sits right after Title as its one
     // static position — before "Show more fields" and before the two
     // .modal-extra rows and Description. This alone makes Assignee the
     // second focusable field after Title in BOTH the minimal create form
-    // (#85, unchanged: dates hidden, so Assignee is visually adjacent to
-    // Title too) and the expanded/edit form (new: dates now tag along, but
+    // (dates hidden, so Assignee is visually adjacent to
+    // Title too) and the expanded/edit form (dates tag along, but
     // Assignee — the row's first field — is still tab stop #2).
     const titleIdx = html.indexOf('id="f-title"');
     const rowIdx = html.indexOf('id="row-assignee-dates"');
@@ -566,7 +566,7 @@ test('kanban.proj #199: Assignee is the DOM/tab order\'s second focusable field 
     assert.ok(rowIdx < assigneeIdx, 'the row wraps the Assignee input');
     assert.ok(assigneeIdx < showMoreIdx, 'Assignee precedes "Show more fields" — no field sits between Title and Assignee');
     assert.ok(showMoreIdx < statusRowIdx, 'Status/Priority/Epic (and everything else) still follows "Show more fields"');
-    // Fixed defect (audit #85): flex `order` used to fake a visual position
+    // Fixed defect: flex `order` used to fake a visual position
     // while leaving real DOM/tab order pointed elsewhere — a WCAG 2.4.3
     // focus-order violation. Still true: no `order` hack anywhere for this
     // row or the button, in any state — the row's one static source position
@@ -574,14 +574,14 @@ test('kanban.proj #199: Assignee is the DOM/tab order\'s second focusable field 
     const css = await (await fetch(`${base}/app.css`)).text();
     assert.doesNotMatch(css, /#row-assignee-dates\s*\{[^}]*order:/, 'no order hack positions the row');
     assert.doesNotMatch(css, /#show-more-btn\s*\{[^}]*order:/, 'no order hack positions the button');
-    // #199 removed card #85's placeAssigneeRow() runtime DOM move entirely —
+    // the tab-order rework removed the placeAssigneeRow() runtime DOM move entirely —
     // the static position above now serves every state, so there is no
     // script left to do that job. Assert it's actually gone (regression
     // guard: a reviewer re-adding a JS-side move would defeat the point of
     // making the position static and no-JS-required).
     const js = await (await fetch(`${base}/app.js`)).text();
     assert.doesNotMatch(js, /placeAssigneeRow/, 'no runtime row-move helper survives — the row\'s position is static now');
-    // Fixed defect (audit #85): the assignee combobox menu opens with the
+    // Fixed defect: the assignee combobox menu opens with the
     // FULL registry list below a modal that, in minimal mode, is only
     // Title+Assignee+button tall — position:absolute clipped it against the
     // modal's overflow:auto edge (e.g. "@afk" hidden behind a tiny inner
@@ -592,25 +592,25 @@ test('kanban.proj #199: Assignee is the DOM/tab order\'s second focusable field 
   });
 });
 
-test('kanban.proj #199: edit opens the SAME card-form markup as create — Assignee is Tab stop #2 there too (no separate edit template)', async () => {
+test('edit opens the SAME card-form markup as create — Assignee is Tab stop #2 there too (no separate edit template)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
     // create and edit share one <form id="card-form"> (openModal() just
     // toggles .minimal and fills values — see app.js) — a single served
-    // page has exactly one card-form, so the #199 static reorder covers
+    // page has exactly one card-form, so the static reorder covers
     // both without any edit-specific markup to keep in sync.
     assert.strictEqual((html.match(/id="card-form"/g) || []).length, 1,
       'create and edit share one form element — one reorder fixes both');
     const js = await (await fetch(`${base}/app.js`)).text();
     const open = js.match(/function openModal\([\s\S]*?\n\}/);
     assert.ok(open, 'openModal found in app.js');
-    // edit (a card is passed) opens full/expanded, never minimal (card #50)
+    // edit (a card is passed) opens full/expanded, never minimal
     assert.match(open[0], /isMinimalCreate\(Boolean\(card\)/, 'edit (card present) never opens minimal — the expanded order is what edit sees');
   });
 });
 
-test('kanban.proj #200: the AI prompt button matches the modal\'s icon-btn styling, sits in the header actions, and carries the "AI prompt" tooltip', async () => {
+test('the AI prompt button matches the modal\'s icon-btn styling, sits in the header actions, and carries the "AI prompt" tooltip', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -625,7 +625,7 @@ test('kanban.proj #200: the AI prompt button matches the modal\'s icon-btn styli
   });
 });
 
-test('kanban.proj #200: #row-prompt starts hidden, sits after the Assignee row and before "Show more fields" (never ahead of Assignee, kanban.proj #199)', async () => {
+test('#row-prompt starts hidden, sits after the Assignee row and before "Show more fields" (never ahead of Assignee)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -640,7 +640,7 @@ test('kanban.proj #200: #row-prompt starts hidden, sits after the Assignee row a
   });
 });
 
-test('kanban.proj #200: app.js wires the prompt field through open/snapshot/submit and the AI button toggles #row-prompt', async () => {
+test('app.js wires the prompt field through open/snapshot/submit and the AI button toggles #row-prompt', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -656,21 +656,21 @@ test('kanban.proj #200: app.js wires the prompt field through open/snapshot/subm
   });
 });
 
-test('kanban.proj #204: setPromptRowVisible relocates #row-prompt to be the form\'s first field when shown, and back to its resting slot when hidden', async () => {
+test('setPromptRowVisible relocates #row-prompt to be the form\'s first field when shown, and back to its resting slot when hidden', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const fn = js.match(/function setPromptRowVisible\(show\) \{[\s\S]*?\n\}/)[0];
     // Real DOM move, not a CSS `order` fake-out (Tab follows DOM order, not
-    // paint order — see the #85 assignee-row precedent this mirrors): shown
+    // paint order — see the assignee-row precedent this mirrors): shown
     // goes ahead of the Title label, hidden goes back before "Show more
-    // fields" (#row-prompt's static markup slot, card #200).
+    // fields" (#row-prompt's static markup slot).
     assert.match(fn, /insertBefore\(row, show \? \$\('#f-title'\)\.closest\('label'\) : \$\('#show-more-btn'\)\)/,
       'one insertBefore call drives both directions off the same `show` flag');
   });
 });
 
-test('kanban.proj #211: Title has no static `required` attribute — updateTitleRequired() manages it dynamically', async () => {
+test('Title has no static `required` attribute — updateTitleRequired() manages it dynamically', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -678,7 +678,7 @@ test('kanban.proj #211: Title has no static `required` attribute — updateTitle
   });
 });
 
-test('kanban.proj #211: updateTitleRequired clears Title\'s required flag only while the prompt row is shown AND non-empty', async () => {
+test('updateTitleRequired clears Title\'s required flag only while the prompt row is shown AND non-empty', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -692,7 +692,7 @@ test('kanban.proj #211: updateTitleRequired clears Title\'s required flag only w
   });
 });
 
-test('kanban.proj #211: archiveCardEl falls back to the prompt-fallback title, same helper as cardEl (kanban.proj #202)', async () => {
+test('archiveCardEl falls back to the prompt-fallback title, same helper as cardEl', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -703,7 +703,7 @@ test('kanban.proj #211: archiveCardEl falls back to the prompt-fallback title, s
   });
 });
 
-test('kanban.proj #211: the map node label falls back to the prompt via cardTitleDisplay, same helper every other view uses', async () => {
+test('the map node label falls back to the prompt via cardTitleDisplay, same helper every other view uses', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -712,7 +712,7 @@ test('kanban.proj #211: the map node label falls back to the prompt via cardTitl
   });
 });
 
-test('kanban.proj #211: ganttBarEl\'s bar text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
+test('ganttBarEl\'s bar text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -723,7 +723,7 @@ test('kanban.proj #211: ganttBarEl\'s bar text and tooltip fall back to the prom
   });
 });
 
-test('kanban.proj #211: the gantt gutter label and due-marker tooltip also fall back to the prompt via cardTitleDisplay', async () => {
+test('the gantt gutter label and due-marker tooltip also fall back to the prompt via cardTitleDisplay', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -735,7 +735,7 @@ test('kanban.proj #211: the gantt gutter label and due-marker tooltip also fall 
   });
 });
 
-test('kanban.proj #211: calendarChipEl\'s chip text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
+test('calendarChipEl\'s chip text and tooltip fall back to the prompt via cardTitleDisplay', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -746,7 +746,7 @@ test('kanban.proj #211: calendarChipEl\'s chip text and tooltip fall back to the
   });
 });
 
-test('kanban.proj #211: the calendar\'s "+N more" overflow tooltip also falls back to the prompt via cardTitleDisplay', async () => {
+test('the calendar\'s "+N more" overflow tooltip also falls back to the prompt via cardTitleDisplay', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -755,7 +755,7 @@ test('kanban.proj #211: the calendar\'s "+N more" overflow tooltip also falls ba
   });
 });
 
-test('kanban.proj #211: the detail popup title falls back to the prompt via cardTitleDisplay', async () => {
+test('the detail popup title falls back to the prompt via cardTitleDisplay', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -765,7 +765,7 @@ test('kanban.proj #211: the detail popup title falls back to the prompt via card
   });
 });
 
-test('index html has a "Last modified" line element in the detail popup header (card #35)', async () => {
+test('index html has a "Last modified" line element in the detail popup header', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -773,7 +773,7 @@ test('index html has a "Last modified" line element in the detail popup header (
   });
 });
 
-test('app.js renders "Last modified" using the updated field when present, else the file mtime labeled as such (card #35)', async () => {
+test('app.js renders "Last modified" using the updated field when present, else the file mtime labeled as such', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -784,7 +784,7 @@ test('app.js renders "Last modified" using the updated field when present, else 
   });
 });
 
-test('formatLocalDateTime renders "YYYY-MM-DD | HH:MM:SS" — no bare "T" separator survives to the human (card #106)', async () => {
+test('formatLocalDateTime renders "YYYY-MM-DD | HH:MM:SS" — no bare "T" separator survives to the human', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -795,7 +795,7 @@ test('formatLocalDateTime renders "YYYY-MM-DD | HH:MM:SS" — no bare "T" separa
   });
 });
 
-test('renderFrontmatterTable formats raw local-datetime values through formatFrontmatterValue, leaving date-only values untouched (card #106)', async () => {
+test('renderFrontmatterTable formats raw local-datetime values through formatFrontmatterValue, leaving date-only values untouched', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -811,7 +811,7 @@ test('renderFrontmatterTable formats raw local-datetime values through formatFro
   });
 });
 
-test('index html has a top-bar map-view toggle button (card #19)', async () => {
+test('index html has a top-bar map-view toggle button', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -820,7 +820,7 @@ test('index html has a top-bar map-view toggle button (card #19)', async () => {
   });
 });
 
-test('index html has a search input and clear button for card #17 field-scoped queries', async () => {
+test('index html has a search input and clear button for field-scoped queries', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -829,7 +829,7 @@ test('index html has a search input and clear button for card #17 field-scoped q
   });
 });
 
-test('index html has no leftover bottom Archive drawer — Archive is a column now (card #15)', async () => {
+test('index html has no leftover bottom Archive drawer — Archive is a column now', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -838,12 +838,12 @@ test('index html has no leftover bottom Archive drawer — Archive is a column n
   });
 });
 
-test('index html has a project-name placeholder span inside the heading for the client to fill in (card #16)', async () => {
+test('index html has a project-name placeholder span inside the heading for the client to fill in', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
-    // card #55 loosened the tail: the copy-board-path button now follows the
-    // span inside the h1 (its own contract lives in the #55 test below).
+    // the tail is deliberately loose: the copy-board-path button follows the
+    // span inside the h1 (its own contract lives in the copy-button test below).
     assert.match(html, /<h1>Kanban<span id="project-name"[^>]*><\/span>/);
   });
 });
@@ -869,7 +869,7 @@ async function req(base, method, p, body) {
   return { status: res.status, json: text ? JSON.parse(text) : null };
 }
 
-// card #49: fetch()/undici forbid setting some headers (notably Host) the way
+// fetch()/undici forbid setting some headers (notably Host) the way
 // a real cross-origin attacker or a hostile DNS-rebinding target would send
 // them — node:http gives full control, so the Origin/Referer/Host tests below
 // use this instead of req() wherever a header needs to be a specific,
@@ -918,7 +918,7 @@ test('POST /api/cards creates; PATCH moves; DELETE removes', async () => {
   });
 });
 
-test('PATCH to doing on a waiting card returns 422 naming the unresolved deps (epic #137)', async () => {
+test('PATCH to doing on a waiting card returns 422 naming the unresolved deps', async () => {
   const dir = tmpBoard(); // card 1 starts done, so unresolve it first
   await withServer(dir, async (base) => {
     await req(base, 'PATCH', '/api/cards/1', { status: 'todo' }); // card 1 no longer done
@@ -929,7 +929,7 @@ test('PATCH to doing on a waiting card returns 422 naming the unresolved deps (e
   });
 });
 
-test('PATCH to doing on a blocked card returns 422 naming the sticker reason (epic #137)', async () => {
+test('PATCH to doing on a blocked card returns 422 naming the sticker reason', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     await req(base, 'PATCH', '/api/cards/1', { blocked: 'legal sign-off pending' }); // card 1 is done — never waiting
@@ -940,7 +940,7 @@ test('PATCH to doing on a blocked card returns 422 naming the sticker reason (ep
   });
 });
 
-test('PATCH blocking a card already in doing succeeds and keeps its column — no eviction, entry-only gate (epic #137)', async () => {
+test('PATCH blocking a card already in doing succeeds and keeps its column — no eviction, entry-only gate', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     await req(base, 'PATCH', '/api/cards/1', { status: 'doing' }); // done card, no deps — enters freely
@@ -993,7 +993,7 @@ test('POST /api/cards with a malformed body fails gracefully; server stays up', 
   });
 });
 
-test('POST /api/cards waiting on an unfinished card returns 422 with the unresolved deps (epic #137)', async () => {
+test('POST /api/cards waiting on an unfinished card returns 422 with the unresolved deps', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     await req(base, 'PATCH', '/api/cards/1', { status: 'todo' }); // card 1 now unfinished
@@ -1003,7 +1003,7 @@ test('POST /api/cards waiting on an unfinished card returns 422 with the unresol
   });
 });
 
-test('POST /api/cards born into doing with a valid blocked sticker returns 422 with the reason (epic #137)', async () => {
+test('POST /api/cards born into doing with a valid blocked sticker returns 422 with the reason', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await req(base, 'POST', '/api/cards', { title: 'Stickered at birth', status: 'doing', blocked: 'spec unclear' });
@@ -1014,12 +1014,11 @@ test('POST /api/cards born into doing with a valid blocked sticker returns 422 w
   });
 });
 
-// card #31 — DELIBERATE CONTRACT CHANGE: these two tests replaced the old
-// "invalid status returns 400" pair. Free-text statuses are legal input end
+// DELIBERATE CONTRACT: no status validation. Free-text statuses are legal input end
 // to end now — the value is written to disk verbatim, and the SPA renders a
 // card whose status isn't in the board's statuses list in the FIRST column
 // (catch-all) with a raw-status chip; the file is never rewritten.
-test('POST /api/cards with an unlisted status is accepted and preserved (card #31)', async () => {
+test('POST /api/cards with an unlisted status is accepted and preserved', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await req(base, 'POST', '/api/cards', { title: 'Free text', status: 'review' });
@@ -1030,7 +1029,7 @@ test('POST /api/cards with an unlisted status is accepted and preserved (card #3
   });
 });
 
-test('PATCH /api/cards/1 with an unlisted status is accepted and preserved (card #31)', async () => {
+test('PATCH /api/cards/1 with an unlisted status is accepted and preserved', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await req(base, 'PATCH', '/api/cards/1', { status: 'someday/maybe' });
@@ -1039,10 +1038,10 @@ test('PATCH /api/cards/1 with an unlisted status is accepted and preserved (card
   });
 });
 
-// card #31: the doing entry gate (waiting + blocked, epic #137) is pinned to
+// the doing entry gate (waiting + blocked) is pinned to
 // the LITERAL status 'doing' — a configured statuses list never moves or
 // disables it.
-test('the doing entry gate stays pinned under a custom statuses list (card #31)', async () => {
+test('the doing entry gate stays pinned under a custom statuses list', async () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'config.yaml'), 'statuses: [triage, doing, review]\n');
   await withServer(dir, async (base) => {
@@ -1054,7 +1053,7 @@ test('the doing entry gate stays pinned under a custom statuses list (card #31)'
   });
 });
 
-test('GET /status-colors.js serves the status color helpers; html loads it before app.js (card #31)', async () => {
+test('GET /status-colors.js serves the status color helpers; html loads it before app.js', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/status-colors.js`);
@@ -1065,15 +1064,15 @@ test('GET /status-colors.js serves the status color helpers; html loads it befor
   });
 });
 
-// card #180 fix: card #172 wired save-hotkey.js into app.html and wrote pure-
-// logic tests for it, but never added it to server.js's static-route
+// The bug guarded: save-hotkey.js was wired into app.html with pure-
+// logic tests, but never added to server.js's static-route
 // allowlist — it 404'd on every real server, so `window.saveHotkeyTarget` was
 // never defined and the whole Ctrl+S feature threw a silent ReferenceError in
 // the browser console instead of saving anything. save-hotkey.test.js's
 // require()-based tests couldn't see this (a route 404 only exists over HTTP).
 // This is the same shape test as status-colors.js above — the guard below
 // generalizes it so no future web/*.js can ship this way again.
-test('GET /save-hotkey.js serves the Ctrl+S save-target logic; html loads it before app.js (card #180, was 404 since card #172)', async () => {
+test('GET /save-hotkey.js serves the Ctrl+S save-target logic; html loads it before app.js', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/save-hotkey.js`);
@@ -1115,7 +1114,7 @@ test('GET /api/cards/1/detail returns raw frontmatter, absolute path, and body',
   });
 });
 
-test('GET /api/cards/:id/detail carries the parsed epic boolean — false for a plain card, true once flagged (kanban.proj #196: the detail popup wash)', async () => {
+test('GET /api/cards/:id/detail carries the parsed epic boolean — false for a plain card, true once flagged (the detail popup wash)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     assert.strictEqual((await req(base, 'GET', '/api/cards/1/detail')).json.epic, false);
@@ -1131,7 +1130,7 @@ test('GET /api/cards/:id/detail surfaces a genuinely unrecognized frontmatter ke
   await withServer(dir, async (base) => {
     const r = await req(base, 'GET', '/api/cards/3/detail');
     assert.strictEqual(r.status, 200);
-    assert.match(r.json.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store special-cases (parent stopped qualifying - card #151 parses it)
+    assert.match(r.json.frontmatter, /^sprint: 5$/m); // unallowlisted key, not one card-store special-cases (parent stopped qualifying once the store parsed it)
   });
 });
 
@@ -1154,7 +1153,7 @@ test('GET /api/cards/:id/detail for an archived card 200s with archived: true (a
   });
 });
 
-test('GET /api/cards/:id/detail carries mtime (ISO string) and updated: null when the file has no field (card #35)', async () => {
+test('GET /api/cards/:id/detail carries mtime (ISO string) and updated: null when the file has no field', async () => {
   const dir = tmpBoard(); // card 1 has no updated field
   await withServer(dir, async (base) => {
     const r = await req(base, 'GET', '/api/cards/1/detail');
@@ -1165,7 +1164,7 @@ test('GET /api/cards/:id/detail carries mtime (ISO string) and updated: null whe
   });
 });
 
-test('GET /api/cards/:id/detail surfaces the card\'s updated value once set (card #35)', async () => {
+test('GET /api/cards/:id/detail surfaces the card\'s updated value once set', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     await req(base, 'PATCH', '/api/cards/1', { priority: 'High' }); // updateCard bumps updated
@@ -1174,10 +1173,10 @@ test('GET /api/cards/:id/detail surfaces the card\'s updated value once set (car
   });
 });
 
-// --- card #36: start_date over the API — sets, clears, and rides createCard,
+// --- start_date over the API — sets, clears, and rides createCard,
 // in date or local-datetime form, with no validation anywhere on the way.
 
-test('PATCH sets start_date (date, then datetime) and clears it with "" (card #36)', async () => {
+test('PATCH sets start_date (date, then datetime) and clears it with ""', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const set = await req(base, 'PATCH', '/api/cards/1', { start_date: '2026-07-10' });
@@ -1193,7 +1192,7 @@ test('PATCH sets start_date (date, then datetime) and clears it with "" (card #3
   });
 });
 
-test('POST /api/cards accepts start_date alongside due_date (card #36)', async () => {
+test('POST /api/cards accepts start_date alongside due_date', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const created = await req(base, 'POST', '/api/cards',
@@ -1204,7 +1203,7 @@ test('POST /api/cards accepts start_date alongside due_date (card #36)', async (
   });
 });
 
-test('index html has a Start date input, and both date placeholders mention the datetime form (card #36)', async () => {
+test('index html has a Start date input, and both date placeholders mention the datetime form', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -1227,9 +1226,9 @@ test('an unmatched route 404s with a plain-text (non-JSON) body — clients must
   });
 });
 
-// --- card #40: end_date over the API — symmetric with #36's start_date coverage.
+// --- end_date over the API — symmetric with the start_date coverage.
 
-test('PATCH sets end_date (date, then datetime) and clears it with "" (card #40)', async () => {
+test('PATCH sets end_date (date, then datetime) and clears it with ""', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const set = await req(base, 'PATCH', '/api/cards/1', { end_date: '2026-07-11' });
@@ -1244,7 +1243,7 @@ test('PATCH sets end_date (date, then datetime) and clears it with "" (card #40)
   });
 });
 
-test('POST /api/cards accepts the full date triad; index html has an End date input (card #40)', async () => {
+test('POST /api/cards accepts the full date triad; index html has an End date input', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const created = await req(base, 'POST', '/api/cards',
@@ -1256,7 +1255,7 @@ test('POST /api/cards accepts the full date triad; index html has an End date in
   });
 });
 
-test('GET /date-picker.js serves the date-picker pick/open rules (card #41)', async () => {
+test('GET /date-picker.js serves the date-picker pick/open rules', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/date-picker.js`);
@@ -1268,7 +1267,7 @@ test('GET /date-picker.js serves the date-picker pick/open rules (card #41)', as
   });
 });
 
-test('index html loads date-picker.js after calendar-model.js and before app.js (card #41, both call the shared helpers as bare globals)', async () => {
+test('index html loads date-picker.js after calendar-model.js and before app.js (both call the shared helpers as bare globals)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -1281,7 +1280,7 @@ test('index html loads date-picker.js after calendar-model.js and before app.js 
   });
 });
 
-// --- card #52: landing in 'todo'/'done' auto-stamps start_date/end_date over
+// --- landing in 'todo'/'done' auto-stamps start_date/end_date over
 // the API — the PATCH endpoint is the funnel every status-changing client path
 // (form edit, board drag, bulk edit, restore-into-column) goes through, and
 // the client re-reads after every write, so server-side stamping is complete.
@@ -1292,7 +1291,7 @@ function localToday() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-test('PATCH into done stamps end_date and the response carries it (card #52)', async () => {
+test('PATCH into done stamps end_date and the response carries it', async () => {
   const dir = tmpBoard(); // card 2 is todo, no dates
   await withServer(dir, async (base) => {
     const before = localToday();
@@ -1304,7 +1303,7 @@ test('PATCH into done stamps end_date and the response carries it (card #52)', a
   });
 });
 
-test('POST /api/cards directly into todo stamps start_date (card #52)', async () => {
+test('POST /api/cards directly into todo stamps start_date', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const before = localToday();
@@ -1315,7 +1314,7 @@ test('POST /api/cards directly into todo stamps start_date (card #52)', async ()
   });
 });
 
-test('restore-into-column stamps like any other transition (card #52)', async () => {
+test('restore-into-column stamps like any other transition', async () => {
   const dir = tmpBoard(); // card 1 is done, no dates
   await withServer(dir, async (base) => {
     // the client's archive-drag drop: POST restore, then PATCH into the drop column
@@ -1329,7 +1328,7 @@ test('restore-into-column stamps like any other transition (card #52)', async ()
   });
 });
 
-test('column headers carry a + quick-create button — gated by showsColumnAdd, wired via the delegated #board listener, status pre-set (card #54)', async () => {
+test('column headers carry a + quick-create button — gated by showsColumnAdd, wired via the delegated #board listener, status pre-set', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1363,7 +1362,7 @@ test('column headers carry a + quick-create button — gated by showsColumnAdd, 
   });
 });
 
-test('header title carries a copy-board-path button — payload boardDir, clipboard ladder with the execCommand fallback, toast feedback (card #55)', async () => {
+test('header title carries a copy-board-path button — payload boardDir, clipboard ladder with the execCommand fallback, toast feedback', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     // The button lives inside the h1 so it rides right beside the
@@ -1396,11 +1395,11 @@ test('header title carries a copy-board-path button — payload boardDir, clipbo
   });
 });
 
-// --- card #59: epic/wayfinder round-trip over the API — create with the flag
-// writes `epic: true`, unchecking on edit removes the line (the #51 lean rule),
+// --- epic/wayfinder round-trip over the API — create with the flag
+// writes `epic: true`, unchecking on edit removes the line (the lean rule),
 // and the board payload always carries the parsed boolean for the views.
 
-test('epic round-trip: POST with epic: true writes the line, PATCH epic: false removes it (card #59)', async () => {
+test('epic round-trip: POST with epic: true writes the line, PATCH epic: false removes it', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const created = await req(base, 'POST', '/api/cards', { title: 'Wayfinder', status: 'todo', epic: true });
@@ -1413,7 +1412,7 @@ test('epic round-trip: POST with epic: true writes the line, PATCH epic: false r
     const epicCard = board.json.active.find((c) => c.id === created.json.id);
     assert.strictEqual(epicCard.epic, true, 'board payload carries the flag for the views');
     assert.strictEqual(board.json.active.find((c) => c.id === 1).epic, false, 'non-epics read false, always a boolean');
-    // uncheck on edit — the line is GONE, not `epic: false` (#51 lean rule)
+    // uncheck on edit — the line is GONE, not `epic: false` (lean rule)
     const cleared = await req(base, 'PATCH', `/api/cards/${created.json.id}`, { epic: false });
     assert.strictEqual(cleared.status, 200);
     assert.strictEqual(cleared.json.epic, false);
@@ -1421,13 +1420,13 @@ test('epic round-trip: POST with epic: true writes the line, PATCH epic: false r
   });
 });
 
-test('the form has an Epic checkbox inside the #50 "Show more fields" section; app.js manages it end to end (card #59)', async () => {
+test('the form has an Epic checkbox inside the "Show more fields" section; app.js manages it end to end', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
     assert.match(html, /<input type="checkbox" id="f-epic"/, 'Epic is a checkbox');
     // Inside a .modal-extra group — hidden by the minimal-first create form
-    // until "Show more fields" (card #50), like every field below Title.
+    // until "Show more fields", like every field below Title.
     const extra = html.match(/<div class="row modal-extra">[\s\S]*?<\/div>/g) || [];
     assert.ok(extra.some((block) => block.includes('id="f-epic"')), 'checkbox lives in a .modal-extra row');
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1436,11 +1435,11 @@ test('the form has an Epic checkbox inside the #50 "Show more fields" section; a
     const submit = js.match(/async function submitModal\([\s\S]*?\n\}/);
     assert.match(submit[0], /epic: \$\('#f-epic'\)\.checked/, 'the payload sends the checkbox boolean (false clears on edit)');
     const snap = js.match(/function snapshotFormFields\([\s\S]*?\n\}/);
-    assert.match(snap[0], /#f-epic/, 'epic joins the card #26 dirty baseline');
+    assert.match(snap[0], /#f-epic/, 'epic joins the dirty-check baseline');
   });
 });
 
-test('the epic cue is a background-wash class on every surface, not a dot or a border (card #45 retires card #91\'s dot)', async () => {
+test('the epic cue is a background-wash class on every surface, not a dot or a border', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1463,7 +1462,7 @@ test('the epic cue is a background-wash class on every surface, not a dot or a b
   });
 });
 
-test('an archived epic keeps its wash in the map\'s isolated row; the board\'s Archive column still withholds it (card #91 fix, wash swap by card #45)', async () => {
+test('an archived epic keeps its wash in the map\'s isolated row; the board\'s Archive column still withholds it', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1473,21 +1472,21 @@ test('an archived epic keeps its wash in the map\'s isolated row; the board\'s A
     const isolatedFn = js.match(/function buildIsolatedRow\([\s\S]*?\n\}/);
     assert.match(isolatedFn[0], /archiveCardEl\(card, \{[^}]*epicDot[^}]*\}\)/,
       'the isolated row opts in to the epic wash for archived cards, so it matches every other archived node on the map (internal option key name unchanged by #45)');
-    // The board's Archive column call site is untouched — a bare archiveCardEl(c)
-    // with no second argument, same as before #91: the Archive column has never
-    // carried the epic cue, before or after #91/#45 (SKILL.md's own contract).
+    // The board's Archive column call site is a bare archiveCardEl(c)
+    // with no second argument: the Archive column has never
+    // carried the epic cue (SKILL.md's own contract).
     assert.match(js, /isArchive \? archiveCardEl\(c\) : cardEl\(c\)/,
       'the board Archive column still calls archiveCardEl with no epic option');
   });
 });
 
-test('the map node border is neutral; status moves to its own dot with a raw-status tooltip (card #91)', async () => {
+test('the map node border is neutral; status moves to its own dot with a raw-status tooltip', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const svg = js.match(/function buildMapSvg\([\s\S]*?\nfunction /);
     assert.doesNotMatch(svg[0], /status-\$\{missing/, 'the node group no longer carries a status-* class');
-    // card #49 verify finding: the dot's color used to be an inline
+    // the dot's color used to be an inline
     // `style="fill:..."` attribute, which a strict `style-src 'self'` CSP
     // (no unsafe-inline) silently blocks the browser from applying — it's a
     // `status-${statusColorClass(n.status)}` CSS class now (app.css carries
@@ -1497,7 +1496,7 @@ test('the map node border is neutral; status moves to its own dot with a raw-sta
     assert.doesNotMatch(svg[0], /style="fill:/, 'no inline style attribute left on the dot — CSP style-src has no channel to break');
     assert.match(svg[0], /<title>\$\{escapeHtml\(n\.status\)\}<\/title>/,
       'the dot names the RAW on-disk status, not a bucketed label');
-    // card #102 reopen (STATUS DOTS NEVER MUTE): the custom-status color used
+    // STATUS DOTS NEVER MUTE: the custom-status color used
     // to step aside on an archived node so the CSS mute rule always won — that
     // gate is gone now (statusColorClass has no archived-flag input at all), so
     // a custom status hashes its color on archived nodes exactly like a live one.
@@ -1506,10 +1505,10 @@ test('the map node border is neutral; status moves to its own dot with a raw-sta
   });
 });
 
-// --- card #97: the shared status dot renders on every card rendering,
+// --- the shared status dot renders on every card rendering,
 // and the map's graph/no-dependencies sections each get a collapse toggle -------
 
-test('statusBadge(card) renders on board tiles (live AND archived) and calendar chips (card #97)', async () => {
+test('statusBadge(card) renders on board tiles (live AND archived) and calendar chips', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1517,18 +1516,18 @@ test('statusBadge(card) renders on board tiles (live AND archived) and calendar 
     assert.match(tile[0], /statusBadge\(card\)/, 'board tile renders the shared status dot');
     const archiveFn = js.match(/function archiveCardEl\([\s\S]*?\n\}/);
     assert.match(archiveFn[0], /statusBadge\(card\)/,
-      'archived tiles get the status dot unconditionally — unlike the epic wash class, no opts gate (card #102 reopen: the dot shows the true status color, archived or not)');
+      'archived tiles get the status dot unconditionally — unlike the epic wash class, no opts gate (the dot shows the true status color, archived or not)');
     const chip = js.match(/function calendarChipEl\([\s\S]*?\n\}/);
     assert.match(chip[0], /statusBadge\(card\)/, 'calendar chip renders the shared status dot');
   });
 });
 
-test('the gantt gutter row gets the status dot AND the epic wash class; the bar itself (status border/fill) stays untouched (card #97, epic wash by card #45)', async () => {
+test('the gantt gutter row gets the status dot AND the epic wash class; the bar itself (status border/fill) stays untouched', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
-    // The gutter label previously carried neither dot (card #91 only reached the
-    // bar) — the card's "all components" line means it joins both now. Card #45
+    // The gutter label previously carried neither dot (the dot glyph only reached
+    // the bar) — "all components" means it joins both now. The epic-wash rework
     // swapped the label's epic dot for its own background-wash class, so a
     // due-only row (no bar at all) doesn't lose the epic cue entirely.
     const render = js.match(/function renderGanttView\([\s\S]*?\n\}/);
@@ -1537,28 +1536,28 @@ test('the gantt gutter row gets the status dot AND the epic wash class; the bar 
     assert.match(render[0], /label\.innerHTML = `<span class="gantt-label-id">[^`]*statusBadge\(bar\.card\)/,
       'the gutter label renders statusBadge (unconditional)');
     assert.doesNotMatch(render[0], /epicBadge\(\) : ''/, 'no more epicBadge() call in the gutter label');
-    // Bars keep exactly their #91 shape (now a class instead of a badge call):
-    // status stays on the border/fill (untouched by either card) rather than
+    // Bars keep exactly their shape (now a class instead of a badge call):
+    // status stays on the border/fill rather than
     // gaining a redundant dot.
     const bar = js.match(/function ganttBarEl\([\s\S]*?\n\}/);
     assert.doesNotMatch(bar[0], /statusBadge/, 'the bar itself gets no status dot — already colored by status');
   });
 });
 
-// verify finding: the dense-surface "dot must not crowd the text" guard is
+// The dense-surface "dot must not crowd the text" guard is
 // satisfied deliberately (dots always precede the croppable title; .cal-chip/
 // .gantt-label's nowrap+ellipsis only ever crops the tail) but nothing pinned
 // the mechanism — a later reorder (title before the dots) or a dropped
 // nowrap/ellipsis rule would silently regress with the whole suite green.
 
-test('dense-surface guard: the dots precede the croppable title, and the truncation CSS that protects them is asserted (card #97 verify)', async () => {
+test('dense-surface guard: the dots precede the croppable title, and the truncation CSS that protects them is asserted (regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const chip = js.match(/function calendarChipEl\([\s\S]*?\n\}/);
-    // card #108: same shape as the gantt gutter label below — statusBadge,
-    // then the conditional archived ball, then the (kanban.proj #211:
-    // fallback-aware) title.
+    // same shape as the gantt gutter label below — statusBadge,
+    // then the conditional archived ball, then the (prompt-fallback-aware)
+    // title.
     assert.match(chip[0], /statusBadge\(card\)\}\$\{card\.archived \? archivedBadge\(\) : ''\} \` \+\s*\r?\n\s*`<span class="cal-chip-title[\s\S]*?escapeHtml\(titleDisplay\.text\)/,
       'calendar chip: statusBadge (then the conditional archived ball) is immediately followed by the (croppable) title — the dots stay in the never-cropped head');
     const render = js.match(/function renderGanttView\([\s\S]*?\n\}/);
@@ -1572,14 +1571,14 @@ test('dense-surface guard: the dots precede the croppable title, and the truncat
   });
 });
 
-// --- card #102 FINAL DESIGN: "show the status color as shown in the
+// --- the archived ball: "show the status color as shown in the
 // frontmatter and an additional ball gray for archived" — archivedBadge()
 // (status-colors.js) joins statusBadge() on every surface that renders an
 // ARCHIVED card, and ONLY those. Order: status, archived, everywhere more
-// than one dot lands together (card #45 retired the epic dot that used to
-// lead this order — an epic is a background-wash class now, not a glyph).
+// than one dot lands together (the epic dot that used to
+// lead this order is retired — an epic is a background-wash class now, not a glyph).
 
-test('archivedBadge joins the archived tile unconditionally (board Archive column AND the map isolated row) — order status, archived (card #102 final design; epic dropped out by card #45)', async () => {
+test('archivedBadge joins the archived tile unconditionally (board Archive column AND the map isolated row) — order status, archived', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1589,7 +1588,7 @@ test('archivedBadge joins the archived tile unconditionally (board Archive colum
   });
 });
 
-test('cardEl NEVER renders archivedBadge — live board tiles never carry the archived ball (card #102 final design)', async () => {
+test('cardEl NEVER renders archivedBadge — live board tiles never carry the archived ball', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1598,18 +1597,18 @@ test('cardEl NEVER renders archivedBadge — live board tiles never carry the ar
   });
 });
 
-test('calendarChipEl conditions archivedBadge on the chip\'s own card.archived flag (card #108, reopens #99/#102 final design)', async () => {
+test('calendarChipEl conditions archivedBadge on the chip\'s own card.archived flag', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const chip = js.match(/function calendarChipEl\([\s\S]*?\n\}/);
     assert.match(chip[0], /statusBadge\(card\)\}\$\{card\.archived \? archivedBadge\(\) : ''\}/,
-      'same "epic, status, archived" glyph order every other surface uses, gated on this chip\'s own card.archived — card #108 lets the calendar render archived cards now, opt-in via its Archive pill');
+      'same "epic, status, archived" glyph order every other surface uses, gated on this chip\'s own card.archived — the calendar renders archived cards opt-in via its Archive pill');
     assert.match(chip[0], /el\.draggable = !card\.archived/, 'an archived chip is not draggable — native drag never starts, so there\'s no fake-drag animation to guard against');
   });
 });
 
-test('the gantt Archive-group gutter row gets the archived ball; the bar itself keeps its own row-level archived mute, no redundant dot (card #98R/#102 final design)', async () => {
+test('the gantt Archive-group gutter row gets the archived ball; the bar itself keeps its own row-level archived mute, no redundant dot', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1617,11 +1616,11 @@ test('the gantt Archive-group gutter row gets the archived ball; the bar itself 
     assert.match(render[0], /statusBadge\(bar\.card\)\}\$\{bar\.card\.archived \? archivedBadge\(\) : ''\}/,
       'the gutter label conditions the archived ball on the row\'s own card.archived flag — every group\'s rows share one label builder, so this covers the Archive group too');
     const bar = js.match(/function ganttBarEl\([\s\S]*?\n\}/);
-    assert.doesNotMatch(bar[0], /archivedBadge/, 'the bar keeps its existing row-level archived wash/mute (card #98 reopen) — no second, redundant archived cue on the same row');
+    assert.doesNotMatch(bar[0], /archivedBadge/, 'the bar keeps its existing row-level archived wash/mute — no second, redundant archived cue on the same row');
   });
 });
 
-test('the map SVG node gets a third archived-ball circle, conditioned on n.archived, alongside status + epic with no overlap (card #102 final design)', async () => {
+test('the map SVG node gets a third archived-ball circle, conditioned on n.archived, alongside status + epic with no overlap', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1633,14 +1632,14 @@ test('the map SVG node gets a third archived-ball circle, conditioned on n.archi
     const archivedCircle = svg[0].match(/<circle class="map-archived-dot"[^>]*>/)[0];
     assert.match(archivedCircle, /cx="\$\{MAP_NODE_W - 10\}"/, 'archived dot shares the status/epic dots\' x column');
     // MAP_NODE_H grew to fit three vertically-stacked dots without crowding —
-    // pin it's still bigger than the old 46 (card #91's two-dot height).
+    // pin it's still bigger than the old 46 (the two-dot height).
     const nodeH = js.match(/const MAP_NODE_H = (\d+);/);
     assert.ok(nodeH, 'MAP_NODE_H constant found');
-    assert.ok(Number(nodeH[1]) > 46, 'node height grew to make room for the third dot (card #102 final design)');
+    assert.ok(Number(nodeH[1]) > 46, 'node height grew to make room for the third dot');
   });
 });
 
-test('the map SVG node gets a priority/waiting border cue, matching the board tile\'s priorityBadge+isWaiting treatment (card #107, renamed by epic #137)', async () => {
+test('the map SVG node gets a priority/waiting border cue, matching the board tile\'s priorityBadge+isWaiting treatment', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1656,7 +1655,7 @@ test('the map SVG node gets a priority/waiting border cue, matching the board ti
   });
 });
 
-test('the map SVG node carries the red blocked pill for a stickered card, reason in its <title> (epic #137)', async () => {
+test('the map SVG node carries the red blocked pill for a stickered card, reason in its <title>', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1668,12 +1667,12 @@ test('the map SVG node carries the red blocked pill for a stickered card, reason
   });
 });
 
-test('the map graph and no-dependencies sections are each collapsible, state persisted per board (card #97)', async () => {
+test('the map graph and no-dependencies sections are each collapsible, state persisted per board', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     // Persisted state: same memoize-once-mutate-in-place + storageKey discipline
-    // as loadMapStatusFilter/saveMapStatusFilter (card #56).
+    // as loadMapStatusFilter/saveMapStatusFilter.
     const load = js.match(/function loadMapSectionsCollapsed\([\s\S]*?\n\}/);
     assert.ok(load, 'loadMapSectionsCollapsed found in app.js');
     assert.match(load[0], /storageKey\(state\.projectName, 'map\.sections\.collapsed'\)/,
@@ -1703,7 +1702,7 @@ test('the map graph and no-dependencies sections are each collapsible, state per
     const header = js.match(/function buildMapSectionHeader\([\s\S]*?\n\}/);
     assert.ok(header, 'buildMapSectionHeader found in app.js');
     assert.match(header[0], /data-section="\$\{section\}"/, 'the toggle button carries the section id the click handler reads');
-    assert.match(header[0], /collapsed \? CHEVRON_RIGHT_ICON : CHEVRON_LEFT_ICON/, 'same chevron glyph pair as the board column-toggle (card #15)');
+    assert.match(header[0], /collapsed \? CHEVRON_RIGHT_ICON : CHEVRON_LEFT_ICON/, 'same chevron glyph pair as the board column-toggle');
     // Wiring: a click on either toggle calls toggleMapSection with its data-section.
     // The #map-view delegated listener is an anonymous callback (not a named
     // function), so pin the two load-bearing lines directly rather than
@@ -1717,7 +1716,7 @@ test('the map graph and no-dependencies sections are each collapsible, state per
   });
 });
 
-test('map section toggles join the poll-guard and Q0 clear-selection exemptions, same as the #56 status pills (card #97)', async () => {
+test('map section toggles join the poll-guard and Q0 clear-selection exemptions, same as the map status-filter pills', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1728,7 +1727,7 @@ test('map section toggles join the poll-guard and Q0 clear-selection exemptions,
   });
 });
 
-test('app.js applyBoardData applies the assignee registry and official lists BEFORE renderBoard (card #46: first paint of a persisted Assignee sort must see the registry)', async () => {
+test('app.js applyBoardData applies the assignee registry and official lists BEFORE renderBoard (first paint of a persisted Assignee sort must see the registry)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1748,11 +1747,11 @@ test('app.js applyBoardData applies the assignee registry and official lists BEF
   });
 });
 
-// --- cards #56/#58 review fixes: rebuilt-per-render controls join the standing
+// --- rebuilt-per-render controls join the standing
 // guards, the search∩status composition rides a pinned pure helper, and the
 // sub-month all-day chips stop shadowing their drop cells.
 
-test('map status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard (card #56)', async () => {
+test('map status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1770,7 +1769,7 @@ test('map status-filter pills join the Q0 clear-selection exemption AND the focu
   });
 });
 
-test('renderMapView composes search and status filter through intersectVisibleIds — never union, never one side dropped (card #56)', async () => {
+test('renderMapView composes search and status filter through intersectVisibleIds — never union, never one side dropped', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1784,24 +1783,24 @@ test('renderMapView composes search and status filter through intersectVisibleId
   });
 });
 
-// --- card #98: gantt gets the map's #56 status-filter pill row — SHARED
+// --- gantt gets the map's status-filter pill row — SHARED
 // mechanism (one builder both views call, comma-joined CSS), own persisted
-// state, composes with search by the same intersection rule. Card #98's 2026
-// reopen ("we are missing archived status") added the Archive pill back —
+// state, composes with search by the same intersection rule. The row
+// carries an Archive pill —
 // see the mergeGanttStatusFilter/boardColumnIds assertions below — default
-// OFF so the base gantt view is unchanged from before the reopen.
+// OFF so the base gantt view stays live-only.
 
-test('gantt status filter: own persisted state, statuses + Archive (default OFF via its own merge helper) (card #98, reopened)', async () => {
+test('gantt status filter: own persisted state, statuses + Archive (default OFF via its own merge helper)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const load = js.match(/function loadGanttStatusFilter\([\s\S]*?\n\}/);
     assert.ok(load, 'loadGanttStatusFilter found in app.js');
     assert.match(load[0], /storageKey\(state\.projectName, 'gantt\.statusFilter'\)/, 'own feature key, namespaced per board like every other persisted view preference');
-    // card #98 reopen: mergeMapStatusFilter would default the new Archive key
+    // mergeMapStatusFilter would default the Archive key
     // to true (the map's Archive pill has always been ON by default) — the
     // gantt needs its OWN default-shape merge helper so Archive defaults OFF
-    // instead, keeping the base gantt view unchanged from before the reopen.
+    // instead, keeping the base gantt view live-only.
     assert.match(load[0], /mergeGanttStatusFilter\(saved, boardColumnIds\(\)\)/,
       'merges against the FULL column id list (statuses + Archive) via the gantt\'s own archive-off-by-default helper, not the map\'s all-on one');
     const save = js.match(/function saveGanttStatusFilter\([\s\S]*?\n\}/);
@@ -1812,7 +1811,7 @@ test('gantt status filter: own persisted state, statuses + Archive (default OFF 
     // A changed statuses list invalidates the gantt filter too, same as mapStatusFilter/collapsedColumns/columnSort.
     const applyStatuses = js.match(/function applyStatuses\([\s\S]*?\n\}/);
     assert.match(applyStatuses[0], /ganttStatusFilter = null/, 'a changed column set re-merges the gantt filter, not just the map\'s');
-    // verify finding: applyProjectName's own comment says a projectName change
+    // The gap guarded here: applyProjectName's own comment says a projectName change
     // "invalidates all of them" (collapsedColumns/columnSort/modalFullscreen/
     // viewMode/mapStatusFilter/calendarSubview/mapSectionsCollapsed) — but
     // ganttStatusFilter, keyed the identical memoize-once-per-project way, was
@@ -1826,7 +1825,7 @@ test('gantt status filter: own persisted state, statuses + Archive (default OFF 
   });
 });
 
-test('buildGanttFilterRow shares the #56 pill-row MECHANISM with the map, and now includes the Archive pill (card #98, reopened)', async () => {
+test('buildGanttFilterRow shares the pill-row MECHANISM with the map, and now includes the Archive pill', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1838,15 +1837,15 @@ test('buildGanttFilterRow shares the #56 pill-row MECHANISM with the map, and no
     const ganttRow = js.match(/function buildGanttFilterRow\([\s\S]*?\n\}/);
     assert.ok(ganttRow, 'buildGanttFilterRow found in app.js');
     assert.match(ganttRow[0], /buildFilterPillRow\(/, 'the gantt row calls the same shared builder');
-    // card #98 reopen ("we are missing archived status"): the gantt pill row
-    // now includes the Archive pseudo-pill, same id list as the map's row
-    // (boardColumnIds: statuses + archive) — no longer the live-only
-    // boardStatuses() this row used before the reopen.
+    // the gantt pill row
+    // includes the Archive pseudo-pill, same id list as the map's row
+    // (boardColumnIds: statuses + archive) — not the live-only
+    // boardStatuses().
     assert.match(ganttRow[0], /boardColumnIds\(\)/, 'gantt pills now come from statuses + the Archive pseudo-column, same list as the map\'s row');
     assert.doesNotMatch(ganttRow[0], /boardStatuses\(\)/, 'no longer scoped to live statuses only — that was the pre-reopen #98 shape');
     // CSS is shared too — comma-joined selectors, not a second declaration
-    // block. card #99: the calendar row joined this same comma group too
-    // (see the buildCalendarFilterRow test below), so these now anchor on
+    // block. The calendar row belongs to this same comma group
+    // (see the buildCalendarFilterRow test below), so these anchor on
     // the full three-view selector rather than stopping after gantt.
     const css = await (await fetch(`${base}/app.css`)).text();
     assert.match(css, /\.map-filter-row,\s*\.gantt-filter-row,\s*\.calendar-filter-row\s*\{/, 'the row layout rule is shared across all views');
@@ -1855,7 +1854,7 @@ test('buildGanttFilterRow shares the #56 pill-row MECHANISM with the map, and no
   });
 });
 
-test('renderGanttView renders the #98 status-filter row UNCONDITIONALLY and composes search+status by intersection, same rule as the map (card #98)', async () => {
+test('renderGanttView renders the status-filter row UNCONDITIONALLY and composes search+status by intersection, same rule as the map', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1866,7 +1865,7 @@ test('renderGanttView renders the #98 status-filter row UNCONDITIONALLY and comp
     assert.ok(rowIdx > -1, 'the filter row is built');
     assert.ok(groupsIdx > -1 && rowIdx < groupsIdx,
       'the row is appended before groups are computed — if it vanished on the everything-filtered-out state there would be no control left to toggle a status back ON, same reasoning as the map\'s #56 row');
-    // verify finding: mapFilterVisibleIds folds an unlisted status into the
+    // The bug guarded here: mapFilterVisibleIds folds an unlisted status into the
     // FIRST column's toggle (correct for the map/board) — but ganttGroups
     // (gantt-model.js) groups cards by their RAW status and gives an
     // unlisted one its OWN separate group row, so that catch-all mapping
@@ -1879,22 +1878,22 @@ test('renderGanttView renders the #98 status-filter row UNCONDITIONALLY and comp
       'the map\'s catch-all-first-column mapping is gone from the gantt — it disagreed with ganttGroups\' raw-status grouping');
     assert.match(render[0], /intersectVisibleIds\(searchIds, statusIds\)/, 'search and status filter meet in the pure helper — never a union, never one side dropped');
     // The empty branch must APPEND a node, never overwrite via innerHTML= — that
-    // would wipe the just-appended filter row (the same bug class #56 avoided
-    // on the map by building an element and appendChild-ing it).
+    // would wipe the just-appended filter row (the same bug class the map avoids
+    // by building an element and appendChild-ing it).
     assert.doesNotMatch(render[0], /container\.innerHTML = '<div class="gantt-empty"/,
       'the empty state appends a node rather than resetting the container');
   });
 });
 
-// --- card #98 reopen ("we are missing archived status"): the Archive pill,
+// --- the gantt's Archive pill,
 // default OFF, appends ONE more group — every dated ARCHIVED card — AFTER
 // the live status groups, same "location after live columns" placement as
-// the board's Archive column (card #34). Muted the same way archive mutes
-// everywhere else (#57/#91/#97); window derivation includes archived bars
+// the board's Archive column. Muted the same way archive mutes
+// everywhere else; window derivation includes archived bars
 // only while the pill is on (rows/window are computed from `groups`, which
 // only carries the archive group when archiveOn).
 
-test('renderGanttView appends an Archive group AFTER the live status groups, only when the Archive pill is explicitly on (card #98 reopen)', async () => {
+test('renderGanttView appends an Archive group AFTER the live status groups, only when the Archive pill is explicitly on', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1910,11 +1909,11 @@ test('renderGanttView appends an Archive group AFTER the live status groups, onl
     const pushIdx = render[0].indexOf('appendArchiveGroup(groups, archiveGroup)');
     assert.ok(groupsIdx > -1, 'live status groups are computed');
     assert.ok(pushIdx > -1 && groupsIdx < pushIdx,
-      'the archive group is APPENDED after the live status groups are already computed — same "location after live columns" placement as the board\'s Archive column (card #34)');
+      'the archive group is APPENDED after the live status groups are already computed — same "location after live columns" placement as the board\'s Archive column');
   });
 });
 
-test('renderGanttView never adds an archive group when the pill is off — the default gantt view is unchanged from before the #98 reopen', async () => {
+test('renderGanttView never adds an archive group when the pill is off — the default gantt view stays archive-free', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -1947,13 +1946,13 @@ test('renderGanttView routes the archive group through appendArchiveGroup instea
   });
 });
 
-test('ganttBarEl mutes an archived bar to the archive grey regardless of its parked on-disk status (card #98 reopen, card #57)', async () => {
+test('ganttBarEl mutes an archived bar to the archive grey regardless of its parked on-disk status', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const bar = js.match(/function ganttBarEl\([\s\S]*?\n\}/);
     assert.ok(bar, 'ganttBarEl found in app.js');
-    // statusColor('archive') already mutes to ARCHIVE_COLOR (card #57) and
+    // statusColor('archive') already mutes to ARCHIVE_COLOR and
     // isBuiltinStatus('archive') is false, so swapping in the literal
     // 'archive' key for an archived bar reuses the existing custom-status
     // inline-color path with no new branching.
@@ -2018,7 +2017,7 @@ test('wireGanttPointerDrag blocks the drag gesture at pointerdown for an archive
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
-    // Scope to wireGanttPointerDrag — card #109 added a calendar pointerdown
+    // Scope to wireGanttPointerDrag — the time grid has a calendar pointerdown
     // handler earlier in the file, so an un-scoped match grabs the wrong one.
     const fn = js.match(/function wireGanttPointerDrag\([\s\S]*?\n\}/);
     assert.ok(fn, 'wireGanttPointerDrag found in app.js');
@@ -2037,7 +2036,7 @@ test('wireGanttPointerDrag blocks the drag gesture at pointerdown for an archive
   });
 });
 
-test('a click on a gantt pill calls toggleGanttStatusFilter, checked before the pointer-drag/card-el handling (card #98)', async () => {
+test('a click on a gantt pill calls toggleGanttStatusFilter, checked before the pointer-drag/card-el handling', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2046,7 +2045,7 @@ test('a click on a gantt pill calls toggleGanttStatusFilter, checked before the 
   });
 });
 
-test('gantt status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard, same as the #56 map pills (card #98)', async () => {
+test('gantt status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard, same as the map pills', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2057,28 +2056,28 @@ test('gantt status-filter pills join the Q0 clear-selection exemption AND the fo
       'a gantt pill click must not wipe a building selection — this pin also names .calendar-filter-toggle (verify-fix: it previously stopped at .gantt-filter-toggle, an unanchored prefix match that no longer proved the #99 calendar pill\'s presence in this exemption list)');
     // Poll guard: the pills live in #gantt-view, which renderGanttView wipes
     // via innerHTML='' on every 5s tick — a focused pill would be destroyed
-    // mid-keyboard-interaction, same reasoning as the map's #56 pills.
+    // mid-keyboard-interaction, same reasoning as the map's pills.
     assert.match(js, /closest\('\.column-sort-field, \.column-sort-dir, \.cal-nav, \.column-add, \.column-add-ai, \.map-filter-toggle, \.map-section-toggle, \.gantt-filter-toggle, \.calendar-filter-toggle'\)/,
       'a focused gantt pill blocks the auto-refresh like every other rebuilt header control');
   });
 });
 
-// --- card #99: calendar gets the map's #56 / gantt's #98 status-filter pill
+// --- calendar gets the map's / gantt's status-filter pill
 // row — SHARED mechanism (one builder all three views call, comma-joined
 // CSS), own persisted state, composes with search by the same intersection
-// rule, and applies to BOTH the month grid and the #58 sub-month time grid.
-// card #108 ("show/hide archived cards the same way we do in map view and
-// gantt view"): reopens the "no Archive pill" decision — the calendar now
-// gets one too, default OFF, same shape as the gantt's own #98 reopen.
+// rule, and applies to BOTH the month grid and the sub-month time grid.
+// "show/hide archived cards the same way we do in map view and
+// gantt view": the calendar
+// gets an Archive pill too, default OFF, same shape as the gantt's.
 
-test('calendar status filter: own persisted state, statuses + Archive (default OFF via its own merge helper) (card #108, reopens #99)', async () => {
+test('calendar status filter: own persisted state, statuses + Archive (default OFF via its own merge helper)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const load = js.match(/function loadCalendarStatusFilter\([\s\S]*?\n\}/);
     assert.ok(load, 'loadCalendarStatusFilter found in app.js');
     assert.match(load[0], /storageKey\(state\.projectName, 'calendar\.statusFilter'\)/, 'own feature key, namespaced per board like every other persisted view preference');
-    assert.match(load[0], /mergeGanttStatusFilter\(saved, boardColumnIds\(\)\)/, 'card #108: reuses the gantt\'s own archive-off-by-default merge helper, against statuses + archive (boardColumnIds, not boardStatuses)');
+    assert.match(load[0], /mergeGanttStatusFilter\(saved, boardColumnIds\(\)\)/, 'reuses the gantt\'s own archive-off-by-default merge helper, against statuses + archive (boardColumnIds, not boardStatuses)');
     const save = js.match(/function saveCalendarStatusFilter\([\s\S]*?\n\}/);
     assert.ok(save, 'saveCalendarStatusFilter found in app.js');
     const toggle = js.match(/function toggleCalendarStatusFilter\([\s\S]*?\n\}/);
@@ -2086,25 +2085,25 @@ test('calendar status filter: own persisted state, statuses + Archive (default O
     assert.match(toggle[0], /renderBoard\(\)/, 'toggling re-renders like every other persisted toggle');
     const solo = js.match(/function soloCalendarStatusFilter\([\s\S]*?\n\}/);
     assert.ok(solo, 'soloCalendarStatusFilter found in app.js');
-    assert.match(solo[0], /boardColumnIds\(\)/, 'card #108: the solo id list includes Archive too, so soloing Archive shows archived cards only');
+    assert.match(solo[0], /boardColumnIds\(\)/, 'the solo id list includes Archive too, so soloing Archive shows archived cards only');
     // A changed statuses list invalidates the calendar filter too, same as mapStatusFilter/ganttStatusFilter.
     const applyStatuses = js.match(/function applyStatuses\([\s\S]*?\n\}/);
     assert.match(applyStatuses[0], /calendarStatusFilter = null/, 'a changed column set re-merges the calendar filter too');
-    // projectName invalidation, same precedent as the #98 review fix for ganttStatusFilter.
+    // projectName invalidation, same precedent as ganttStatusFilter.
     const applyProj = js.match(/function applyProjectName\([\s\S]*?\n\}/);
     assert.match(applyProj[0], /calendarStatusFilter = null/,
       'calendar.statusFilter re-merges on a projectName change too, same as mapStatusFilter/ganttStatusFilter');
   });
 });
 
-test('buildCalendarFilterRow shares the #56/#98 pill-row MECHANISM and now includes the Archive pill (card #108, reopens #99)', async () => {
+test('buildCalendarFilterRow shares the pill-row MECHANISM and now includes the Archive pill', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const row = js.match(/function buildCalendarFilterRow\([\s\S]*?\n\}/);
     assert.ok(row, 'buildCalendarFilterRow found in app.js');
     assert.match(row[0], /buildFilterPillRow\(/, 'the calendar row calls the same shared builder as map/gantt');
-    assert.match(row[0], /boardColumnIds\(\)/, 'card #108: pills now come from statuses + Archive, same id list as the gantt\'s row');
+    assert.match(row[0], /boardColumnIds\(\)/, 'pills now come from statuses + Archive, same id list as the gantt\'s row');
     assert.match(row[0], /col === 'archive'/, 'the Archive pill gets its own tooltip wording, same ternary shape as the gantt row');
     // CSS is shared too — comma-joined selectors, not a third declaration block.
     const css = await (await fetch(`${base}/app.css`)).text();
@@ -2114,13 +2113,13 @@ test('buildCalendarFilterRow shares the #56/#98 pill-row MECHANISM and now inclu
   });
 });
 
-test('the calendar month grid AND the #58 sub-month time grid both append search-filtered archived cards only while the Archive pill is on (card #108)', async () => {
+test('the calendar month grid AND the sub-month time grid both append search-filtered archived cards only while the Archive pill is on', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     const month = js.match(/function renderCalendarMonthGrid\([\s\S]*?\n\}/);
     assert.ok(month, 'renderCalendarMonthGrid found in app.js');
-    assert.match(month[0], /loadCalendarStatusFilter\(\)\.archive === true/, 'card #108: the Archive pill\'s OWN boolean gates inclusion — a missing/stale/false value must never render archived chips');
+    assert.match(month[0], /loadCalendarStatusFilter\(\)\.archive === true/, 'the Archive pill\'s OWN boolean gates inclusion — a missing/stale/false value must never render archived chips');
     assert.match(month[0], /state\.archived\.filter\(\(c\) => searchIds\.has\(c\.id\)\)/, 'archived cards still respect the live search box');
     assert.match(month[0], /filterCards\(state\.active\.concat\(state\.archived\), searchTerms\)/, 'the search pool spans live + archived unconditionally, same as the gantt');
     const timegrid = js.match(/function renderCalendarTimeGrid\([\s\S]*?\n\}/);
@@ -2130,7 +2129,7 @@ test('the calendar month grid AND the #58 sub-month time grid both append search
   });
 });
 
-test('renderCalendarView renders the #99 status-filter row UNCONDITIONALLY, before branching into month/sub-month (card #99)', async () => {
+test('renderCalendarView renders the status-filter row UNCONDITIONALLY, before branching into month/sub-month', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2143,7 +2142,7 @@ test('renderCalendarView renders the #99 status-filter row UNCONDITIONALLY, befo
   });
 });
 
-test('the calendar month grid AND the #58 sub-month time grid both compose search+status by intersection through the gantt-style visible-ids rule (card #99)', async () => {
+test('the calendar month grid AND the sub-month time grid both compose search+status by intersection through the gantt-style visible-ids rule', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2160,7 +2159,7 @@ test('the calendar month grid AND the #58 sub-month time grid both compose searc
   });
 });
 
-test('a click on a calendar pill calls toggleCalendarStatusFilter, checked in the delegated #calendar-view listener (card #99)', async () => {
+test('a click on a calendar pill calls toggleCalendarStatusFilter, checked in the delegated #calendar-view listener', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2169,7 +2168,7 @@ test('a click on a calendar pill calls toggleCalendarStatusFilter, checked in th
   });
 });
 
-test('calendar status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard, same as the #56/#98 pills (card #99)', async () => {
+test('calendar status-filter pills join the Q0 clear-selection exemption AND the focused-control poll guard, same as the map/gantt pills', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2180,18 +2179,18 @@ test('calendar status-filter pills join the Q0 clear-selection exemption AND the
       'a calendar pill click must not wipe a building selection');
     // Poll guard: the pills live in #calendar-view, which renderCalendarView wipes
     // via innerHTML='' on every 5s tick — a focused pill would be destroyed
-    // mid-keyboard-interaction, same reasoning as the map's #56/gantt's #98 pills.
+    // mid-keyboard-interaction, same reasoning as the map's/gantt's pills.
     assert.match(js, /closest\('\.column-sort-field, \.column-sort-dir, \.cal-nav, \.column-add, \.column-add-ai, \.map-filter-toggle, \.map-section-toggle, \.gantt-filter-toggle, \.calendar-filter-toggle'\)/,
       'a focused calendar pill blocks the auto-refresh like every other rebuilt header control');
   });
 });
 
-// --- card #101: right-click SOLO/viceversa grammar — pure rule pinned in
+// --- right-click SOLO/viceversa grammar — pure rule pinned in
 // column-state.test.js; this pins the app.js GLUE the review found untested:
 // each view's solo*StatusFilter wrapper, its contextmenu wiring, and the
 // shared tooltip hint.
 
-test('soloMapStatusFilter/soloGanttStatusFilter/soloCalendarStatusFilter each feed the pure soloStatusFilter rule their own filter + id list, same shape as the toggle* wrappers (card #101)', async () => {
+test('soloMapStatusFilter/soloGanttStatusFilter/soloCalendarStatusFilter each feed the pure soloStatusFilter rule their own filter + id list, same shape as the toggle* wrappers', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2203,7 +2202,7 @@ test('soloMapStatusFilter/soloGanttStatusFilter/soloCalendarStatusFilter each fe
 
     const soloGantt = js.match(/function soloGanttStatusFilter\([\s\S]*?\n\}/);
     assert.ok(soloGantt, 'soloGanttStatusFilter found in app.js');
-    // card #98 reopen: the gantt's own column-id list now includes Archive
+    // the gantt's own column-id list now includes Archive
     // (boardColumnIds), same as the map's — soloing must cover the new pill
     // too (soloing a status turns Archive off; soloing Archive shows
     // archived only; right-click on the soloed Archive pill restores all).
@@ -2213,15 +2212,15 @@ test('soloMapStatusFilter/soloGanttStatusFilter/soloCalendarStatusFilter each fe
 
     const soloCal = js.match(/function soloCalendarStatusFilter\([\s\S]*?\n\}/);
     assert.ok(soloCal, 'soloCalendarStatusFilter found in app.js');
-    // card #108: the calendar's own column-id list now includes Archive too
-    // (boardColumnIds), same as the gantt's reopen — soloing must cover it.
+    // the calendar's own column-id list includes Archive too
+    // (boardColumnIds), same as the gantt's — soloing must cover it.
     assert.match(soloCal[0], /soloStatusFilter\(filter, boardColumnIds\(\), col\)/, 'calendar solo now uses statuses + Archive, same list as toggleCalendarStatusFilter');
     assert.match(soloCal[0], /saveCalendarStatusFilter\(\)/);
     assert.match(soloCal[0], /renderBoard\(\)/);
   });
 });
 
-test('buildFilterPillRow appends the #101 SOLO/viceversa hint to every pill\'s tooltip once, shared by all three views (card #101)', async () => {
+test('buildFilterPillRow appends the SOLO/viceversa hint to every pill\'s tooltip once, shared by all three views', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2232,7 +2231,7 @@ test('buildFilterPillRow appends the #101 SOLO/viceversa hint to every pill\'s t
   });
 });
 
-test('the three #101 pill contextmenu listeners solo the right view and, like the #39 shared handler, skip while a drag is in flight (card #101, card #39)', async () => {
+test('the three pill contextmenu listeners solo the right view and, like the shared document-level contextmenu handler, skip while a drag is in flight', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2254,9 +2253,9 @@ test('the three #101 pill contextmenu listeners solo the right view and, like th
   });
 });
 
-// --- card #109: time-grid drag-to-retime + edge-resize glue -----------------------
+// --- time-grid drag-to-retime + edge-resize glue -----------------------
 
-test('GET /calendar-model.js serves the #109 time-grid drag/resize math', async () => {
+test('GET /calendar-model.js serves the time-grid drag/resize math', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const body = await (await fetch(`${base}/calendar-model.js`)).text();
@@ -2268,7 +2267,7 @@ test('GET /calendar-model.js serves the #109 time-grid drag/resize math', async 
   });
 });
 
-test('calendar-model.js exports the #109 drag/resize functions both ways (module.exports AND window)', async () => {
+test('calendar-model.js exports the time-grid drag/resize functions both ways (module.exports AND window)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/calendar-model.js`)).text();
@@ -2280,7 +2279,7 @@ test('calendar-model.js exports the #109 drag/resize functions both ways (module
   });
 });
 
-test('renderCalendarTimeGrid makes timed blocks draggable:false and gives ONLY real durations resize handles (card #109)', async () => {
+test('renderCalendarTimeGrid makes timed blocks draggable:false and gives ONLY real durations resize handles', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2293,7 +2292,7 @@ test('renderCalendarTimeGrid makes timed blocks draggable:false and gives ONLY r
   });
 });
 
-test('wireCalendarDrag (native day-drag) excludes .cal-timeblock so the two drag systems never both fire (card #109)', async () => {
+test('wireCalendarDrag (native day-drag) excludes .cal-timeblock so the two drag systems never both fire', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2303,11 +2302,11 @@ test('wireCalendarDrag (native day-drag) excludes .cal-timeblock so the two drag
   });
 });
 
-test('wireCalendarTimeDrag is wired ONCE (a DOMContentLoaded init), never inside a per-render function (card #109)', async () => {
+test('wireCalendarTimeDrag is wired ONCE (a DOMContentLoaded init), never inside a per-render function', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
-    assert.match(js, /wireCalendarTimeDrag\(\); \/\/ card #109/, 'called at init');
+    assert.match(js, /wireCalendarTimeDrag\(\); \/\/ delegated once on the stable #calendar-view/, 'called at init');
     const renderView = js.match(/function renderCalendarView\([\s\S]*?\n\}/);
     const renderGrid = js.match(/function renderCalendarTimeGrid\([\s\S]*?\n\}/);
     assert.ok(!renderView[0].includes('wireCalendarTimeDrag('), 'never re-wired by renderCalendarView (delegated once on the stable parent)');
@@ -2315,7 +2314,7 @@ test('wireCalendarTimeDrag is wired ONCE (a DOMContentLoaded init), never inside
   });
 });
 
-test('the calendar pointerdown archived-guard (toast + return) precedes setPointerCapture — no fake drag for a read-only card (card #109, mirrors the gantt)', async () => {
+test('the calendar pointerdown archived-guard (toast + return) precedes setPointerCapture — no fake drag for a read-only card (mirrors the gantt)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2333,7 +2332,7 @@ test('the calendar pointerdown archived-guard (toast + return) precedes setPoint
   });
 });
 
-test('onCalTimeDragEnd bails on a null (no-op) changes BEFORE spending a PATCH or bumping pendingDrops (card #109)', async () => {
+test('onCalTimeDragEnd bails on a null (no-op) changes BEFORE spending a PATCH or bumping pendingDrops', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2343,7 +2342,7 @@ test('onCalTimeDragEnd bails on a null (no-op) changes BEFORE spending a PATCH o
     const patchIdx = fn[0].indexOf("api('PATCH'");
     const pendingIdx = fn[0].indexOf('pendingDrops++');
     assert.ok(nullIdx > -1, 'the !changes early-return exists');
-    assert.ok(nullIdx < pendingIdx && nullIdx < patchIdx, 'a zero-delta / not-applicable drag never PATCHes or bumps the poll guard — no stray `updated` bump (card #35)');
+    assert.ok(nullIdx < pendingIdx && nullIdx < patchIdx, 'a zero-delta / not-applicable drag never PATCHes or bumps the poll guard — no stray `updated` bump');
     // the three modes route to the three pure functions
     assert.match(fn[0], /rescheduleDueAtTime\(card, drag\.targetDay, drag\.targetMin\)/, 'due mode → rescheduleDueAtTime');
     assert.match(fn[0], /rescheduleRangeAtTime\(card, drag\.targetDay, drag\.targetMin\)/, 'shift mode → rescheduleRangeAtTime');
@@ -2351,7 +2350,7 @@ test('onCalTimeDragEnd bails on a null (no-op) changes BEFORE spending a PATCH o
   });
 });
 
-test('the document-level #39 contextmenu guard also skips a calendar time-drag (card #109)', async () => {
+test('the document-level contextmenu guard also skips a calendar time-drag', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2364,7 +2363,7 @@ test('the document-level #39 contextmenu guard also skips a calendar time-drag (
   });
 });
 
-test('sub-month all-day chips are not drop-dead zones: a live drag lets pointer events fall through to the day cells (card #58)', async () => {
+test('sub-month all-day chips are not drop-dead zones: a live drag lets pointer events fall through to the day cells', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     // Band chips are grid-overlay SIBLINGS of the .cal-tg-allday-cell drop
@@ -2389,14 +2388,14 @@ test('sub-month all-day chips are not drop-dead zones: a live drag lets pointer 
   });
 });
 
-// defect fix (kanban.proj #195/#197): a date-only card's month/all-day chip
+// defect fix: a date-only card's month/all-day chip
 // carried draggable=true and was wired into wireCalendarDrag same as any
 // other chip — the browser-visible symptom ("date-only cards can't be
 // dragged anywhere in the calendar") wasn't a missing attribute/handler at
 // all. Confirmed by driving a REAL browser (headless Edge over CDP, genuine
 // Input.dispatchMouseEvent — NOT a synthetic DragEvent, which bypasses the
 // native drag-initiation layer entirely and would have hidden this): the
-// #58 pointer-events:none rule above applied to EVERY .cal-chip during a
+// drag-hides-chips pointer-events:none rule above applied to EVERY .cal-chip during a
 // live drag, including the chip the OS was actively tracking AS the drag
 // source, because that chip still matches the bare `.cal-chip` selector.
 // Chromium cancels an in-flight native HTML5 drag outright the instant its
@@ -2407,9 +2406,9 @@ test('sub-month all-day chips are not drop-dead zones: a live drag lets pointer 
 // single-day, and multi-day range alike, since none are excluded from the
 // selector); it read as "date-only" only because a card carrying a
 // datetime value renders in the hour grid instead, which drags through the
-// entirely separate pointer-based wireCalendarTimeDrag (card #109) that
+// entirely separate pointer-based wireCalendarTimeDrag that
 // never touches this CSS class at all.
-test('the #58 drag-hides-chips rule excludes the DRAGGED chip itself, not just other chips (kanban.proj #195/#197 — pointer-events:none on the drag source cancels native HTML5 drag in Chromium)', async () => {
+test('the drag-hides-chips rule excludes the DRAGGED chip itself, not just other chips (pointer-events:none on the drag source cancels native HTML5 drag in Chromium)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2431,7 +2430,7 @@ test('the #58 drag-hides-chips rule excludes the DRAGGED chip itself, not just o
   });
 });
 
-test('CAL_HOUR_PX and the .cal-tg-col hour stripe agree — JS positions blocks in the CSS-drawn coordinate space (card #58)', () => {
+test('CAL_HOUR_PX and the .cal-tg-col hour stripe agree — JS positions blocks in the CSS-drawn coordinate space', () => {
   // Same JS/CSS sync-pinning as status-colors.test.js's palette checks: the
   // comment convention ("40px = CAL_HOUR_PX") enforced nothing — a one-sided
   // edit drifted every timed block off the drawn hour lines with the suite green.
@@ -2444,18 +2443,18 @@ test('CAL_HOUR_PX and the .cal-tg-col hour stripe agree — JS positions blocks 
     `.cal-tg-col hour stripe must be ${px}px to match CAL_HOUR_PX`);
 });
 
-test('Esc closes the open popup directly on the first press — no exit-fullscreen step, fullscreen state untouched (card #96)', () => {
+test('Esc closes the open popup directly on the first press — no exit-fullscreen step, fullscreen state untouched', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   // The document-level Esc handler's first line is a bare `if (e.key !== 'Escape')
   // return;` — the date-picker's own Esc handler guards `|| !datePickerFor` on
-  // that same line, and the combobox's (card #95 grew it into a multi-key
+  // that same line, and the combobox's (grown into a multi-key
   // grammar) still opens with the un-negated `if (e.key === 'Escape' ...)` —
   // neither false-matches this anchor.
   const esc = js.match(/document\.addEventListener\('keydown', \(e\) => \{\s*if \(e\.key !== 'Escape'\) return;[\s\S]*?\n\s*\}\);/);
   assert.ok(esc, 'document-level Escape handler found in app.js');
   const body = esc[0];
   assert.doesNotMatch(body, /isModalVisuallyFullscreen/,
-    'Esc no longer checks fullscreen state — card #20\'s "first Esc exits fullscreen" step is gone');
+    'Esc no longer checks fullscreen state — the old "first Esc exits fullscreen" step is gone');
   assert.doesNotMatch(body, /openFullscreenModalType/, 'Esc no longer looks up which modal is fullscreen');
   assert.doesNotMatch(body, /setModalFullscreenVisual/,
     'Esc never flips fullscreen — the persisted #20 preference and the toggle button stay untouched');
@@ -2463,7 +2462,7 @@ test('Esc closes the open popup directly on the first press — no exit-fullscre
     'an open detail popup closes on the very first Esc, fullscreen or not');
   assert.match(body, /if \(!\$\('#modal'\)\.classList\.contains\('hidden'\)\) \{ requestCloseModal\(\); return; \}/,
     'the edit/new-card modal now closes on Esc through the #26 unsaved-changes guard, same call the X button makes');
-  // verify finding: before this, a fullscreen-capable bulk popup (bulkSingle/
+  // Before this, a fullscreen-capable bulk popup (bulkSingle/
   // Tags/Schedule) left Esc a true no-op — the old fullscreen-exit step was
   // removed and nothing replaced it for these three. Esc must close them
   // directly too, same as their own backdrop-click (no confirm — bulk edits
@@ -2472,7 +2471,7 @@ test('Esc closes the open popup directly on the first press — no exit-fullscre
     'Esc closes an open bulk-edit popup directly, same as its backdrop-click');
 });
 
-test('closeAnyBulkPopup closes whichever bulk popup is open, no confirm — the fix for the Esc-is-inert-on-bulk-popups verify finding', () => {
+test('closeAnyBulkPopup closes whichever bulk popup is open, no confirm — the fix for the Esc-is-inert-on-bulk-popups bug', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/function closeAnyBulkPopup\([\s\S]*?\n\}/);
   assert.ok(fn, 'closeAnyBulkPopup found in app.js');
@@ -2482,16 +2481,16 @@ test('closeAnyBulkPopup closes whichever bulk popup is open, no confirm — the 
   assert.doesNotMatch(fn[0], /confirm\(/, 'bulk-edit popups are speedbump-exempt — Esc closes them with no confirm, same as backdrop-click');
 });
 
-test('isModalVisuallyFullscreen stays removed — dead code once Esc stopped calling it (card #96)', () => {
+test('isModalVisuallyFullscreen stays removed — dead code once Esc stopped calling it', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   assert.doesNotMatch(js, /function isModalVisuallyFullscreen/);
-  // openFullscreenModalType was ALSO removed by #96 as dead code, then
-  // deliberately resurrected by card #145 with a live caller (the Alt+Enter
-  // hotkey) — see the dedicated #145 test below. Esc itself still never
+  // openFullscreenModalType was ALSO removed as dead code, then
+  // deliberately resurrected with a live caller (the Alt+Enter
+  // hotkey) — see the dedicated Alt+Enter test below. Esc itself still never
   // touches fullscreen; the Esc-handler test above pins that separately.
 });
 
-test('Alt+Enter toggles fullscreen on the open popup — keyboard twin of the toggle button (card #145)', () => {
+test('Alt+Enter toggles fullscreen on the open popup — keyboard twin of the toggle button', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   // The lookup helper: first visible fullscreen-capable backdrop wins.
   const fn = js.match(/function openFullscreenModalType\(\) \{[\s\S]*?\n\}/);
@@ -2500,7 +2499,7 @@ test('Alt+Enter toggles fullscreen on the open popup — keyboard twin of the to
   assert.match(fn[0], /classList\.contains\('hidden'\)/);
   // The document-level handler: bare Alt+Enter only (no other modifiers),
   // routed through toggleModalFullscreen so the persisted per-modal-type
-  // preference (card #20) updates identically to a button click.
+  // preference updates identically to a button click.
   const handler = js.match(/document\.addEventListener\('keydown', \(e\) => \{\s*if \(e\.key !== 'Enter' \|\| !e\.altKey[\s\S]*?\n\s*\}\);/);
   assert.ok(handler, 'document-level Alt+Enter handler found in app.js');
   assert.match(handler[0], /e\.ctrlKey \|\| e\.metaKey \|\| e\.shiftKey/, 'other-modifier chords fall through untouched');
@@ -2510,25 +2509,25 @@ test('Alt+Enter toggles fullscreen on the open popup — keyboard twin of the to
   // No popup open = no-op: the lookup returning null must bail BEFORE preventDefault.
   assert.match(handler[0], /if \(!type\) return;\s*\n\s*e\.preventDefault\(\)/);
   // attachCombobox exempts alt-chorded Enter so the hotkey wins over the
-  // menu's pick grammar even while a suggestion menu is open (card #95's
+  // menu's pick grammar even while a suggestion menu is open (the
   // plain-Enter contract is untouched — its own test below).
   const combo = js.match(/function attachCombobox\([\s\S]*?\n\}/);
   assert.ok(combo, 'attachCombobox found in app.js');
   assert.match(combo[0], /if \(e\.altKey\) return;/);
 });
 
-test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, Esc still stops at the menu (card #95)', () => {
+test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, Esc still stops at the menu', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/function attachCombobox\([\s\S]*?\n\}/);
   assert.ok(fn, 'attachCombobox found in app.js');
   const body = fn[0];
-  // Esc: card #96's contract survives untouched — closes the menu ONLY and
+  // Esc: the contract survives untouched — closes the menu ONLY and
   // stops propagation so the document-level popup-close handler never sees
   // this keypress (the next Esc is the one that closes the popup/modal).
   assert.match(body, /if \(e\.key === 'Escape' && !menu\.hidden\) \{ close\(\); e\.stopPropagation\(\); return; \}/);
   // A closed menu hands every other key back — no Arrow/Enter handling runs,
   // so a bare Enter reaches the surrounding <form>'s native submit-on-Enter
-  // (the #50/#85 minimal-create flow this card must not break).
+  // (the minimal-create flow must not break).
   assert.match(body, /if \(menu\.hidden\) return;/);
   // Up/Down move `highlightIndex` through the CURRENTLY RENDERED `items`,
   // wrapping — the wrap/clamp math itself is combobox.js's nextHighlightIndex
@@ -2536,11 +2535,11 @@ test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, 
   assert.match(body, /e\.key === 'ArrowDown' \|\| e\.key === 'ArrowUp'/);
   assert.match(body, /setHighlight\(nextHighlightIndex\(items\.length, highlightIndex, e\.key === 'ArrowDown' \? 1 : -1\)\);/);
   assert.match(body, /e\.preventDefault\(\); \/\/ don't let the browser hunt for another focusable element/);
-  // verify finding: Enter must NEVER fall through to the form while the menu
-  // is open ("ONLY when the menu is closed" — card #95 AC1). An open menu
+  // Enter must NEVER fall through to the form while the menu
+  // is open ("ONLY when the menu is closed"). An open menu
   // always consumes it: picks the highlighted row, or — nothing highlighted —
   // just closes the menu so the very next Enter is the one that reaches the
-  // form. #50/#85 still work: a mouse pick already closes the menu before
+  // form. Minimal create still works: a mouse pick already closes the menu before
   // Enter is ever pressed, and the plain title-only flow never opens the
   // assignee menu at all.
   assert.match(body, /if \(e\.key === 'Enter'\) \{/);
@@ -2550,7 +2549,7 @@ test('attachCombobox keydown grammar: Up/Down move a highlight, Enter picks it, 
     'the old highlightIndex-gated Enter (which let it fall through to submit while the menu stayed open) is gone');
 });
 
-test('setHighlight scrolls the highlighted row into view — a menu taller than its 180px max-height must not hide the active row (verify finding)', () => {
+test('setHighlight scrolls the highlighted row into view — a menu taller than its 180px max-height must not hide the active row (regression)', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/const setHighlight = \(idx\) => \{[\s\S]*?\n  \};/);
   assert.ok(fn, 'setHighlight found in app.js');
@@ -2558,19 +2557,19 @@ test('setHighlight scrolls the highlighted row into view — a menu taller than 
     'the highlighted item scrolls into view — a plain classList toggle never auto-scrolls an unfocused div into an overflow:auto container');
 });
 
-test("combobox Up/Down highlight reuses the existing hover treatment, not a new color (card #95)", () => {
+test("combobox Up/Down highlight reuses the existing hover treatment, not a new color", () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
   assert.match(css, /\.combobox-item:hover, \.combobox-item\.active \{ background: #1f6feb33; \}/);
 });
 
-// --- verify finding: card #92's "one rule, three callers" is only pinned for
+// --- the "one rule, three callers" is only pinned for
 // drag-to-Archive (via dragPlan/selection.test.js) — doArchive (tile/detail
 // Archive button) and bulkArchive (bulk menu's Archive selected) call
 // archiveNeedsConfirm too, but nothing asserted that wiring, so a regression
 // dropping/inverting the gate on either of those two surfaces would pass the
 // whole suite silently.
 
-test('doArchive gates its confirm on archiveNeedsConfirm — the tile/detail Archive button surface (card #92 verify)', () => {
+test('doArchive gates its confirm on archiveNeedsConfirm — the tile/detail Archive button surface (regression)', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/async function doArchive\([\s\S]*?\n\}/);
   assert.ok(fn, 'doArchive found in app.js');
@@ -2580,7 +2579,7 @@ test('doArchive gates its confirm on archiveNeedsConfirm — the tile/detail Arc
     'confirm is skipped entirely when the found card is done — same rule dragPlan/bulkArchive use');
 });
 
-test('bulkArchive gates its confirm on archiveNeedsConfirm — the bulk menu\'s Archive selected surface (card #92 verify)', () => {
+test('bulkArchive gates its confirm on archiveNeedsConfirm — the bulk menu\'s Archive selected surface (regression)', () => {
   const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
   const fn = js.match(/async function bulkArchive\([\s\S]*?\n\}/);
   assert.ok(fn, 'bulkArchive found in app.js');
@@ -2589,7 +2588,7 @@ test('bulkArchive gates its confirm on archiveNeedsConfirm — the bulk menu\'s 
 });
 
 // =====================================================================
-// card #49 — security audit (Track A of #146's go-public gate). Four
+// security audit (part of the go-public gate). Four
 // ratified deliverables: pin the loopback bind, add an Origin/Referer +
 // Host allowlist on state-changing routes, ship a CSP header + sweep the
 // SPA's card-content render paths for XSS, and SECURITY.md's threat model.
@@ -2602,7 +2601,7 @@ test('bulkArchive gates its confirm on archiveNeedsConfirm — the bulk menu\'s 
 // start() itself) so a future edit that widens the bind to '0.0.0.0' or drops
 // the host argument (defaulting to all interfaces) fails loudly.
 
-test("start() binds the HTTP server to 127.0.0.1 only — no 0.0.0.0 footgun (card #49 deliverable 1)", async () => {
+test("start() binds the HTTP server to 127.0.0.1 only — no 0.0.0.0 footgun", async () => {
   const dir = tmpBoard();
   const srv = start(dir, 0); // port 0: OS picks a free port — start()'s own listen() call is what's under test
   try {
@@ -2627,21 +2626,21 @@ test("start() binds the HTTP server to 127.0.0.1 only — no 0.0.0.0 footgun (ca
 // disallowed origin/host is refused; an ABSENT header is a legitimate local
 // client (curl, direct tool calls, VSCode Simple Browser) and passes through.
 
-test('originAllowed: absent Origin, Referer, and Host all pass — curl-style local clients are never refused (card #49)', () => {
+test('originAllowed: absent Origin, Referer, and Host all pass — curl-style local clients are never refused', () => {
   assert.strictEqual(originAllowed({ headers: {} }), true);
 });
 
-test('originAllowed: allows Origin/Host naming localhost or 127.0.0.1 on any port, or no port at all (card #49)', () => {
+test('originAllowed: allows Origin/Host naming localhost or 127.0.0.1 on any port, or no port at all', () => {
   assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost:7777', host: 'localhost:7777' } }), true);
   assert.strictEqual(originAllowed({ headers: { origin: 'http://127.0.0.1:7797', host: '127.0.0.1:7797' } }), true);
   assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost', host: 'localhost' } }), true);
 });
 
-test('originAllowed: refuses a PRESENT Origin naming somewhere else (card #49, kills CSRF)', () => {
+test('originAllowed: refuses a PRESENT Origin naming somewhere else (kills CSRF)', () => {
   assert.strictEqual(originAllowed({ headers: { origin: 'http://evil.example' } }), false);
 });
 
-test('originAllowed: refuses a PRESENT Host naming somewhere else (card #49, kills DNS-rebinding)', () => {
+test('originAllowed: refuses a PRESENT Host naming somewhere else (kills DNS-rebinding)', () => {
   assert.strictEqual(originAllowed({ headers: { host: 'evil.example' } }), false);
 });
 
@@ -2655,7 +2654,7 @@ test('originAllowed: an allowed Origin is not overruled by a mismatched Host, an
   assert.strictEqual(originAllowed({ headers: { origin: 'http://localhost:7777', host: 'evil.example' } }), false);
 });
 
-test('POST /api/cards with no Origin/Referer/Host override succeeds — direct tool calls stay legitimate (card #49)', async () => {
+test('POST /api/cards with no Origin/Referer/Host override succeeds — direct tool calls stay legitimate', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'POST', '/api/cards', { body: { title: 'No headers', status: 'todo' } });
@@ -2663,7 +2662,7 @@ test('POST /api/cards with no Origin/Referer/Host override succeeds — direct t
   });
 });
 
-test('POST /api/cards with an allowed localhost/127.0.0.1 Origin succeeds (card #49)', async () => {
+test('POST /api/cards with an allowed localhost/127.0.0.1 Origin succeeds', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const port = new URL(base).port;
@@ -2676,7 +2675,7 @@ test('POST /api/cards with an allowed localhost/127.0.0.1 Origin succeeds (card 
   });
 });
 
-test('POST /api/cards with a hostile Origin is refused with 403 and writes nothing to disk (card #49, kills CSRF)', async () => {
+test('POST /api/cards with a hostile Origin is refused with 403 and writes nothing to disk (kills CSRF)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const before = fs.readdirSync(dir).filter((f) => f.endsWith('.card.md')).length;
@@ -2688,7 +2687,7 @@ test('POST /api/cards with a hostile Origin is refused with 403 and writes nothi
   });
 });
 
-test('PATCH /api/cards/:id with a hostile Host header is refused with 403 and leaves the card untouched (card #49, kills DNS-rebinding)', async () => {
+test('PATCH /api/cards/:id with a hostile Host header is refused with 403 and leaves the card untouched (kills DNS-rebinding)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'PATCH', '/api/cards/1',
@@ -2699,7 +2698,7 @@ test('PATCH /api/cards/:id with a hostile Host header is refused with 403 and le
   });
 });
 
-test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the file survives (card #49)', async () => {
+test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the file survives', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'DELETE', '/api/cards/1', { headers: { origin: 'http://evil.example' } });
@@ -2708,14 +2707,14 @@ test('DELETE /api/cards/:id with a hostile Origin is refused with 403 and the fi
   });
 });
 
-// verify finding: the first pass exempted GET from the guard entirely, which
+// The first pass exempted GET from the guard entirely, which
 // left DNS rebinding's read/exfiltration half open — a rebound hostile origin
 // is same-origin to the browser once resolved to 127.0.0.1, so a GET fetch
 // from that tab would return the full board with no write ever attempted.
 // The guard now applies uniformly; only a PRESENT disallowed header is
 // refused, so a normal top-level GET (which sends no Origin and whose Host
 // always matches the address actually loaded) keeps working unmodified.
-test('GET requests ARE blocked by the Origin/Host guard too — reads are not exempt (card #49 verify finding)', async () => {
+test('GET requests ARE blocked by the Origin/Host guard too — reads are not exempt (regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'GET', '/api/board', { headers: { origin: 'http://evil.example', host: 'evil.example' } });
@@ -2723,7 +2722,7 @@ test('GET requests ARE blocked by the Origin/Host guard too — reads are not ex
   });
 });
 
-test('GET /api/board with no Origin/Referer/Host override succeeds — direct tool calls and normal browser navigation stay legitimate (card #49 verify finding)', async () => {
+test('GET /api/board with no Origin/Referer/Host override succeeds — direct tool calls and normal browser navigation stay legitimate (regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const r = await rawRequest(base, 'GET', '/api/board', {});
@@ -2731,7 +2730,7 @@ test('GET /api/board with no Origin/Referer/Host override succeeds — direct to
   });
 });
 
-test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (card #49 verify finding)', async () => {
+test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (regression)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const port = new URL(base).port;
@@ -2744,7 +2743,7 @@ test('GET /api/board with an allowed localhost/127.0.0.1 Origin succeeds (card #
 // script/style anywhere (every script is a separate <script src>, every rule
 // lives in app.css), so the policy needs no 'unsafe-inline'/'unsafe-eval'.
 
-test("GET / carries a Content-Security-Policy header with no unsafe-inline/unsafe-eval (card #49 deliverable 3)", async () => {
+test("GET / carries a Content-Security-Policy header with no unsafe-inline/unsafe-eval", async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/`);
@@ -2760,7 +2759,7 @@ test("GET / carries a Content-Security-Policy header with no unsafe-inline/unsaf
   });
 });
 
-test('static JS/CSS assets do not carry the Content-Security-Policy header — it is scoped to the HTML document (card #49)', async () => {
+test('static JS/CSS assets do not carry the Content-Security-Policy header — it is scoped to the HTML document', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const res = await fetch(`${base}/app.js`);
@@ -2773,12 +2772,12 @@ test('static JS/CSS assets do not carry the Content-Security-Policy header — i
 // throughout) — these tests PIN that property so a future edit can't
 // silently reintroduce an unescaped sink.
 
-test('XSS sweep: card.title never lands in innerHTML unescaped — board tile, archived tile, calendar chip, and gantt bar/gutter all wrap it in escapeHtml (card #49 security audit)', async () => {
+test('XSS sweep: card.title never lands in innerHTML unescaped — board tile, archived tile, calendar chip, and gantt bar/gutter all wrap it in escapeHtml (security audit)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
     assert.match(js.match(/function cardEl\([\s\S]*?\n\}/)[0], /escapeHtml\(card\.title\)/);
-    // kanban.proj #211: archiveCardEl/cardEl still escape the raw title on
+    // archiveCardEl/cardEl still escape the raw title on
     // their non-fallback branch (title present); calendarChipEl/ganttBarEl/
     // renderGanttView now escape `titleDisplay.text` instead — cardTitleDisplay's
     // output (either the real title or, for a titleless AI-prompt card, the
@@ -2791,7 +2790,7 @@ test('XSS sweep: card.title never lands in innerHTML unescaped — board tile, a
   });
 });
 
-test('XSS sweep: the dependency map SVG escapes every card-derived string — node id/title lines, tooltip, raw status, and blocked reason (card #49 security audit)', async () => {
+test('XSS sweep: the dependency map SVG escapes every card-derived string — node id/title lines, tooltip, raw status, and blocked reason (security audit)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2804,7 +2803,7 @@ test('XSS sweep: the dependency map SVG escapes every card-derived string — no
   });
 });
 
-test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synthesis, and never lets an unsafe link scheme through (card #49 security audit)', async () => {
+test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synthesis, and never lets an unsafe link scheme through (security audit)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();
@@ -2816,7 +2815,7 @@ test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synt
   });
 });
 
-test('XSS sweep: the detail popup\'s frontmatter table and "Last modified" line escape every value (card #49 security audit)', async () => {
+test('XSS sweep: the detail popup\'s frontmatter table and "Last modified" line escape every value (security audit)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const js = await (await fetch(`${base}/app.js`)).text();

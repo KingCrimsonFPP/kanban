@@ -1,9 +1,9 @@
 #!/bin/bash
-# Doing-gate-clear todo cards, ready for pickup (card #156): status EXACTLY
+# Doing-gate-clear todo cards, ready for pickup: status EXACTLY
 # `todo` (literal, case-sensitive) AND not waiting (show_waiting.sh semantics:
 # some waiting_for id names a card, live or archived, whose status != done;
 # dangling ids don't count) AND not blocked (show_blocked.sh predicate) AND
-# not review-stickered (show_review.sh predicate — ADR 0009, card #181:
+# not review-stickered (show_review.sh predicate — ADR 0009:
 # agents skip a card awaiting human approval, same stance as blocked, even
 # though `review` doesn't gate the literal `doing` entry check).
 # Optional assignee arg filters the result, quote-normalized so `@afk` and
@@ -38,7 +38,7 @@ blocked_reason() {
 }
 
 # review's sibling of blocked_reason — same predicate, applied to the
-# `review` field (ADR 0009, card #181).
+# `review` field (ADR 0009).
 review_text() {
     local v="$1"
     v="${v#"${v%%[![:space:]]*}"}"; v="${v%"${v##*[![:space:]]}"}"

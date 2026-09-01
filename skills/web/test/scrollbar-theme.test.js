@@ -3,8 +3,8 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- kanban.proj #209: theme every visible scrollbar to match the dark page
-// palette instead of default OS chrome (follow-up to #207's per-column
+// --- theme every visible scrollbar to match the dark page
+// palette instead of default OS chrome (a follow-up to the per-column
 // scroll containers) --------------------------------------------------
 // CSS-only, so pinned as structure tests against app.css's source text (same
 // convention as status-colors.test.js / board-header-layout.test.js): every
@@ -15,7 +15,7 @@ const path = require('node:path');
 
 const css = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.css'), 'utf8');
 
-// Every scrollable container the card calls out: the page itself, #207's
+// Every scrollable container the app owns: the page itself, the
 // per-column vertical lists and horizontal board strip, popup/modal scroll
 // areas, the gantt/map horizontal scrollers, and the calendar hour grid.
 const SCROLL_SELECTORS = [
@@ -68,7 +68,7 @@ test('the webkit scrollbar track is transparent, not a hardcoded fill (container
   assert.match(css, /::-webkit-scrollbar-track\s*[,{][\s\S]{0,600}?background:\s*transparent/, 'track blends into whichever surface it is over');
 });
 
-// Verify finding (kanban.proj #209): overflow: auto is silently inert unless
+// The bug guarded: overflow: auto is silently inert unless
 // the box has a height/max-height of its own — a plain block child of body
 // (which sets neither) just grows to fit its content, so it never overflows
 // itself and its ::-webkit-scrollbar* rules never fire; html scrolls instead.

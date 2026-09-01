@@ -1,9 +1,9 @@
 'use strict';
-const state = { active: [], archived: [], projectName: '', boardDir: '', notifications: [], priorities: [], tags: [], statuses: [], assignees: [] }; // card #46: assignees seeded empty — renderBoard's Assignee sort reads it before the first /api/board response lands. card #55: boardDir seeded empty — copyBoardPath toasts honestly on a pre-first-poll click.
+const state = { active: [], archived: [], projectName: '', boardDir: '', notifications: [], priorities: [], tags: [], statuses: [], assignees: [] }; // assignees seeded empty — renderBoard's Assignee sort reads it before the first /api/board response lands. boardDir seeded empty — copyBoardPath toasts honestly on a pre-first-poll click.
 
 const $ = (sel) => document.querySelector(sel);
 
-// --- Dynamic columns (card #31): the live columns come from config.yaml's
+// --- Dynamic columns: the live columns come from config.yaml's
 // `statuses` list (via /api/board), the built-in four when unconfigured.
 // column-state.js owns the pure rules (columnIdsFor/columnForStatus/
 // columnLabel); status-colors.js owns the color rules (built-in four keep
@@ -25,9 +25,9 @@ function applyStatuses(list) {
   state.statuses = next;
   collapsedColumns = null;
   columnSort = null;
-  mapStatusFilter = null; // card #56: keyed by the same column set
-  ganttStatusFilter = null; // card #98: keyed by the LIVE statuses (no archive), same invalidation rule
-  calendarStatusFilter = null; // card #99: same LIVE-statuses key as the gantt's
+  mapStatusFilter = null; // keyed by the same column set
+  ganttStatusFilter = null; // keyed by the LIVE statuses (no archive), same invalidation rule
+  calendarStatusFilter = null; // same LIVE-statuses key as the gantt's
 }
 
 // column-state.js provides DEFAULT_STATUSES / columnIdsFor / columnForStatus /
@@ -45,7 +45,7 @@ function loadCollapsedColumns() {
     const raw = localStorage.getItem(storageKey(state.projectName, 'columns.collapsed'));
     if (raw) saved = JSON.parse(raw);
   } catch (e) { saved = null; } // corrupt/inaccessible storage — fall back to defaults
-  collapsedColumns = mergeCollapsedState(saved, boardColumnIds()); // card #31: merge against the board's current column set
+  collapsedColumns = mergeCollapsedState(saved, boardColumnIds()); // merge against the board's current column set
   return collapsedColumns;
 }
 
@@ -63,7 +63,7 @@ function toggleColumn(col) {
 
 // column-sort.js provides SORT_FIELDS / SORT_FIELD_LABELS / DEFAULT_SORT /
 // DEFAULT_SORT_DIRECTION / mergeSortState / compareCards / sortCards as bare
-// globals (card #18, same dual-environment pattern). Loaded once from
+// globals (same dual-environment pattern). Loaded once from
 // localStorage per page load and mutated in place — same discipline as
 // collapsedColumns above — so the chosen sort survives every renderBoard()
 // call (manual, drag, poll, toggle, search) without re-reading storage.
@@ -76,7 +76,7 @@ function loadColumnSort() {
     const raw = localStorage.getItem(storageKey(state.projectName, 'columns.sort'));
     if (raw) saved = JSON.parse(raw);
   } catch (e) { saved = null; } // corrupt/inaccessible storage — fall back to defaults
-  columnSort = mergeSortState(saved, boardColumnIds()); // card #31: merge against the board's current column set
+  columnSort = mergeSortState(saved, boardColumnIds()); // merge against the board's current column set
   return columnSort;
 }
 
@@ -87,7 +87,7 @@ function saveColumnSort() {
 
 // Changing the field resets direction to that field's natural default
 // (id/due -> asc, priority -> desc/High-first, modified -> desc/newest-first,
-// assignee -> asc/registry-order — card #46) rather than keeping whatever
+// assignee -> asc/registry-order) rather than keeping whatever
 // direction the previous field happened to be on.
 function setColumnSortField(col, field) {
   if (!SORT_FIELDS.includes(field)) return;
@@ -105,7 +105,7 @@ function toggleColumnSortDirection(col) {
   renderBoard();
 }
 
-// card #56: which columns' cards the MAP shows — one toggle per column
+// Which columns' cards the MAP shows — one toggle per column
 // (statuses in column order + archive, the location pseudo-column). Pure
 // rules (defaults/merge/card→toggle mapping) live in column-state.js; same
 // memoize-once-mutate-in-place discipline as collapsedColumns/columnSort
@@ -137,7 +137,7 @@ function toggleMapStatusFilter(col) {
   renderBoard();
 }
 
-// card #101: right-click SOLO — that pill on, every other off; right-click
+// Right-click SOLO — that pill on, every other off; right-click
 // again on an already-soloed pill restores all ON ("viceversa"). The pure
 // rule (soloStatusFilter, column-state.js) is shared by all three views;
 // this wrapper mirrors toggleMapStatusFilter's load/mutate-in-place/save/
@@ -149,16 +149,16 @@ function soloMapStatusFilter(col) {
   renderBoard();
 }
 
-// card #98: which statuses the GANTT shows — one toggle per board status in
-// column order, all ON by default. card #98's 2026 reopen ("we are missing
-// archived status") added an Archive pseudo-pill, same id list as the map's
+// Which statuses the GANTT shows — one toggle per board status in
+// column order, all ON by default, plus
+// an Archive pseudo-pill, same id list as the map's
 // row (boardColumnIds(): statuses + archive) — but DEFAULT OFF, unlike every
-// live status and unlike the map's own Archive pill (#56, always ON — the
+// live status and unlike the map's own Archive pill (always ON — the
 // map has always included archived cards): the base gantt view must stay
 // exactly live-only until a human opts in. That one different default is why
 // this reuses mergeGanttStatusFilter (its own archive-off-by-default merge
 // helper, column-state.js) rather than the map's mergeMapStatusFilter, which
-// would default the new key to true. Same memoize-once-mutate-in-place
+// would default the archive key to true. Same memoize-once-mutate-in-place
 // discipline as mapStatusFilter above, so the choice survives every
 // renderGanttView() call (manual, poll, drag, toggle, search) and page
 // reloads, per board.
@@ -171,7 +171,7 @@ function loadGanttStatusFilter() {
     const raw = localStorage.getItem(storageKey(state.projectName, 'gantt.statusFilter'));
     if (raw) saved = JSON.parse(raw);
   } catch (e) { saved = null; } // corrupt/inaccessible storage — fall back to defaults (archive OFF)
-  ganttStatusFilter = mergeGanttStatusFilter(saved, boardColumnIds()); // card #98 reopen: statuses + archive, archive-off-by-default merge — a stale pre-reopen saved value (no 'archive' key) fills in OFF, never ON
+  ganttStatusFilter = mergeGanttStatusFilter(saved, boardColumnIds()); // statuses + archive, archive-off-by-default merge — a stale saved value with no 'archive' key fills in OFF, never ON
   return ganttStatusFilter;
 }
 
@@ -188,13 +188,12 @@ function toggleGanttStatusFilter(col) {
   renderBoard();
 }
 
-// card #101: right-click SOLO, gantt-scoped — same rule/shape as
-// soloMapStatusFilter above, own filter + id list. card #98 reopen: the id
-// list now includes Archive (boardColumnIds), so soloing a status turns
+// Right-click SOLO, gantt-scoped — same rule/shape as
+// soloMapStatusFilter above, own filter + id list. The id
+// list includes Archive (boardColumnIds), so soloing a status turns
 // Archive off too (every-other-off), soloing Archive shows archived cards
 // only, and right-clicking the already-soloed Archive pill restores all —
-// soloStatusFilter is already fully generic over its id list, no change
-// needed there.
+// soloStatusFilter is fully generic over its id list.
 function soloGanttStatusFilter(col) {
   const filter = loadGanttStatusFilter();
   Object.assign(filter, soloStatusFilter(filter, boardColumnIds(), col));
@@ -202,15 +201,14 @@ function soloGanttStatusFilter(col) {
   renderBoard();
 }
 
-// card #99: which LIVE statuses the CALENDAR shows — one toggle per board
-// status in column order, all ON by default. card #108 ("show/hide archived
-// cards the same way we do in map view and gantt view") added an Archive
+// Which LIVE statuses the CALENDAR shows — one toggle per board
+// status in column order, all ON by default, plus an Archive
 // pseudo-pill, same id list as the gantt's row (boardColumnIds(): statuses +
 // archive) and the same DEFAULT OFF as the gantt (not the map's always-ON):
 // the base calendar view must stay exactly live-only until a human opts in.
 // That default is why this reuses mergeGanttStatusFilter (its own
 // archive-off-by-default merge helper, column-state.js), not the map's
-// mergeMapStatusFilter (which would default the new key to true). The
+// mergeMapStatusFilter (which would default the archive key to true). The
 // calendar doesn't bucket cards into board columns any more than the gantt
 // does (a chip renders off cardSchedule/dueMarker, not a column lookup), so
 // it reuses ganttFilterVisibleIds verbatim (see renderCalendarMonthGrid/
@@ -228,7 +226,7 @@ function loadCalendarStatusFilter() {
     const raw = localStorage.getItem(storageKey(state.projectName, 'calendar.statusFilter'));
     if (raw) saved = JSON.parse(raw);
   } catch (e) { saved = null; } // corrupt/inaccessible storage — fall back to defaults (archive OFF)
-  calendarStatusFilter = mergeGanttStatusFilter(saved, boardColumnIds()); // card #108: statuses + archive, archive-off-by-default merge — a stale pre-#108 saved value (no 'archive' key) fills in OFF, never ON
+  calendarStatusFilter = mergeGanttStatusFilter(saved, boardColumnIds()); // statuses + archive, archive-off-by-default merge — a stale saved value with no 'archive' key fills in OFF, never ON
   return calendarStatusFilter;
 }
 
@@ -245,12 +243,12 @@ function toggleCalendarStatusFilter(col) {
   renderBoard();
 }
 
-// card #101: right-click SOLO, calendar-scoped — same rule/shape as
-// soloGanttStatusFilter above. card #108: the id list is now boardColumnIds()
+// Right-click SOLO, calendar-scoped — same rule/shape as
+// soloGanttStatusFilter above. The id list is boardColumnIds()
 // (statuses + Archive), so soloing a status turns Archive off too, soloing
 // Archive shows archived cards only, and right-clicking the already-soloed
-// Archive pill restores all — soloStatusFilter is already fully generic over
-// its id list, no change needed there.
+// Archive pill restores all — soloStatusFilter is fully generic over
+// its id list.
 function soloCalendarStatusFilter(col) {
   const filter = loadCalendarStatusFilter();
   Object.assign(filter, soloStatusFilter(filter, boardColumnIds(), col));
@@ -258,7 +256,7 @@ function soloCalendarStatusFilter(col) {
   renderBoard();
 }
 
-// card #97: map section collapse — one boolean per section (the layered graph,
+// Map section collapse — one boolean per section (the layered graph,
 // the "No dependencies" list). column-state.js's MAP_SECTIONS/mergeMapSectionsCollapsed
 // own the fixed two-key shape (not a dynamic column set, unlike collapse/sort/
 // status-filter above); same memoize-once-mutate-in-place discipline and own
@@ -292,14 +290,14 @@ function toggleMapSection(key) {
 
 const CHEVRON_LEFT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
 const CHEVRON_RIGHT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-// kanban.proj #202: same sparkle glyph as #modal-ai-btn (app.html) — reused
+// Same sparkle glyph as #modal-ai-btn (app.html) — reused
 // here (not re-fetched from the DOM) for the column header's AI quick-create
 // button and the board tile's empty-title prompt-fallback, so both read as
 // the same "AI prompt" cue the modal's own toggle already established.
 const AI_PROMPT_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"></path><path d="M19 15l0.8 2.2L22 18l-2.2 0.8L19 21l-0.8-2.2L16 18l2.2-0.8L19 15z"></path></svg>';
 
 // modal-fullscreen.js provides MODAL_TYPES / DEFAULT_FULLSCREEN /
-// mergeFullscreenState as bare globals (card #20, same dual-environment
+// mergeFullscreenState as bare globals (same dual-environment
 // pattern as column-state.js/column-sort.js). Loaded once from localStorage
 // per page load and mutated in place — same discipline as collapsedColumns/
 // columnSort above — so the chosen fullscreen state survives every popup
@@ -313,8 +311,8 @@ const EXIT_FULLSCREEN_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0
 
 // Registry mapping a modal type (matches modal-fullscreen.js's MODAL_TYPES)
 // to its DOM handles. Following the .modal-backdrop convention here (rather
-// than hardcoding two call sites) is what the card means by a future popup —
-// e.g. #13's AI-assist popup — getting fullscreen "mostly free": it only
+// than hardcoding two call sites) lets a future popup
+// get fullscreen "mostly free": it only
 // needs an entry here plus a toggle button of its own.
 const FULLSCREEN_MODALS = {
   edit: { backdrop: '#modal', btn: '#modal-fullscreen-btn' },
@@ -343,12 +341,10 @@ function saveModalFullscreen() {
 }
 
 // Sets a modal's DOM (class + button icon/tooltip/aria) to an explicit on/off
-// value WITHOUT touching the persisted preference. Card #20 originally split
-// this out so Esc could exit fullscreen visually without downgrading an
-// "always fullscreen" preference; card #96 removed Esc from the fullscreen
-// picture entirely (Esc now closes the popup outright, first press, fullscreen
+// value WITHOUT touching the persisted preference. Esc is not part of the
+// fullscreen picture (Esc closes the popup outright, first press, fullscreen
 // or not — see the document keydown handler below), so the only two callers
-// left are applyModalFullscreen (reflect the saved preference on every open)
+// are applyModalFullscreen (reflect the saved preference on every open)
 // and toggleModalFullscreen (the button, which persists first and then calls
 // this to update the DOM to match).
 function setModalFullscreenVisual(type, on) {
@@ -381,7 +377,7 @@ function toggleModalFullscreen(type) {
   applyModalFullscreen(type);
 }
 
-// The fullscreen-capable popup currently open, if any (card #145's Alt+Enter
+// The fullscreen-capable popup currently open, if any (the Alt+Enter
 // hotkey needs a target). At most one .modal-backdrop is ever visible at a
 // time, so first match wins; the notifications popup isn't in the registry
 // and correctly yields null.
@@ -420,7 +416,7 @@ function toast(msg) {
   toast._t = setTimeout(() => t.classList.add('hidden'), 3500);
 }
 
-// epic #137: waiting (derived from waiting_for) and blocked (the manual
+// Waiting (derived from waiting_for) and blocked (the manual
 // sticker) are distinct words with distinct predicates — both live in
 // waiting-blocked.js (bare globals here); these are the board-state wrappers.
 // Waiting is location-independent: deps resolve against active + archived.
@@ -454,11 +450,10 @@ function gate422Text(data) {
   return (data && data.error) || 'blocked';
 }
 
-// card #183 (kanban.proj #191 replaced the dot with tinted text):
 // assigneeBadge() can't write a reserved custom color as an inline-style
 // HTML attribute string — a strict `style-src 'self'` CSP (no unsafe-inline)
-// blocks the browser from applying one at all, the exact #49 verify finding
-// status-colors.js's own dots were fixed for. It instead marks the
+// blocks the browser from applying one at all, the same CSP trap
+// status-colors.js's own dots guard against. It instead marks the
 // `.card-assignee` span itself with `data-assignee-color`; this small CSSOM
 // pass (never a string attribute, exactly the exception status-colors.js
 // documents) paints the text color after the innerHTML above lands. The
@@ -472,33 +467,33 @@ function paintAssigneeColors(root) {
 }
 
 // assigneeBadge/escapeHtml come from assignee-badge.js (bare globals, same
-// dual-environment pattern as refresh-policy.js/column-state.js — see #21).
-// card #39: every card-representing element in every view carries `card-el` +
+// dual-environment pattern as refresh-policy.js/column-state.js).
+// Every card-representing element in every view carries `card-el` +
 // data-id — the shared contract the document-level click/contextmenu grammar
 // handlers key on (see the multi-select section).
 function cardEl(card) {
   const el = document.createElement('div');
-  const pb = priorityBadge(card, state.priorities); // card #30: emphasis by rank in the configured list, label pre-escaped
-  // card #45: epic is a class now (`.card.epic`, app.css), not a dot glyph
-  // (card #91's epicBadge()) — circles are reserved for status alone, so
-  // priority/blocked/column membership need no gating around it, same as
-  // before. Archived tiles never call cardEl at all (archiveCardEl is a
-  // separate function that never grew this class), so an archived epic still
-  // shows no epic cue on the board — unchanged from #91's behavior.
-  // card #97: statusBadge() joins it unconditionally (every card has a
+  const pb = priorityBadge(card, state.priorities); // emphasis by rank in the configured list, label pre-escaped
+  // epic is a class (`.card.epic`, app.css), not a dot glyph
+  // — circles are reserved for status alone, so
+  // priority/blocked/column membership need no gating around it.
+  // Archived tiles never call cardEl at all (archiveCardEl is a
+  // separate function without this class), so an archived epic
+  // shows no epic cue on the board.
+  // statusBadge() joins it unconditionally (every card has a
   // status; unlike epic there's no absent case) — status is already implied
-  // by column placement here, but the card asks for the dot on every surface
+  // by column placement here, but the dot renders on every surface
   // regardless, so board tiles get it too, same helper as everywhere else.
   el.className = 'card card-el' + (pb.className ? ` ${pb.className}` : '') + (isWaiting(card) ? ' waiting' : '') + (card.epic ? ' epic' : '') + (selectedIds.has(card.id) ? ' selected' : '');
   el.draggable = true;
   el.dataset.id = card.id;
   const tags = card.tags.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-  // epic #137: the amber badge lists the UNRESOLVED ids only — it disappears
+  // The amber badge lists the UNRESOLVED ids only — it disappears
   // on its own when every dep lands, so a fully-satisfied card never reads
   // as waiting anywhere.
   const waits = waitingOn(card);
   const waiting = waits.length ? `<div class="waiting-badge">Waiting on: ${escapeHtml(waits.map((w) => `#${w.id}`).join(', '))}</div>` : '';
-  // card #31: an on-disk status that isn't in the board's statuses list parks
+  // An on-disk status that isn't in the board's statuses list parks
   // the card in the FIRST column with a small raw-status chip — the file is
   // NEVER rewritten. Promotion = the human adds the status to config.yaml;
   // the next poll files the card under its real column and the chip vanishes.
@@ -506,10 +501,10 @@ function cardEl(card) {
   const statusChip = unlisted
     ? `<span class="status-chip" title="Status not in the board's statuses list — shown in the first column until promoted in config.yaml">${escapeHtml(card.status)}</span>`
     : '';
-  // card #44: the schedule key (same precedence the Due date sort uses) top-right —
+  // The schedule key (same precedence the Due date sort uses) top-right —
   // escaped: date fields are free text by contract, never trust them in HTML.
   const sched = scheduleLabel(card, localTodayStr());
-  // kanban.proj #202: a card with no title yet but a queued prompt (an
+  // A card with no title yet but a queued prompt (an
   // AI-dispatched card waiting on kanban-afk to name it) shows the sparkle +
   // prompt text in the title's own spot — a temporary stand-in, never a
   // permanent glyph, gone the moment a real title lands. card-title.js's
@@ -523,8 +518,8 @@ function cardEl(card) {
     `<div class="card-head"><span class="card-id">#${card.id}${pb.label ? ` ${pb.label}` : ''}</span>${statusBadge(card)}${statusChip}${assigneeBadge(card, state.assignees)}${sched ? `<span class="card-schedule">${escapeHtml(sched)}</span>` : ''}</div>` +
     `<div class="card-title${titleDisplay.isPromptFallback ? ' card-title--prompt-fallback' : ''}">${titleHtml}</div>` +
     (tags ? `<div class="card-tags">${tags}</div>` : '') + waiting;
-  paintAssigneeColors(el); // card #183: reserved custom colors need a CSSOM pass, see helper
-  // epic #137: the red blocked pill — the sticker is a human stop sign, so
+  paintAssigneeColors(el); // reserved custom colors need a CSSOM pass, see helper
+  // The red blocked pill — the sticker is a human stop sign, so
   // it reads as its own glyph, not a border (borders stay priority/status
   // territory). The reason is USER DATA: it goes in via textContent/title
   // property assignment only, never through innerHTML.
@@ -535,7 +530,7 @@ function cardEl(card) {
     pill.title = blockedLabel(card.blocked);
     el.querySelector('.card-head').appendChild(pill);
   }
-  // ADR 0009 (card #181): the gold review pill — blocked's sibling sticker,
+  // ADR 0009: the gold review pill — blocked's sibling sticker,
   // "finished, approve me" rather than a stop sign, so its own color family.
   // Same USER-DATA-in-tooltip discipline: textContent/title property only.
   if (isReviewValue(card.review)) {
@@ -548,39 +543,37 @@ function cardEl(card) {
   return el;
 }
 
-// Archived tiles (card #11's popup behavior, now inline in the Archive column
-// instead of the old bottom drawer): no drag, no Edit/Archive actions (an
+// Archived tiles, inline in the Archive column: no drag, no Edit/Archive actions (an
 // already-archived card 404-ing on re-archive is exactly what the idempotency
 // guard on the server exists for, but there's no reason to invite it from the
-// UI) — Restore/Delete stay reachable as tile buttons, same as the drawer had.
-// card #91 fix: the board's Archive column has never carried the epic cue
-// (before or after #91, and still true after #45's dot-to-wash swap) — its
+// UI) — Restore/Delete stay reachable as tile buttons.
+// The board's Archive column never carries the epic cue — its
 // call site below passes no second argument. But this same function also
 // renders archived tiles in the map's isolated row (buildIsolatedRow), and
 // there epic is a durable identity that must keep showing even off the
 // layered graph (same as the SVG node's own epic wash) — so `opts.epicDot`
 // is an explicit opt-in for that one caller, rather than a blanket change
 // that would put the cue back on the Archive column too.
-// card #97: statusBadge(card) needs no opts gate here — it colors straight
-// off the card's true status regardless of card.archived (card #102 reopen:
-// status dots never mute), so the SAME call is correct whether this renders
+// statusBadge(card) needs no opts gate here — it colors straight
+// off the card's true status regardless of card.archived (status
+// dots never mute), so the SAME call is correct whether this renders
 // in the Archive column or the map's isolated row: "board tiles (live AND
 // archived)" gets the dot always, true color always.
-// card #102 FINAL DESIGN: archivedBadge() joins right after statusBadge(),
+// archivedBadge() joins right after statusBadge(),
 // same unconditional-no-opts-gate reasoning — archiveCardEl only ever
 // renders an archived card (both call sites below pass one), so unlike the
 // epic class's opt-in flag, the archived ball needs no gate either. Glyph
-// order everywhere it appears: epic (now a background wash, card #45),
+// order everywhere it appears: epic (a background wash),
 // status, archived.
 function archiveCardEl(card, opts) {
   const showEpic = !!(opts && opts.epicDot);
   const el = document.createElement('div');
   el.className = 'card card-el archived-card' + (showEpic && card.epic ? ' epic' : '') + (selectedIds.has(card.id) ? ' selected' : '');
-  el.draggable = true; // card #34: drag out of Archive restores to the drop column
+  el.draggable = true; // drag out of Archive restores to the drop column
   el.dataset.id = card.id;
   const sched = scheduleLabel(card, localTodayStr());
-  // kanban.proj #211: same empty-title-shows-the-prompt fallback the board
-  // tile got from kanban.proj #202 — reused verbatim via cardTitleDisplay
+  // Same empty-title-shows-the-prompt fallback as the board
+  // tile — reused verbatim via cardTitleDisplay
   // (card-title.js), never re-derived here.
   const titleDisplay = cardTitleDisplay(card);
   const titleHtml = titleDisplay.isPromptFallback
@@ -593,7 +586,7 @@ function archiveCardEl(card, opts) {
       `<button type="button" data-act="restore" data-id="${card.id}">Restore</button>` +
       `<button type="button" data-act="delete-arch" data-id="${card.id}">Delete</button>` +
     `</div>`;
-  paintAssigneeColors(el); // card #183: reserved custom colors need a CSSOM pass, see helper
+  paintAssigneeColors(el); // reserved custom colors need a CSSOM pass, see helper
   return el;
 }
 
@@ -604,8 +597,8 @@ function archiveCardEl(card, opts) {
 // their .column-cards list entirely (nothing to wire drag/click on while
 // hidden). Archive is excluded from drag/drop (see wireDrag): dropping a live
 // card's status as "archive" would just 400 at the server, so that
-// interaction doesn't "fall out naturally" per the card's optional scope.
-// Search (card #17): the box lives in the header, outside #board, so it's never
+// interaction is deliberately not offered.
+// Search: the box lives in the header, outside #board, so it's never
 // rebuilt by renderBoard() — reading its live .value here each call is how the
 // query "survives" every re-render (manual, poll, drag, toggle) for free, with
 // no separate state to keep in sync. Parsing/matching itself is search.js
@@ -615,9 +608,8 @@ function currentSearchTerms() {
   return parseSearchQuery(input ? input.value : '');
 }
 
-// --- View mode: board (columns) / dependency map (card #19) / calendar
-// (card #37) / gantt (card #38). Was a plain in-memory 'board'|'map' var;
-// #37 grew it to a closed set AND promoted it to the same lazy-loaded,
+// --- View mode: board (columns) / dependency map / calendar
+// / gantt. A closed set, with the same lazy-loaded,
 // localStorage-persisted discipline as collapsedColumns/columnSort above
 // (feature key 'view.mode', validated by calendar-model.js's mergeViewMode —
 // an unknown/corrupt saved value falls back to 'board'). Every state-changing
@@ -652,12 +644,12 @@ function toggleView(mode) {
 
 // One mode→container map for everything that needs "which element hosts
 // this view" — applyViewMode's hide/show and visibleCardIds' range scope
-// (card #144 review) — so a fifth view is one entry here, not two edits.
+// — so a fifth view is one entry here, not two edits.
 const VIEW_CONTAINERS = { board: '#board', map: '#map-view', calendar: '#calendar-view', gantt: '#gantt-view' };
 
 function applyViewMode() {
   const mode = loadViewMode();
-  for (const [m, sel] of Object.entries(VIEW_CONTAINERS)) $(sel).classList.toggle('hidden', mode !== m); // card #38 added gantt
+  for (const [m, sel] of Object.entries(VIEW_CONTAINERS)) $(sel).classList.toggle('hidden', mode !== m);
   const mapBtn = $('#map-toggle-btn');
   mapBtn.textContent = mode === 'map' ? '☰ Board view' : '🕸 Map view';
   mapBtn.setAttribute('aria-pressed', String(mode === 'map'));
@@ -677,7 +669,7 @@ function renderBoard() {
   applyViewMode();
 }
 
-// kanban.proj #207: publishes the sticky page header's real rendered height as
+// Publishes the sticky page header's real rendered height as
 // a CSS var so each column-header's `top: var(--board-header-h)` (app.css)
 // parks it directly under the page header instead of a guessed fixed px
 // offset — the header wraps to a second row on a narrow viewport, a long
@@ -694,7 +686,7 @@ function syncBoardHeaderHeight() {
 
 function renderBoardColumns() {
   const board = $('#board');
-  // Verify finding fix (kanban.proj #207): each column now scrolls its own
+  // Each column scrolls its own
   // card list independently (.column-cards, see app.css's comment on the
   // rule) instead of the whole board sharing one scroll — but every
   // renderBoard() call (poll, drag, search keystroke, ...; the auto-refresh
@@ -706,8 +698,8 @@ function renderBoardColumns() {
   // before the wipe (keyed by column id — a column can be removed/reordered
   // by a config change between renders, so index position isn't safe to
   // reuse), restore it once that column's card list is rebuilt.
-  // main#board itself keeps its own pre-existing horizontal scroll
-  // (overflow-x: auto, unrelated to this card) — scrollLeft is preserved
+  // main#board itself keeps its own horizontal scroll
+  // (overflow-x: auto) — scrollLeft is preserved
   // the same way for the same reason.
   const keepBoardLeft = board.scrollLeft;
   const keepColumnTops = new Map();
@@ -722,7 +714,7 @@ function renderBoardColumns() {
   const searchActive = searchTerms.length > 0;
   const clearBtn = $('#search-clear-btn');
   if (clearBtn) clearBtn.classList.toggle('hidden', !searchActive);
-  // card #74: tree:/path: terms need the FULL active+archived graph to
+  // tree:/path: terms need the FULL active+archived graph to
   // resolve connectivity — resolving per column (a pre-sliced subset) would
   // see almost no edges. Mirrors renderMapView/renderCalendar*/renderGantt's
   // own "resolve searchIds once against the full board" pattern: compute the
@@ -730,7 +722,7 @@ function renderBoardColumns() {
   // by id rather than re-calling filterCards on its own slice.
   const searchIds = searchActive
     ? new Set(filterCards(state.active.concat(state.archived), searchTerms).map((c) => c.id)) : null;
-  // card #31: columns render FROM the configured statuses list (+ archive at
+  // Columns render FROM the configured statuses list (+ archive at
   // the far right). A card whose status isn't listed renders in the FIRST
   // column via columnForStatus — the catch-all — with cardEl's raw-status chip.
   const statuses = boardStatuses();
@@ -738,7 +730,7 @@ function renderBoardColumns() {
     const isArchive = col === 'archive';
     const source = isArchive ? state.archived : state.active.filter((c) => columnForStatus(c.status, statuses) === col);
     const sortState = colSort[col];
-    // card #46: the Assignee sort ranks by registry order, so the comparator
+    // The Assignee sort ranks by registry order, so the comparator
     // gets the config.yaml handles — plumbed exactly like priorities above.
     const allCards = sortCards(source, sortState, state.priorities, state.assignees.map((a) => a.handle));
     const cards = searchActive ? allCards.filter((c) => searchIds.has(c.id)) : allCards;
@@ -746,7 +738,7 @@ function renderBoardColumns() {
     const label = columnLabel(col);
     // Counts stay truthful whether or not the column is collapsed — column-count
     // renders in both states, so a collapsed column with hits signals them on its
-    // strip (card #17's Behavior note) with no extra branching.
+    // strip with no extra branching.
     const countLabel = searchActive ? `${cards.length}/${allCards.length}` : `${allCards.length}`;
     const colEl = document.createElement('div');
     // col-<name> only for css-safe names (the built-in five have color rules;
@@ -757,8 +749,8 @@ function renderBoardColumns() {
       (isArchive ? ' archive-column' : '') +
       (searchActive && cards.length > 0 ? ' search-match' : '');
     colEl.dataset.col = col;
-    colEl.title = label; // native tooltip, per #9's convention; matters most while collapsed
-    // Sort controls (card #18) share the header with #15's collapse toggle —
+    colEl.title = label; // native tooltip; matters most while collapsed
+    // Sort controls share the header with the collapse toggle —
     // hidden entirely while collapsed (no card list visible to sort, and no
     // room in the narrow strip), so the two never fight for space. The
     // dropdown's selected option and the direction glyph both reflect the
@@ -785,11 +777,11 @@ function renderBoardColumns() {
         (isCollapsed ? '' : `<span class="column-name">${escapeHtml(label)}</span>`) +
         sortControls +
         `<span class="column-count">${escapeHtml(countLabel)}</span>` +
-        // card #54: + quick-create, pre-aimed at this column. Live expanded
+        // + quick-create, pre-aimed at this column. Live expanded
         // headers only (showsColumnAdd: archive never — you can't create an
         // archived card — and a collapsed strip has no room). Wired through
         // the delegated #board click listener, same as every header control.
-        // kanban.proj #202: the sparkle twin sits right after it, same gate —
+        // the sparkle twin sits right after it, same gate —
         // opens the same modal pre-aimed at this column, with the AI prompt
         // row already revealed (see enableAiPrompt(), wired in the delegated
         // click listener below).
@@ -799,7 +791,7 @@ function renderBoardColumns() {
           `<button type="button" class="column-add-ai" data-col="${escapeHtml(col)}" ` +
             `aria-label="New AI-prompt card in ${escapeHtml(label)}" title="New card in ${escapeHtml(label)} with AI prompt enabled">${AI_PROMPT_ICON}</button>` : '') +
       `</div>`;
-    // card #31: custom columns get their deterministic hashed color inline
+    // Custom columns get their deterministic hashed color inline
     // (there is no CSS rule for them); the built-in four keep their exact
     // .col-<name> CSS palette, archive keeps its neutral header.
     if (!isArchive && !isBuiltinStatus(col)) colEl.querySelector('.column-header').style.color = statusColor(col);
@@ -822,7 +814,7 @@ function renderBoardColumns() {
   wireDrag();
 }
 
-// --- Dependency map rendering (card #19) ------------------------------------
+// --- Dependency map rendering ------------------------------------
 // Graph-building (nodes/edges/ghost-stubs/isolated, filter-aware) lives in
 // dependency-graph.js — pure, unit-tested, dual-environment like search.js.
 // Everything below is presentation: laying the graph's nodes/edges out as an
@@ -831,12 +823,11 @@ function renderBoardColumns() {
 // not a status; see isWaiting() above, same reasoning) — so the map shows the
 // true dependency picture regardless of where a card currently lives.
 const MAP_NODE_W = 176;
-// card #102 final design: grew from 46 (card #91's two-dot height) to fit a
-// third right-edge dot (the archived ball) stacked between status and epic
-// without crowding either — see buildMapSvg's statusDot/archivedDot. Left at
-// 58 by card #45, which retired the epic dot (a background wash now, not a
-// third dot) — status+archived alone no longer need the extra room, but
-// there's no harm in the node staying this size, and shrinking it would ripple
+// 58 fits the right-edge dot column (status dot + archived ball) with room
+// to spare — see buildMapSvg's statusDot/archivedDot. The epic cue is a
+// background wash, not a third dot, so status+archived alone don't strictly
+// need the extra room, but there's no harm in the node staying this size,
+// and shrinking it would ripple
 // into every other pinned map-layout measurement for no visual gain.
 const MAP_NODE_H = 58;
 const MAP_GAP_X = 24;
@@ -861,13 +852,13 @@ function renderMapView() {
   const keepLeft = container.scrollLeft, keepTop = container.scrollTop;
   container.innerHTML = '';
   const allCards = state.active.concat(state.archived);
-  // card #56: the status-filter row renders first and UNCONDITIONALLY — if it
+  // The status-filter row renders first and UNCONDITIONALLY — if it
   // vanished with the graph on the everything-filtered-out state, there'd be
   // no control left to toggle a status back ON.
   container.appendChild(buildMapFilterRow());
   const searchTerms = currentSearchTerms();
   const searchIds = searchTerms.length ? new Set(filterCards(allCards, searchTerms).map((c) => c.id)) : null;
-  // card #56: status filter composes with search by INTERSECTION — a card is
+  // Status filter composes with search by INTERSECTION — a card is
   // visible only if BOTH say so, and buildDependencyGraph sees one combined
   // visibleIds so the ghost-stub semantics stay EXACTLY the search filter's,
   // for free. The rule (incl. either side's null "not filtering" pass-through)
@@ -884,15 +875,14 @@ function renderMapView() {
     return;
   }
 
-  // card #97: each section's collapse state persists per board (memoize-once-
+  // Each section's collapse state persists per board (memoize-once-
   // mutate-in-place, same as loadMapStatusFilter above), so it survives every
   // renderMapView() call — manual, poll, drag, toggle, search.
   const sections = loadMapSectionsCollapsed();
-  // card #151: the graph lays out every node touched by ANY edge — dep or
-  // epic membership — while graph.isolated stays dep-keyed. Pre-#151 the two
-  // sets were complements (participants = !isolated); an epic whose only
-  // edges are membership now sits in BOTH: laid out in the graph AND listed
-  // in the no-dependencies row, as the card asks. The two derivations (and
+  // The graph lays out every node touched by ANY edge — dep or
+  // epic membership — while graph.isolated stays dep-keyed; an epic whose only
+  // edges are membership sits in BOTH: laid out in the graph AND listed
+  // in the no-dependencies row. The two derivations (and
   // their different kind-keying) are buildDependencyGraph's own, unit-pinned.
   const participantIds = graph.participants;
   if (participantIds.length) container.appendChild(buildMapGraphSection(graph, participantIds, sections.graph));
@@ -901,8 +891,8 @@ function renderMapView() {
   container.scrollTop = keepTop;
 }
 
-// card #98: the status-filter pill row MECHANISM — one toggle per column,
-// shared verbatim between the map (#56) and the gantt (#98) rather than each
+// The status-filter pill row MECHANISM — one toggle per column,
+// shared verbatim between the map and the gantt rather than each
 // view duplicating the markup/build-loop. Only the filter state, the id list,
 // the row/pill class (so each view's own delegated listener and its own
 // poll-guard/Q0-exemption selector keep targeting just their own pills), and
@@ -910,10 +900,10 @@ function renderMapView() {
 // duplicated — app.css comma-joins the two views' pill classes onto one
 // declaration each. Border color comes from statusColor() for EVERY pill —
 // built-in, custom (their hashed hue; no CSS rule exists, same reasoning as
-// the column headers), and archive's neutral grey (card #57) where the map's
+// the column headers), and archive's neutral grey where the map's
 // row includes it.
 //
-// card #101: the right-click SOLO/viceversa grammar rides here too — one
+// The right-click SOLO/viceversa grammar rides here too — one
 // line appended to every caller's tooltip (rather than repeating it in each
 // titleFor closure) since the gesture is otherwise invisible; the per-view
 // contextmenu wiring lives with each view's own click delegate.
@@ -935,7 +925,7 @@ function buildFilterPillRow(filter, columnIds, rowClass, pillClass, titleFor) {
   return row;
 }
 
-// card #56: one pill per board column in column order (statuses + Archive:
+// One pill per board column in column order (statuses + Archive:
 // the map always includes archived cards, so the location pseudo-column is
 // always offered). Rebuilt by every renderMapView() call like the rest of
 // #map-view; state lives in the memoized mapStatusFilter, so the row never
@@ -944,17 +934,17 @@ function buildFilterPillRow(filter, columnIds, rowClass, pillClass, titleFor) {
 function buildMapFilterRow() {
   const row = buildFilterPillRow(loadMapStatusFilter(), boardColumnIds(), 'map-filter-row', 'map-filter-toggle',
     (col, on) => `${on ? 'Hide' : 'Show'} ${columnLabel(col)} cards on the map (hidden cards ghost when a visible card references them)`);
-  // kanban.proj #222: the "Epics" tap-chip rides in the same control row,
+  // The "Epics" tap-chip rides in the same control row,
   // map-view only (buildGanttFilterRow/buildCalendarFilterRow below never
   // call this) — see buildEpicFilterChip.
   row.appendChild(buildEpicFilterChip());
   return row;
 }
 
-// kanban.proj #222: mobile-first shortcut for the map's `epic:` search term
-// (card #222) — same "write straight into #search-input, then renderBoard()"
-// pattern as focusOn()'s tree:/path: buttons (card #74) and addSearchTerm's
-// assignee/tag click (#189), but a TOGGLE (tap sets `epic:`, tap again clears
+// Mobile-first shortcut for the map's `epic:` search term
+// — same "write straight into #search-input, then renderBoard()"
+// pattern as focusOn()'s tree:/path: buttons and addSearchTerm's
+// assignee/tag click, but a TOGGLE (tap sets `epic:`, tap again clears
 // it) rather than focusOn's always-replace or addSearchTerm's idempotent-add,
 // since this chip only ever manages the one term and composes with whatever
 // else (status pills, other search terms) is already in the box.
@@ -990,14 +980,14 @@ function buildEpicFilterChip() {
   return btn;
 }
 
-// card #98: same mechanism, gantt-scoped — statuses + Archive (boardColumnIds(),
-// same id list as the map's row; card #98's 2026 reopen added the Archive
-// pseudo-pill back, default OFF — see loadGanttStatusFilter). No ghost
+// Same mechanism, gantt-scoped — statuses + Archive (boardColumnIds(),
+// same id list as the map's row; the Archive
+// pseudo-pill defaults OFF — see loadGanttStatusFilter). No ghost
 // wording either — the gantt has no dependency edges, so a filtered-out
 // status just drops its group rows outright, and the rendered timeline
 // window re-derives from whatever bars remain (may narrow). Archive gets its
 // own tooltip: flipping it ON adds one more group, after the live status
-// groups, for dated ARCHIVED cards (muted grey, same #57 mute as everywhere
+// groups, for dated ARCHIVED cards (muted grey, same mute as everywhere
 // else archive shows up). Rebuilt by every renderGanttView() call; clicks
 // ride #gantt-view's own delegated listener (see wireGanttPointerDrag).
 function buildGanttFilterRow() {
@@ -1007,11 +997,11 @@ function buildGanttFilterRow() {
       : `${on ? 'Hide' : 'Show'} ${columnLabel(col)} cards on the timeline (the visible window re-derives from what's left)`);
 }
 
-// card #99: same mechanism again, calendar-scoped. card #108: statuses +
+// Same mechanism again, calendar-scoped: statuses +
 // Archive (boardColumnIds(), same id list as the gantt's row) — the calendar
-// can now show dated ARCHIVED cards too, opt-in, default OFF, same shape as
+// can show dated ARCHIVED cards too, opt-in, default OFF, same shape as
 // the gantt's own Archive pill. Rebuilt by every renderCalendarView() call
-// (month AND every #58 sub-view share this one row); clicks ride
+// (month AND every sub-view share this one row); clicks ride
 // #calendar-view's own delegated listener (see the calendar wiring section).
 function buildCalendarFilterRow() {
   return buildFilterPillRow(loadCalendarStatusFilter(), boardColumnIds(), 'calendar-filter-row', 'calendar-filter-toggle',
@@ -1020,9 +1010,9 @@ function buildCalendarFilterRow() {
       : `${on ? 'Hide' : 'Show'} ${columnLabel(col)} cards on the calendar`);
 }
 
-// card #97: the two collapsible map sections share this header shape — a
+// The two collapsible map sections share this header shape — a
 // chevron toggle (same CHEVRON_LEFT/RIGHT_ICON + .column-toggle look as the
-// board's per-column collapse, card #15) plus a count label. data-section
+// board's per-column collapse) plus a count label. data-section
 // names which half of loadMapSectionsCollapsed() the click flips; the
 // delegated #map-view listener (see the map wiring section) reads it.
 function buildMapSectionHeader(section, label, collapsed) {
@@ -1037,7 +1027,7 @@ function buildMapSectionHeader(section, label, collapsed) {
   return header;
 }
 
-// card #97: the layered SVG, wrapped in a collapse/expand toggle — state
+// The layered SVG, wrapped in a collapse/expand toggle — state
 // persists per board (loadMapSectionsCollapsed) and survives the 5s poll like
 // every other memoized view preference. Collapsed skips layerNodes()/
 // buildMapSvg() entirely (nothing to lay out while hidden), not just a CSS
@@ -1054,13 +1044,13 @@ function buildMapGraphSection(graph, participantIds, collapsed) {
 }
 
 // Isolated cards (no waiting_for edge in either direction) render as a
-// detached row below the layered graph rather than a "show isolated" toggle —
-// implementer's judgment call per the card: a toggle is one more piece of UI
+// detached row below the layered graph, never hidden behind a "show
+// isolated" toggle: a toggle would be one more piece of UI
 // state to persist/compose with view mode + search + sort + collapse, for a
 // case (no dependencies at all) that's common on most boards and cheap to
 // just always show. Reuses cardEl's board tile look so a card reads the same
 // wherever it appears.
-// card #97: NOW collapsible after all — the card asks for it explicitly, and
+// The section IS collapsible, though —
 // loadMapSectionsCollapsed's own state (not a fresh toggle-per-view) is what
 // makes it cheap: one more merged boolean, not new persisted UI state design.
 function buildIsolatedRow(graph, allCards, collapsed) {
@@ -1074,15 +1064,15 @@ function buildIsolatedRow(graph, allCards, collapsed) {
     graph.isolated.forEach((id) => {
       const card = byId.get(id);
       if (!card) return;
-      // card #91 fix: opt in to the epic cue here — the map is the one place an
+      // Opt in to the epic cue here — the map is the one place an
       // archived card appears outside the graph proper, and epic (unlike status)
       // isn't supposed to mute or disappear just because a card has no edges.
-      // card #45: the cue is now a background wash, not a dot, but the same
+      // The cue is a background wash, not a dot; the
       // opt-in flag name carries it (internal option key only, no user-facing
-      // meaning to update).
+      // meaning).
       const tile = card.archived ? archiveCardEl(card, { epicDot: true }) : cardEl(card);
       tile.draggable = false; // the map isn't a drag surface
-      // cardEl/archiveCardEl already stamp card-el + data-id (card #39), so the
+      // cardEl/archiveCardEl already stamp card-el + data-id, so the
       // shared grammar handlers cover these tiles with no extra wiring.
       row.appendChild(tile);
     });
@@ -1146,7 +1136,7 @@ function buildMapSvg(graph, layer) {
       const midY = (y1 + y2) / 2;
       d = `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
     }
-    // card #151: membership edges (epic -> child) draw in the epic's own
+    // Membership edges (epic -> child) draw in the epic's own
     // channel — orange, dashed, its own arrowhead — so sequencing and
     // membership never read as the same relation. A cycle through a
     // membership edge still bows (backEdge is layout-derived), keeping the
@@ -1163,62 +1153,49 @@ function buildMapSvg(graph, layer) {
   const width = maxX + MAP_PAD;
   const height = Math.max(MAP_NODE_H + MAP_PAD * 2, numLayers * (MAP_NODE_H + MAP_GAP_Y) - MAP_GAP_Y + MAP_PAD * 2);
 
-  // card #91, groomed requirement 3 (investigate before changing): checked
-  // this function at baseline (commit 7580da3, pre-#91) for any existing
-  // priority/blocked border cue on a map node — there was none. The node's
-  // group class there carried only ghost/missing/archived/selectable state,
-  // same as below; the rect's stroke was 100% status color (card #57), with
-  // no separate accent for priority or dependency edges. So requirement 3's
-  // conditional ("if a border cue exists for blocked, leave it and note it")
-  // never triggered at the time: nothing to preserve, nothing invented — that
-  // card added exactly the two indicators requirement 1/2 called for (status
-  // dot, epic dot) and no more. Card #107 later asked for the omitted cue
-  // explicitly — see the `.high`/`.waiting` classes below (epic #137 renamed
-  // #107's amber `.blocked` stroke to `.waiting`), one deliberate addition
-  // to the rect's border channel, not a reopening of #91's dot work.
   let nodesSvg = '';
   for (const [id, p] of pos) {
     const n = allById.get(id);
     if (!n) continue;
     const missing = !!n.missing;
-    // card #39: only REAL nodes join the shared card-el grammar (selection +
+    // Only REAL nodes join the shared card-el grammar (selection +
     // context menu). Ghost stubs stay click-through-to-detail only: a ghost
     // stands for a card the active search filter deliberately hid, and the
     // board never lets a filtered-out card join a selection (it isn't rendered
     // there at all) — so its stub must not smuggle hidden cards into a bulk
     // batch either. Archived cards that MATCH the filter render as real nodes
-    // and are selectable (card #34). A `missing` stub has no card to act on.
+    // and are selectable. A `missing` stub has no card to act on.
     const selectable = !n.ghost && !missing;
-    // card #91: the node border is one neutral weight for every node (see
+    // The node border is one neutral weight for every node (see
     // .map-node rect in app.css) — status (its own dot) and epic (its own
-    // background wash, card #45) no longer fight over that single stroke
-    // channel with each other or with archive (card #57/#59's old contract).
+    // background wash) never fight over that single stroke
+    // channel with each other or with archive.
     // `archived` still rides the group class: its neutral-grey
-    // border mute is the one exception the card names, same as selection glow
+    // border mute is the one exception, same as selection glow
     // / ghost dashing / the back-edge amber all keeping their own treatments.
-    // card #107: priority/waiting join that same channel — same board-tile
+    // priority/waiting join that same channel — same board-tile
     // parity `priorityBadge`+`isWaiting` gives cardEl (app.js), reused
     // straight off the node's own `priority`/`waiting` fields (computed once
     // in dependency-graph.js, structural — no config needed there) instead of
     // re-deriving from a full card lookup. Mutually exclusive with `archived`,
     // same as the board: archiveCardEl never applies pb.className/waiting
     // either, so an archived node keeps ONLY its grey mute, never both cues
-    // fighting over one stroke. epic #137 renamed the amber cue: the stroke
-    // marks WAITING (unresolved waiting_for deps — it inherits the old
-    // blocked visual slot); the manual blocked sticker is the separate red
+    // fighting over one stroke. The amber stroke
+    // marks WAITING (unresolved waiting_for
+    // deps); the manual blocked sticker is the separate red
     // pill below, not a border.
     const pb = (!missing && !n.archived) ? priorityBadge(n, state.priorities) : { className: '' };
-    // card #45: epic rides the group class too — .map-node.epic rect (app.css)
-    // tints the node's fill instead of card #91's separate <circle>. Same gate
-    // as before (n.epic alone; never true for a missing stub — dependency-
+    // epic rides the group class too — .map-node.epic rect (app.css)
+    // tints the node's fill; no separate <circle>. Gated
+    // on n.epic alone (never true for a missing stub — dependency-
     // graph.js's stub shape has no epic field), it keeps showing on an
     // archived node (a durable identity, not a location).
     const cls = `map-node${n.ghost ? ' ghost' : ''}${missing ? ' missing' : ''}${n.archived ? ' archived' : ''}` +
       `${pb.className ? ` ${pb.className}` : ''}${(!missing && !n.archived && n.waiting) ? ' waiting' : ''}${n.epic ? ' epic' : ''}` +
       `${selectable ? ' card-el' : ''}${selectable && selectedIds.has(id) ? ' selected' : ''}`;
     const idLabel = `#${id}`;
-    // kanban.proj #211: same empty-title-shows-the-prompt fallback every
-    // other view got (cardTitleDisplay, card-title.js) — n already carries
+    // Same empty-title-shows-the-prompt fallback every
+    // other view uses (cardTitleDisplay, card-title.js) — n already carries
     // `prompt` (dependency-graph.js's cardToNode). A missing stub has no
     // card behind it at all, so it keeps its own '(not found)' text instead.
     const titleDisplay = cardTitleDisplay(n);
@@ -1226,39 +1203,35 @@ function buildMapSvg(graph, layer) {
     const tooltip = missing
       ? `#${id} — referenced but not found on the board`
       : `#${id} ${titleDisplay.text}${n.archived ? ' (archived)' : ''}`;
-    // card #91: status moved off the border onto its own dot — a filled
-    // circle colored exactly like the old rect stroke. card #31's non-built-in
+    // Status lives on its own dot — a filled circle. A non-built-in
     // status (custom column or unlisted on-disk value) gets one of the 8
-    // hashed `status-palette-N` classes (card #49 verify finding: this used
-    // to write the deterministic hash straight into an inline fill-style
-    // attribute instead, which a strict `style-src 'self'` CSP silently
+    // hashed `status-palette-N` classes (never the deterministic hash
+    // written straight into an inline fill-style
+    // attribute, which a strict `style-src 'self'` CSP silently
     // blocks — statusColorClass() is the one source both this dot and
-    // statusBadge() key off now).
-    // card #102 REOPEN (STATUS DOTS NEVER MUTE): this used to gate off
-    // archived nodes so the CSS mute rule beneath always won for a parked
-    // pre-archive status (card #57) — that gate is GONE now, so a custom
+    // statusBadge() key off).
+    // STATUS DOTS NEVER MUTE: no archived gate here — a custom
     // status hashes its color on an archived node exactly like a live one; the
     // archived cue is carried by the rect border alone (the one exception).
     // The dot's OWN <title> — SVG-native tooltip — names the RAW on-disk
-    // status for every node, not just custom ones (the old tooltip suffix
-    // only covered the custom case; the dot is a strict superset).
+    // status for every node, not just custom ones.
     const statusDot = missing ? '' :
       `<circle class="map-status-dot status-${statusColorClass(n.status)}" cx="${MAP_NODE_W - 10}" cy="10" r="4"><title>${escapeHtml(n.status)}</title></circle>`;
-    // card #102 FINAL DESIGN ("an additional ball gray for archived"): the
+    // The archived ball: the
     // second right-edge dot, only for a truly archived node — same x column
     // as status (MAP_NODE_W - 10, already proven clear of the truncated
     // title text). Never set for a `missing` stub (its `archived` is always
-    // false — dependency-graph.js's own stub shape). card #45 retired the
-    // epic dot this used to sit beside (now the node's own background wash,
-    // .map-node.epic rect above) — this is the only right-edge dot left.
+    // false — dependency-graph.js's own stub shape). Epic is a background
+    // wash, not a dot (.map-node.epic rect above), so status and this ball
+    // are the only right-edge dots.
     const archivedDot = n.archived ? `<circle class="map-archived-dot" cx="${MAP_NODE_W - 10}" cy="${MAP_NODE_H / 2}" r="4"><title>Archived</title></circle>` : '';
-    // epic #137: the red blocked pill — the map twin of the board tile's
+    // The red blocked pill — the map twin of the board tile's
     // sticker glyph, bottom-left under the title where no dot column lives.
     // The pill's own <title> carries the reason (SVG-native tooltip; the
     // reason is user data, escaped like every other user string in this
     // SVG). Skipped for missing stubs (no card behind them) but NOT gated
     // off archived — a stop sign is identity, not location, and unlike
-    // #107's stroke it doesn't share a channel with the archived grey mute.
+    // the waiting stroke it doesn't share a channel with the archived grey mute.
     const blockedPill = (!missing && n.blocked)
       ? `<g class="map-blocked-pill"><title>${escapeHtml(n.blockedReason ? `blocked: ${n.blockedReason}` : 'blocked')}</title>` +
         `<rect x="8" y="${MAP_NODE_H - 18}" width="46" height="13" rx="6.5"></rect>` +
@@ -1283,7 +1256,7 @@ function buildMapSvg(graph, layer) {
   svg.innerHTML =
     `<defs><marker id="map-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
       `<path d="M0,0 L10,5 L0,10 z"></path></marker>` +
-    // card #151: the membership arrowhead — same shape, epic orange (a marker
+    // the membership arrowhead — same shape, epic orange (a marker
     // never inherits the path's stroke, so it needs its own def).
     `<marker id="map-arrow-epic" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">` +
       `<path class="map-arrow-epic-head" d="M0,0 L10,5 L0,10 z"></path></marker></defs>` +
@@ -1300,8 +1273,8 @@ async function fetchBoard() {
 // entities in the tab instead of "&". The heading span IS DOM markup (innerHTML), so
 // it gets escapeHtml like every other filesystem/card-derived string in this file.
 // Project name leads the tab title (not the heading) because that's the field that
-// gets truncated when several kanban tabs are open side by side — the whole point of
-// card #16 is telling those tabs apart at a glance.
+// gets truncated when several kanban tabs are open side by side — the whole point
+// is telling those tabs apart at a glance.
 function applyProjectName(name) {
   const next = name || '';
   if (next !== state.projectName) {
@@ -1315,12 +1288,12 @@ function applyProjectName(name) {
     collapsedColumns = null;
     columnSort = null;
     modalFullscreen = null;
-    viewMode = null; // card #37: view.mode joined the same discipline
-    mapStatusFilter = null; // card #56: map.statusFilter too
-    calendarSubview = null; // card #58: calendar.subview too
-    mapSectionsCollapsed = null; // card #97: map.sections.collapsed too
-    ganttStatusFilter = null; // card #98: gantt.statusFilter too (verify finding: this was missing — applyStatuses' own reset doesn't fire on a pure rename with an unchanged status list)
-    calendarStatusFilter = null; // card #99: calendar.statusFilter too, same #98 review-fix precedent
+    viewMode = null; // view.mode joins the same discipline
+    mapStatusFilter = null; // map.statusFilter too
+    calendarSubview = null; // calendar.subview too
+    mapSectionsCollapsed = null; // map.sections.collapsed too
+    ganttStatusFilter = null; // gantt.statusFilter too — applyStatuses' own reset doesn't fire on a pure rename with an unchanged status list
+    calendarStatusFilter = null; // calendar.statusFilter too, same reasoning
   }
   state.projectName = next;
   document.title = name ? `${name} — Kanban` : 'Kanban App';
@@ -1330,23 +1303,23 @@ function applyProjectName(name) {
 function applyBoardData(data) {
   state.active = data.active;
   state.archived = data.archived;
-  state.boardDir = data.boardDir || ''; // card #55: absolute board path for the header copy button (defensive ||: an old server without the field degrades to the honest empty-path toast)
+  state.boardDir = data.boardDir || ''; // absolute board path for the header copy button (defensive ||: an old server without the field degrades to the honest empty-path toast)
   applyProjectName(data.projectName); // must run before renderBoard: collapse state's storage key is namespaced by projectName
-  applyStatuses(data.statuses || []); // card #31: must also run before renderBoard — the column set drives every render below
-  // card #27: the registry feeds the form's assignee suggestions — and since
-  // card #46 it's a render input too (the Assignee sort ranks by registry
+  applyStatuses(data.statuses || []); // must also run before renderBoard — the column set drives every render below
+  // The registry feeds the form's assignee suggestions — and
+  // it's a render input too (the Assignee sort ranks by registry
   // order), so it must ALSO run before renderBoard: a persisted Assignee sort
   // is live on the very first paint after reload, and rendering with the
   // seeded-empty registry degrades it to plain lexicographic until the next
   // poll silently reshuffles the column.
   applyAssignees(data.assignees || []);
-  // card #30: official lists feed the form's comboboxes — before renderBoard
+  // Official lists feed the form's comboboxes — before renderBoard
   // for the same reason: the Priority sort/badges read state.priorities at
   // render time (masked pre-move only by priorityRank's built-in fallback).
   applyLists(data.priorities || [], data.tags || []);
-  selectedIds = pruneSelection(selectedIds, [...state.active, ...state.archived].map((c) => c.id)); // card #25: drop ghosts before render (archived joined the domain, #34)
+  selectedIds = pruneSelection(selectedIds, [...state.active, ...state.archived].map((c) => c.id)); // drop ghosts before render (archived cards are in the domain too)
   renderBoard();
-  applyNotifications(data.notifications || []); // card #22: the board poll carries them — no separate timer
+  applyNotifications(data.notifications || []); // the board poll carries them — no separate timer
 }
 
 async function loadBoard() {
@@ -1372,7 +1345,7 @@ function anyModalOpen() {
   return !!document.querySelector('.modal-backdrop:not(.hidden)');
 }
 
-// Card #18's sort controls live inside #board, which renderBoard() wipes
+// The sort controls live inside #board, which renderBoard() wipes
 // (innerHTML = '') on every render, including unattended poll ticks. The
 // search input was deliberately kept outside #board to dodge this exact
 // class of bug (see currentSearchTerms() above); the sort controls can't be,
@@ -1383,10 +1356,10 @@ function anyModalOpen() {
 // blocking a refresh the same way an open modal does.
 function boardControlFocused() {
   const el = document.activeElement;
-  // .cal-nav: calendar nav (card #37/#58); .column-add: the #54 header +;
-  // .column-add-ai: its kanban.proj #202 sparkle twin; .map-filter-toggle/
-  // .map-section-toggle: the #56/#97 map pills; .gantt-filter-toggle: the
-  // #98 gantt pills; .calendar-filter-toggle: the #99
+  // .cal-nav: calendar nav; .column-add: the header +;
+  // .column-add-ai: its sparkle twin; .map-filter-toggle/
+  // .map-section-toggle: the map pills; .gantt-filter-toggle: the
+  // gantt pills; .calendar-filter-toggle: the
   // calendar pills (their views are wiped by every render). All focusable,
   // all rebuilt per render — a poll landing while one is focused would
   // silently dump keyboard focus to <body>.
@@ -1423,7 +1396,7 @@ async function autoRefreshTick() {
   }
 }
 
-// Card #34 (archive column parity): every tile drags and every column —
+// Archive column parity: every tile drags and every column —
 // Archive included — accepts drops. A drop on Archive archives the batch; a
 // drop of archived cards on a live column restores them there. Routing
 // happens at drop time: anything touching archive goes through dragPlan's
@@ -1434,7 +1407,7 @@ function wireDrag() {
       e.dataTransfer.setData('text/plain', el.dataset.id);
       el.classList.add('dragging');
       isDragging = true;
-      // Card #25: dragging a selected card while others are selected drags the
+      // Dragging a selected card while others are selected drags the
       // whole selection. Captured at dragstart — the flag, not the live set,
       // decides at drop time, so a poll pruning the set mid-drag can't flip
       // a bulk drag into a single-card one halfway through.
@@ -1464,7 +1437,7 @@ function wireDrag() {
   });
 }
 
-// Drops that touch archive in either direction (card #34). No optimistic
+// Drops that touch archive in either direction. No optimistic
 // render — a file move plus a status write isn't worth faking; the confirm
 // already broke the gesture's flow, so the loadBoard round-trip is fine.
 async function archiveAwareDrop(ids, dest) {
@@ -1507,9 +1480,9 @@ async function onDrop(id, status) {
   const card = state.active.find((c) => c.id === id);
   // A drop onto the column the card already RENDERS in is a no-op — for a
   // parked unlisted status that also means never silently rewriting the raw
-  // value the catch-all promised to preserve (card #31 verify finding).
+  // value the catch-all promised to preserve.
   if (!card || columnForStatus(card.status, state.statuses) === status) return;
-  if (status === 'doing' && refusesDoing(card)) { // client-side pre-check (server also enforces); names which gate (epic #137)
+  if (status === 'doing' && refusesDoing(card)) { // client-side pre-check (server also enforces); names which gate
     toast(`#${id} is ${isWaiting(card)
       ? `waiting on ${waitingOn(card).map((w) => `#${w.id} (${w.status})`).join(', ')}`
       : blockedLabel(card.blocked)} — can't move to doing.`);
@@ -1537,19 +1510,19 @@ async function onDrop(id, status) {
 
 window.addEventListener('DOMContentLoaded', () => {
   loadBoard().catch((e) => toast('Load failed: ' + e.message));
-  // kanban.proj #228: click-to-dismiss — wired once since #toast is static markup.
+  // click-to-dismiss — wired once since #toast is static markup.
   $('#toast').addEventListener('click', () => {
     clearTimeout(toast._t);
     $('#toast').classList.add('hidden');
   });
-  $('#board-copy-btn').addEventListener('click', copyBoardPath); // card #55
+  $('#board-copy-btn').addEventListener('click', copyBoardPath);
   $('#refresh-btn').addEventListener('click', () =>
     loadBoard().then(() => setStale(false)).catch((e) => toast('Refresh failed: ' + e.message)));
   setInterval(autoRefreshTick, AUTO_REFRESH_MS);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') autoRefreshTick();
   });
-  // kanban.proj #207: sticky column headers park below the sticky page
+  // Sticky column headers park below the sticky page
   // header via --board-header-h — sync it now (static markup, already
   // parsed) and keep it current across wraps/resizes.
   syncBoardHeaderHeight();
@@ -1561,7 +1534,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// card #31: the status <select>'s options come from the board's statuses
+// The status <select>'s options come from the board's statuses
 // list, rebuilt on every open. A card whose on-disk status isn't listed gets
 // that raw value appended (marked "unlisted") and selected — so opening and
 // saving the form never silently rewrites an unpromoted status.
@@ -1574,39 +1547,38 @@ function renderStatusOptions(current) {
   $('#f-status').innerHTML = opts.join('');
 }
 
-// epic #137: the blocked input wears a red border exactly while its value
+// The blocked input wears a red border exactly while its value
 // would gate (passes the shared predicate) — colorless otherwise, so
 // `false` / whitespace / junk visibly read as "not a sticker" while typing.
 function syncBlockedInputStyle() {
   $('#f-blocked').classList.toggle('blocked-active', isBlockedValue($('#f-blocked').value));
 }
 
-// ADR 0009 (card #181): review's own live-feedback twin of syncBlockedInputStyle.
+// ADR 0009: review's own live-feedback twin of syncBlockedInputStyle.
 function syncReviewInputStyle() {
   $('#f-review').classList.toggle('review-active', isReviewValue($('#f-review').value));
 }
 
-// kanban.proj #200: shows/hides #row-prompt and keeps the header AI button's
-// aria-pressed in sync — the toggle IS the reveal, so unlike #50's one-way
+// Shows/hides #row-prompt and keeps the header AI button's
+// aria-pressed in sync — the toggle IS the reveal, so unlike the one-way
 // "Show more fields" this can flip back off too (click again to collapse).
-// kanban.proj #204: shown also means moved — the row becomes the form's
+// Shown also means moved — the row becomes the form's
 // very first field (ahead of Title), since reaching for the sparkle means
 // the prompt IS the thing you're about to type. Hidden always means back in
-// its permanent DOM slot, right before "Show more fields" (kanban.proj #199's
+// its permanent DOM slot, right before "Show more fields" (the
 // Title -> Assignee tab order is untouched — this only ever displaces the
 // row itself, never Assignee). CSS `order` can't give this a real tab order
-// (Tab follows DOM order, not paint order — the reasoning card #85's now-
-// retired assignee-row DOM-move helper already spells out), so this really
+// (Tab follows DOM order, not paint order), so this really
 // moves the node, both directions, on every call — not just the first.
 function setPromptRowVisible(show) {
   const row = $('#row-prompt');
   $('#card-form').insertBefore(row, show ? $('#f-title').closest('label') : $('#show-more-btn'));
   row.classList.toggle('hidden', !show);
   $('#modal-ai-btn').setAttribute('aria-pressed', String(show));
-  updateTitleRequired(); // kanban.proj #211: revealing/hiding the row can flip whether Title is required
+  updateTitleRequired(); // revealing/hiding the row can flip whether Title is required
 }
 
-// kanban.proj #211: Title is required UNLESS the AI prompt row is visible
+// Title is required UNLESS the AI prompt row is visible
 // AND actually carries text — an AI-prompt-only card (assignee @afk, no
 // title of its own yet) can save empty; a shown-but-empty prompt row still
 // requires a title, same as a hidden one. Re-run on every reveal/hide
@@ -1617,9 +1589,9 @@ function updateTitleRequired() {
   $('#f-title').required = !(promptShown && $('#f-prompt').value.trim());
 }
 
-// kanban.proj #202: turning the AI prompt row ON — from the modal's own
+// Turning the AI prompt row ON — from the modal's own
 // sparkle button or a column header's sparkle quick-create (below) — reveals
-// it, focuses it (same "two-step gesture" as #200), and, for a NEW card only
+// it, focuses it (the same two-step gesture), and, for a NEW card only
 // (an edit keeps whatever assignee the card already has), sets the assignee
 // straight to @afk: turning the toggle on IS the queue-it-for-AI decision,
 // so the assignee shouldn't need a second, separate edit to match.
@@ -1632,7 +1604,7 @@ function enableAiPrompt() {
   }
 }
 
-// card #183 (kanban.proj #191 replaced the dot with tinted text): the
+// The
 // modal's own live color cue for the field currently being typed — same
 // handle-color contract the board tiles wear (assigneeBadge's text tint),
 // kept in sync on open and on every keystroke, same "reflect the live
@@ -1647,12 +1619,12 @@ function syncAssigneeColor() {
   input.style.color = handle ? (assigneeColor(handle, state.assignees) || '') : '';
 }
 
-// card #54: presetStatus (a live column id — always a listed status, so
+// presetStatus (a live column id — always a listed status, so
 // renderStatusOptions already carries it) aims a new card at the column whose
 // + was clicked. The hidden #f-status field submits it even while the form is
-// minimal (#50), and "Show more fields" reveals the dropdown with it selected.
+// minimal, and "Show more fields" reveals the dropdown with it selected.
 // No preset (the global "+ New card" button) keeps the first-column default.
-// card #193: presetStart (calendarCreateStart's output — a date or local
+// presetStart (calendarCreateStart's output — a date or local
 // datetime) aims a new card at the calendar cell/slot that was double-clicked,
 // same hidden-field-submits-while-minimal trick, but for #f-start alone;
 // status is deliberately left at its own default here (see the Calendar view
@@ -1667,23 +1639,23 @@ function openModal(card, presetStatus, presetStart) {
   $('#f-tags').value = card ? card.tags.join(', ') : '';
   $('#f-waiting').value = card ? card.waiting_for.join(', ') : '';
   $('#f-blocked').value = card && card.blocked ? card.blocked : '';
-  syncBlockedInputStyle(); // epic #137: red border iff the value passes the predicate
+  syncBlockedInputStyle(); // red border iff the value passes the predicate
   $('#f-review').value = card && card.review ? card.review : '';
   syncReviewInputStyle(); // ADR 0009: gold border iff the value passes the predicate
   $('#f-prompt').value = card && card.prompt ? card.prompt : '';
-  // kanban.proj #200: auto-reveal on edit when the card already carries a
+  // Auto-reveal on edit when the card already carries a
   // prompt (existing data is never hidden behind an unclicked toggle); a new
   // card, or an edit of a card with none, starts collapsed.
   setPromptRowVisible(Boolean(card && card.prompt));
   $('#f-assignee').value = card && card.assignee ? card.assignee : '';
-  syncAssigneeColor(); // card #183: live color cue matches whatever the field now holds
-  $('#f-start').value = card ? (card.start_date || '') : (presetStart || ''); // card #36; card #193: calendar click-create prefill
-  $('#f-end').value = card && card.end_date ? card.end_date : ''; // card #40: the triad's "to"
+  syncAssigneeColor(); // live color cue matches whatever the field now holds
+  $('#f-start').value = card ? (card.start_date || '') : (presetStart || ''); // calendar click-create prefill
+  $('#f-end').value = card && card.end_date ? card.end_date : ''; // the triad's "to"
   $('#f-due').value = card && card.due_date ? card.due_date : '';
-  $('#f-epic').checked = card ? !!card.epic : false; // card #59: edit preserves the flag; create starts unchecked
+  $('#f-epic').checked = card ? !!card.epic : false; // edit preserves the flag; create starts unchecked
   $('#f-body').value = card ? card.body : '';
-  formSnapshot = snapshotFormFields(); // dirty baseline for backdrop-close (card #26)
-  // card #50: create opens minimal (Title + "Show more fields"), edit always
+  formSnapshot = snapshotFormFields(); // dirty baseline for backdrop-close
+  // Create opens minimal (Title + "Show more fields"), edit always
   // full. expanded=false on EVERY open — the reveal is one-way per open and
   // never persisted. The hidden fields already hold the defaults set above,
   // so the snapshot and the save payload are the same as a full form's.
@@ -1691,12 +1663,12 @@ function openModal(card, presetStatus, presetStart) {
   $('#card-form').classList.toggle('minimal', minimal);
   $('#modal').classList.remove('hidden');
   applyModalFullscreen('edit'); // re-apply the persisted per-modal-type preference on every open
-  if (!card) $('#f-title').focus(); // card #50: quick capture — cursor lands ready to type (after unhide; focus is a no-op on display:none)
+  if (!card) $('#f-title').focus(); // quick capture — cursor lands ready to type (after unhide; focus is a no-op on display:none)
 }
 
 function closeModal() { $('#modal').classList.add('hidden'); }
 
-// Backdrop-close for the edit/new-card form (card #26): silent when the form
+// Backdrop-close for the edit/new-card form: silent when the form
 // is untouched, one confirm when typed work would be lost. Cancel/Save keep
 // their existing behavior — explicit buttons are deliberate, only the easy-to-
 // fat-finger backdrop click gets the guard.
@@ -1706,8 +1678,8 @@ function snapshotFormFields() {
   return {
     title: $('#f-title').value, status: $('#f-status').value, priority: $('#f-priority').value,
     tags: $('#f-tags').value, waiting: $('#f-waiting').value, blocked: $('#f-blocked').value, review: $('#f-review').value, prompt: $('#f-prompt').value, assignee: $('#f-assignee').value,
-    start: $('#f-start').value, end: $('#f-end').value, due: $('#f-due').value, body: $('#f-body').value, // card #36/#40: the whole date triad joins the dirty baseline
-    epic: $('#f-epic').checked, // card #59: a toggled checkbox is typed work too (isDirty compares booleans fine)
+    start: $('#f-start').value, end: $('#f-end').value, due: $('#f-due').value, body: $('#f-body').value, // the whole date triad joins the dirty baseline
+    epic: $('#f-epic').checked, // a toggled checkbox is typed work too (isDirty compares booleans fine)
   };
 }
 
@@ -1737,12 +1709,12 @@ async function submitModal(e) {
     // an invalid/clear value (so a blank simply removes the line).
     blocked: $('#f-blocked').value.trim(),
     review: $('#f-review').value.trim(), // ADR 0009: same lean-rule contract as blocked
-    prompt: $('#f-prompt').value.trim(), // kanban.proj #200: same lean-rule contract, but not a sticker
+    prompt: $('#f-prompt').value.trim(), // same lean-rule contract, but not a sticker
     assignee: $('#f-assignee').value.trim(),
-    start_date: $('#f-start').value.trim(), // card #36: empty string clears, same as due
-    end_date: $('#f-end').value.trim(), // card #40: same clear contract
+    start_date: $('#f-start').value.trim(), // empty string clears, same as due
+    end_date: $('#f-end').value.trim(), // same clear contract
     due_date: $('#f-due').value.trim(),
-    epic: $('#f-epic').checked, // card #59: false clears — the line is removed, never written as `epic: false`
+    epic: $('#f-epic').checked, // false clears — the line is removed, never written as `epic: false`
     body: $('#f-body').value,
   };
   try {
@@ -1764,18 +1736,18 @@ window.addEventListener('DOMContentLoaded', () => {
   // X goes through the dirty guard (the retired Cancel button bypassed it —
   // backdrop-click and X now agree on the unsaved-changes speedbump)
   $('#modal-close').addEventListener('click', requestCloseModal);
-  // card #50: revealing changes no field values, so the dirty baseline is untouched
+  // revealing changes no field values, so the dirty baseline is untouched
   $('#show-more-btn').addEventListener('click', () => {
     const minimal = isMinimalCreate(false, true); // always false — expanding lifts minimal for the rest of the open
     $('#card-form').classList.toggle('minimal', minimal);
   });
   $('#card-form').addEventListener('submit', submitModal);
-  $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // epic #137: live red-border feedback
+  $('#f-blocked').addEventListener('input', syncBlockedInputStyle); // live red-border feedback
   $('#f-review').addEventListener('input', syncReviewInputStyle); // ADR 0009: live gold-border feedback
-  $('#f-prompt').addEventListener('input', updateTitleRequired); // kanban.proj #211: typing/clearing the prompt live-toggles whether Title is required
-  // kanban.proj #200: toggles #row-prompt; focuses the input on reveal so
+  $('#f-prompt').addEventListener('input', updateTitleRequired); // typing/clearing the prompt live-toggles whether Title is required
+  // Toggles #row-prompt; focuses the input on reveal so
   // clicking the sparkle and typing is a two-step gesture, not three.
-  // kanban.proj #202: turning it ON goes through enableAiPrompt() (also sets
+  // Turning it ON goes through enableAiPrompt() (also sets
   // assignee to @afk for a new card); turning it back OFF is still a plain
   // hide — the assignee nudge is one-way, never undone by re-hiding the row.
   $('#modal-ai-btn').addEventListener('click', () => {
@@ -1783,13 +1755,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if (show) enableAiPrompt();
     else setPromptRowVisible(false);
   });
-  $('#f-assignee').addEventListener('input', syncAssigneeColor); // card #183: live color-text feedback
+  $('#f-assignee').addEventListener('input', syncAssigneeColor); // live color-text feedback
   $('#modal-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('edit'));
   // Single delegated listener on #board covers all five columns (renderBoard()
   // rebuilds the DOM every call — manual refresh, poll, drag, toggle — so
   // per-element listeners here would need constant rewiring; delegation on the
-  // stable #board parent doesn't). Only board-specific controls live here since
-  // card #39 — tile clicks (detail / selection gestures) moved to the document-level
+  // stable #board parent doesn't). Only board-specific controls live here
+  // — tile clicks (detail / selection gestures) live in the document-level
   // shared card-el grammar in the multi-select section, one handler for all
   // four views. These button branches simply return; the shared handler
   // independently ignores clicks landing on buttons/selects, so a Restore
@@ -1800,9 +1772,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const sortDirBtn = e.target.closest('.column-sort-dir');
     if (sortDirBtn) { toggleColumnSortDirection(sortDirBtn.dataset.col); return; }
     const addBtn = e.target.closest('.column-add');
-    if (addBtn) { openModal(null, addBtn.dataset.col); return; } // card #54: create pre-aimed at this column
+    if (addBtn) { openModal(null, addBtn.dataset.col); return; } // create pre-aimed at this column
     const addAiBtn = e.target.closest('.column-add-ai');
-    // kanban.proj #202: same pre-aimed create, with the AI prompt row already
+    // same pre-aimed create, with the AI prompt row already
     // revealed (and, per enableAiPrompt, the assignee already set to @afk).
     if (addAiBtn) { openModal(null, addAiBtn.dataset.col); enableAiPrompt(); return; }
 
@@ -1823,8 +1795,8 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Names the object in a confirm (card #26's speedbump policy): title when we
-// know it, id otherwise. kanban.proj #211 verify: falls back through
+// Names the object in a confirm (the speedbump policy): title when we
+// know it, id otherwise. Falls back through
 // cardTitleDisplay like every other title-rendering call site, so a
 // titleless AI-prompt card's confirm() text names it by its queued prompt
 // instead of a blank quoted title.
@@ -1835,7 +1807,7 @@ function cardLabel(id) {
   return titleDisplay.text ? `#${id} "${titleDisplay.text}"` : `#${id}`;
 }
 
-// card #92: a done card archiving is completion, not a destructive act — skip
+// A done card archiving is completion, not a destructive act — skip
 // the confirm when the card is already done (shared archiveNeedsConfirm rule,
 // selection.js). A missing lookup (shouldn't happen — the button is only
 // wired for live cards) falls back to confirming, the safe default.
@@ -1846,7 +1818,7 @@ async function doArchive(id, { onSuccess } = {}) {
   catch (e) { toast('Archive failed: ' + e.message); }
 }
 
-// Restore is exempt from the speedbump policy (card #26): it's the reversible
+// Restore is exempt from the speedbump policy: it's the reversible
 // direction — archiving it back costs one click.
 async function doRestore(id) {
   try { await api('POST', `/api/cards/${id}/restore`); await loadBoard(); }
@@ -1997,7 +1969,7 @@ function copyDetailPath() {
   }
 }
 
-// card #55: copy the board directory's ABSOLUTE path from the header title.
+// Copy the board directory's ABSOLUTE path from the header title.
 // Same clipboard ladder as copyDetailPath above — navigator.clipboard first,
 // textarea+execCommand fallback second (VSCode's Simple Browser doesn't grant
 // the async API a secure context, so the fallback is load-bearing there) —
@@ -2018,10 +1990,10 @@ let detailRequestId = 0;
 let currentDetailId = null;
 let currentDetailArchived = false;
 
-// card #35: "Last modified" line — the `updated` frontmatter field when the
+// "Last modified" line — the `updated` frontmatter field when the
 // card has one (machine-maintained, bumped on every write), else the file's
 // mtime labeled as such (older cards predating the field). Both timestamps
-// render local-time "YYYY-MM-DD | HH:MM:SS" (card #106); `updated` has no
+// render local-time "YYYY-MM-DD | HH:MM:SS"; `updated` has no
 // timezone suffix so it's already local, and `new Date(isoUtcMtime)` converts
 // to the browser's local time same as any other Date getter.
 function formatLocalDateTime(s) {
@@ -2030,7 +2002,7 @@ function formatLocalDateTime(s) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} | ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-// card #106: a raw local-datetime frontmatter value (e.g. `updated:
+// A raw local-datetime frontmatter value (e.g. `updated:
 // 2026-07-10T09:36:31`, or a `start_date`/`end_date`/`due_date` carrying a
 // time component) reads badly with its literal "T" separator — reuse
 // formatLocalDateTime so every surface shows the same "YYYY-MM-DD | HH:MM:SS"
@@ -2054,9 +2026,9 @@ async function openDetailModal(id) {
   if (reqId !== detailRequestId) return; // a newer openDetailModal call superseded this one
   currentDetailId = data.id;
   currentDetailArchived = !!data.archived;
-  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
-  // view got (cardTitleDisplay, card-title.js) — cardDetail (card-store.js)
-  // now carries `prompt` alongside title for exactly this.
+  // Same empty-title-shows-the-prompt fallback every other
+  // view uses (cardTitleDisplay, card-title.js) — cardDetail (card-store.js)
+  // carries `prompt` alongside title for exactly this.
   const titleDisplay = cardTitleDisplay(data);
   $('#detail-title').textContent = `#${data.id} ${titleDisplay.text}`;
   $('#detail-title').classList.toggle('detail-title--prompt-fallback', titleDisplay.isPromptFallback);
@@ -2066,13 +2038,13 @@ async function openDetailModal(id) {
   $('#detail-modified').innerHTML = formatDetailModified(data);
   $('#detail-frontmatter').innerHTML = renderFrontmatterTable(parseFrontmatter(data.frontmatter));
   $('#detail-body').innerHTML = mdToHtml(data.body || '');
-  // card #45's tile wash (`.card.epic`), same class on the popup's own panel —
+  // The tile wash (`.card.epic`), same class on the popup's own panel —
   // cardDetail (card-store.js) carries the tolerant any-case read tiles use.
   $('#detail-modal').querySelector('.modal').classList.toggle('epic', !!data.epic);
   // Archived cards: Edit only knows about state.active, and Archive on an already-archived
   // card would rename the file again (never clobbers, but pointless/confusing) — hide both.
-  // visibility, not .hidden: with the icons leading the header (card #61,
-  // order:-1) the title's x-position is the group's width, so display:none
+  // visibility, not .hidden: with the icons leading the header
+  // (order:-1) the title's x-position is the group's width, so display:none
   // here would hop the title ~72px left between an active card's popup and an
   // archived one's. visibility keeps the two slots (and still drops the
   // buttons from hit-testing and tab order).
@@ -2113,20 +2085,18 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#detail-fullscreen-btn').addEventListener('click', () => toggleModalFullscreen('detail'));
   $('#detail-modal').addEventListener('click', (e) => { if (e.target.id === 'detail-modal') closeDetailModal(); });
-  // Esc priority (card #96, replacing #20's "first Esc exits fullscreen,
-  // second Esc closes" chain): fullscreen is out of the picture entirely now.
+  // Esc priority: fullscreen is out of the Esc picture entirely.
   // An open detail popup closes on the very first Esc regardless of its
-  // fullscreen state. The edit/new-card modal now closes on Esc too — through
-  // requestCloseModal(), the exact same #26 unsaved-changes guard the X button
-  // uses (card #20 left this modal's Esc as a no-op; #96 wires it up). Esc
-  // never calls setModalFullscreenVisual any more, so the persisted preference
+  // fullscreen state. The edit/new-card modal closes on Esc too — through
+  // requestCloseModal(), the exact same unsaved-changes guard the X button
+  // uses. Esc
+  // never calls setModalFullscreenVisual, so the persisted preference
   // and the toggle button's state are untouched by it either way — the toggle
-  // button is the only thing that changes fullscreen now. verify finding: the
+  // button is the only thing that changes fullscreen. The
   // three bulk-edit popups (bulkSingle/Tags/Schedule) are ALSO fullscreen-
-  // capable (see FULLSCREEN_MODALS) and used to at least exit fullscreen on
-  // the first Esc via the old (now-removed) step — closeAnyBulkPopup() closes
+  // capable (see FULLSCREEN_MODALS) — closeAnyBulkPopup() closes
   // whichever one is open directly, matching the detail/edit popups above and
-  // its own backdrop-click, so Esc is never a true no-op there. #95's
+  // its own backdrop-click, so Esc is never a true no-op there. The
   // combobox menu still gets first crack at Esc when open — attachCombobox's
   // own keydown listener stops propagation before this document-level
   // listener ever sees the key, so nothing here needs to special-case it.
@@ -2140,7 +2110,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (anyModalOpen()) return; // defensive catch-all: any future .modal-backdrop popup not listed above
     clearSearch();
   });
-  // Alt+Enter (card #145): toggle fullscreen on whichever fullscreen-capable
+  // Alt+Enter: toggle fullscreen on whichever fullscreen-capable
   // popup is open — the keyboard twin of that popup's toggle button, going
   // through the same toggleModalFullscreen so the persisted per-modal-type
   // preference updates identically. Works with focus anywhere inside the
@@ -2155,7 +2125,7 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     toggleModalFullscreen(type);
   });
-  // Ctrl+S / Cmd+S (card #172): save whichever save-capable popup is open —
+  // Ctrl+S / Cmd+S: save whichever save-capable popup is open —
   // the keyboard twin of its Save/Apply button, instead of the browser's
   // save-page dialog mid-edit. save-hotkey.js owns the chord + target
   // decision (strict chord — Shift/Alt chords never match; bulk-tags
@@ -2163,7 +2133,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // "save"). The edit/create modal goes through requestSubmit() so native
   // validation and submitModal run exactly as a Save click; the two bulk
   // popups click their Apply button, skipped while it's disabled. No
-  // save-capable popup open = plain no-op, same shape as #145 above.
+  // save-capable popup open = plain no-op, same shape as Alt+Enter above.
   const SAVE_APPLY_BUTTONS = { bulkSingle: '#bulk-single-apply', bulkSchedule: '#bulk-schedule-apply' };
   document.addEventListener('keydown', (e) => {
     const target = saveHotkeyTarget(e, {
@@ -2179,11 +2149,11 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// --- Search box wiring (card #17): live filter-as-you-type, clear button,
+// --- Search box wiring: live filter-as-you-type, clear button,
 // `/` focuses the box (skipped while any input/textarea/select/contentEditable
 // already has focus, so it doesn't hijack typing elsewhere — including inside
 // either modal, whose fields are all one of those tag names). Ctrl+F/Cmd+F
-// (kanban.proj #198) also focuses it, with its own `#`-prefill/select-all
+// also focuses it, with its own `#`-prefill/select-all
 // logic — see the keydown listener below.
 function clearSearch() {
   const input = $('#search-input');
@@ -2192,13 +2162,13 @@ function clearSearch() {
   renderBoard();
 }
 
-// kanban.proj #189: append a scoped term to whatever's already in the search
+// Append a scoped term to whatever's already in the search
 // box (assignee cue / tag click on a card tile) and re-render — same direct-
-// call convention as focusOn() (card #74, further down): set the box, call
+// call convention as focusOn() (further down): set the box, call
 // renderBoard() straight, no synthetic 'input' event needed. Idempotent
 // rather than a toggle: clicking the same assignee/tag again while its term
 // is already present is a no-op — simpler than tracking "did I add this" to
-// support removing it again, and the card leaves the choice open.
+// support removing it again.
 function addSearchTerm(term) {
   const input = $('#search-input');
   const terms = input.value.trim() ? input.value.trim().split(/\s+/) : [];
@@ -2209,7 +2179,7 @@ function addSearchTerm(term) {
 
 window.addEventListener('DOMContentLoaded', () => {
   const input = $('#search-input');
-  // kanban.proj #205: the Ctrl+F "#" prefill only makes sense while an id is
+  // The Ctrl+F "#" prefill only makes sense while an id is
   // still being typed (digits). searchHashStrip re-checks the box on every
   // keystroke and drops the leading "#" the moment a non-numeric char shows
   // up after it, so the query reads as a plain search term instead of a
@@ -2233,7 +2203,7 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     input.focus();
   });
-  // Ctrl+F / Cmd+F (kanban.proj #198): focus the search box, preventDefault
+  // Ctrl+F / Cmd+F: focus the search box, preventDefault
   // on the browser's own find bar. search-hotkey.js owns the chord + value
   // decision — an empty box gets "#" prefilled with the caret right after it
   // (typing digits immediately forms the #<id> exact-match term), a box that
@@ -2243,7 +2213,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // is open (anyModalOpen(), the same guard the 5s poll uses) — every
   // popup's .modal-backdrop covers the whole viewport, so the search bar
   // sits hidden behind it; browser's native find stands in that case
-  // instead — mirror of card #172's Ctrl+S, which only fires INSIDE a popup,
+  // instead — mirror of Ctrl+S, which only fires INSIDE a popup,
   // this one only fires OUTSIDE one. Unlike the "/" hotkey above, no
   // active-element check is needed: Ctrl+F never inserts a literal
   // character into whatever's focused, so there's nothing for it to hijack.
@@ -2257,7 +2227,7 @@ window.addEventListener('DOMContentLoaded', () => {
     input.focus();
     input.setSelectionRange(result.selectionStart, result.selectionEnd);
   });
-  // card #187: autocomplete dropdown, same hand-rolled combobox (native
+  // Autocomplete dropdown, same hand-rolled combobox (native
   // <datalist> misrenders in VSCode's Simple Browser — see attachCombobox's
   // own header comment) the create/edit form uses for priority/assignee/tags.
   // getOptions reads input.value itself (searchSuggestionItems computes
@@ -2267,7 +2237,7 @@ window.addEventListener('DOMContentLoaded', () => {
   attachCombobox(input, () => searchSuggestionItems(input.value), { preFiltered: true, selectOnFocus: false });
 });
 
-// --- Map view wiring (card #19; reshaped by #39): top-bar toggle + the bits
+// --- Map view wiring: top-bar toggle + the bits
 // the shared card-el grammar does NOT cover. #map-view is rebuilt from
 // scratch by every renderMapView() call (manual/poll/drag/toggle alike, same
 // as #board's cards), so clicks use event delegation on the stable #map-view
@@ -2287,22 +2257,22 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('DOMContentLoaded', () => {
   $('#map-toggle-btn').addEventListener('click', () => toggleView('map'));
   $('#map-view').addEventListener('click', (e) => {
-    // card #97: section collapse toggles — control-row buttons, checked first
-    // for the same reason the #56 pills and data-act buttons are (never fall
+    // Section collapse toggles — control-row buttons, checked first
+    // for the same reason the status pills and data-act buttons are (never fall
     // through to card-el).
     const sectionBtn = e.target.closest('.map-section-toggle[data-section]');
     if (sectionBtn) {
       toggleMapSection(sectionBtn.dataset.section);
       return;
     }
-    // card #56: status-filter pills — control-row buttons, checked first for
+    // Status-filter pills — control-row buttons, checked first for
     // the same reason data-act buttons are (never fall through to card-el).
     const filterBtn = e.target.closest('.map-filter-toggle[data-col]');
     if (filterBtn) {
       toggleMapStatusFilter(filterBtn.dataset.col);
       return;
     }
-    // kanban.proj #222: the "Epics" chip — same control-row-buttons-checked-
+    // The "Epics" chip — same control-row-buttons-checked-
     // first reasoning as the status pills above.
     const epicChip = e.target.closest('#map-epic-chip');
     if (epicChip) {
@@ -2319,15 +2289,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const stub = e.target.closest('.map-node.ghost[data-id]');
     if (stub) openDetailModal(Number(stub.dataset.id));
   });
-  // card #101: right-click a status-filter pill SOLOs it (every other pill
+  // Right-click a status-filter pill SOLOs it (every other pill
   // off); right-click the already-soloed pill again restores all ON. Own
   // listener (not folded into the click one above) so it can preventDefault
   // WITHOUT touching the browser's context menu anywhere else in #map-view —
-  // a right-click that misses a pill falls through untouched to the #39
+  // a right-click that misses a pill falls through untouched to the
   // shared card-el contextmenu handler on document (map nodes/isolated tiles
   // keep their bulk-menu right-click exactly as before).
   $('#map-view').addEventListener('contextmenu', (e) => {
-    if (isDragging || ganttDrag || calTimeDrag) return; // same #39 guard (app.js ~3006) — a chorded right-click mid-drag must not re-render under the gesture
+    if (isDragging || ganttDrag || calTimeDrag) return; // same guard as the gantt's contextmenu — a chorded right-click mid-drag must not re-render under the gesture
     const filterBtn = e.target.closest('.map-filter-toggle[data-col]');
     if (!filterBtn) return;
     e.preventDefault();
@@ -2335,18 +2305,18 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// --- Calendar view (card #37; sub-views by card #58) ---------------------------
+// --- Calendar view ---------------------------
 // Month grid + chips + drag-to-reschedule, plus the Outlook/Teams-style
 // Month | Week | 3 days | Day switcher. All date math and layout construction
 // live in calendar-model.js (pure, unit-tested, dual-environment); everything
 // below is presentation and API glue. LIVE cards (state.active) by default —
 // the calendar answers "when is work due", and archived cards aren't work —
-// but dated ARCHIVED cards can join too, opt-in via the Archive pill (card
-// #108), same "show it if the human asks" reasoning as the gantt's own #98
-// reopen.
+// but dated ARCHIVED cards can join too, opt-in via the Archive
+// pill, same "show it if the human asks" reasoning as the gantt's own
+// Archive pill.
 //
 // The displayed window is ONE in-memory anchor day for all four sub-views
-// (card #58 replaced #37's {year,monthIndex} cursor — the month view derives
+// (the month view derives
 // y/m from it, so the window carries across sub-view switches): it resets to
 // today on page load and survives the 5s poll's re-render by construction
 // (renderCalendarView reads it, nothing in the render path resets it — only
@@ -2363,7 +2333,7 @@ function currentCalendarMonth() {
   return { year: y, monthIndex: m - 1 };
 }
 
-// card #58: the sub-view choice persists per board — same memoize-once
+// The sub-view choice persists per board — same memoize-once
 // localStorage discipline as viewMode above (feature key 'calendar.subview',
 // validated by mergeCalendarSubview: unknown/corrupt saved values fall back
 // to month).
@@ -2390,7 +2360,7 @@ function setCalendarSubview(subview) {
   renderCalendarView();
 }
 
-// Local time on purpose (matches the user's wall clock, same as card #35's
+// Local time on purpose (matches the user's wall clock, same as
 // formatLocalDateTime) — the grid itself is built with UTC math but its "is
 // this cell today" check must agree with the calendar on the user's wall.
 function localTodayStr() {
@@ -2401,33 +2371,32 @@ function localTodayStr() {
 
 function calendarChipEl(card, pos, time, isDue) {
   const el = document.createElement('div');
-  const pb = priorityBadge(card, state.priorities); // same emphasis rules as the board tiles (card #30)
-  // card #39: chips join the shared card-el grammar. Selection is by id, so
+  const pb = priorityBadge(card, state.priorities); // same emphasis rules as the board tiles
+  // Chips join the shared card-el grammar. Selection is by id, so
   // every chip of a multi-day run paints .selected together — they all read
-  // the same selectedIds entry on this render. The #40 deadline chip keeps
+  // the same selectedIds entry on this render. The deadline chip keeps
   // its distinct class on top of the grammar.
-  // card #45: epic is a background-wash class now (`.cal-chip.epic`,
-  // app.css), not a dot glyph (card #91's epicBadge()) — the priority/
-  // waiting/due rules below need no gating, nothing left to win over.
-  // card #108: same for archived — priority/waiting keep applying regardless
+  // epic is a background-wash class (`.cal-chip.epic`,
+  // app.css), not a dot glyph — the priority/
+  // waiting/due rules below need no gating, nothing to win over.
+  // Same for archived — priority/waiting keep applying regardless
   // (matching the gantt bar's precedent: colorStatus/mute is a SEPARATE
   // channel from the border accent, so an archived-and-high card still reads
   // high). archived rides the class list too, for the not-allowed cursor.
-  // epic #137: the amber accent marks WAITING (renamed from the old blocked
-  // visuals); the manual blocked sticker's red pill lives on tiles + map
-  // only, per the card's display rules.
+  // The amber accent marks WAITING; the manual blocked sticker's red pill
+  // lives on tiles + map only.
   el.className = `cal-chip card-el ${pos}` + (isDue ? ' cal-chip-due' : '') +
     (pb.className ? ` ${pb.className}` : '') + (isWaiting(card) ? ' waiting' : '') +
     (card.epic ? ' epic' : '') +
     (card.archived ? ' archived' : '') +
     (selectedIds.has(card.id) ? ' selected' : '');
-  // defect fix (same class as the gantt's #98 reopen): an archived card is
+  // An archived card is
   // read-only — native drag simply never starts (no fake-drag animation to
   // guard against, unlike the gantt's custom pointer-drag), so onCalendarDrop
   // never gets called for it in the first place.
   el.draggable = !card.archived;
   el.dataset.id = card.id;
-  // card #40: the due marker is a DIFFERENT chip from the range run — the drop
+  // The due marker is a DIFFERENT chip from the range run — the drop
   // handler must know which one was picked up (range drag moves the range pair,
   // due drag moves due_date alone), so the deadline chip flags itself.
   if (isDue) el.dataset.due = '1';
@@ -2435,17 +2404,17 @@ function calendarChipEl(card, pos, time, isDue) {
   // range-end / the due marker) — a range's start/mid days repeating the end
   // time would misread.
   const timeLabel = time && (pos === 'single' || pos === 'range-end') ? `${escapeHtml(time)} ` : '';
-  const glyph = isDue ? '<span class="cal-chip-due-glyph">⚑</span> ' : ''; // ⚑ deadline flag before the text (card #40)
-  // card #97: the status dot rides right after the id, before the title — the
-  // dense-chip width the card warns about is handled the same way: nowrap+
+  const glyph = isDue ? '<span class="cal-chip-due-glyph">⚑</span> ' : ''; // ⚑ deadline flag before the text
+  // The status dot rides right after the id, before the title —
+  // dense-chip width is handled the same way: nowrap+
   // ellipsis on .cal-chip only ever crops the TAIL (the title), never the
   // id/dot near the front.
-  // card #108: archived joins status — same "status, archived" glyph order
-  // every other surface uses (Archived ball, card #102 final design), gated
-  // on the chip's own card.archived flag. Epic no longer rides this glyph
-  // sequence at all (card #45: it's the chip's own background wash instead).
-  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
-  // view got (cardTitleDisplay, card-title.js) — reused as-is.
+  // archived joins status — same "status, archived" glyph order
+  // every other surface uses (Archived ball), gated
+  // on the chip's own card.archived flag. Epic doesn't ride this glyph
+  // sequence at all (it's the chip's own background wash instead).
+  // Same empty-title-shows-the-prompt fallback every other
+  // view uses (cardTitleDisplay, card-title.js) — reused as-is.
   const titleDisplay = cardTitleDisplay(card);
   el.innerHTML = `${glyph}${timeLabel}<span class="cal-chip-id">#${card.id}</span>${statusBadge(card)}${card.archived ? archivedBadge() : ''} ` +
     `<span class="cal-chip-title${titleDisplay.isPromptFallback ? ' cal-chip-title--prompt-fallback' : ''}">${escapeHtml(titleDisplay.text)}</span>`;
@@ -2454,7 +2423,7 @@ function calendarChipEl(card, pos, time, isDue) {
   return el;
 }
 
-// card #58: the sub-view label set for the switcher + the nav buttons' spans.
+// The sub-view label set for the switcher + the nav buttons' spans.
 const CAL_SUBVIEW_LABELS = { month: 'Month', week: 'Week', '3day': '3 days', day: 'Day' };
 
 function renderCalendarView() {
@@ -2474,7 +2443,7 @@ function renderCalendarView() {
     `<button type="button" id="cal-today-btn" class="cal-nav" title="Jump back to today">Today</button>` +
     `<button type="button" id="cal-next-btn" class="cal-nav" title="Next ${spanNoun}" aria-label="Next ${spanNoun}">&#8250;</button>` +
     `<span class="cal-title">${escapeHtml(subviewTitle(subview, currentCalendarAnchor()))}</span>` +
-    // card #58: the sub-view switcher. cal-nav class on purpose: it joins the
+    // The sub-view switcher. cal-nav class on purpose: it joins the
     // focused-control poll guard AND the Q0 clear-selection exemption, same
     // as prev/today/next (these buttons are rebuilt every render too).
     `<span class="cal-subview-switch" role="group" aria-label="Calendar span">` +
@@ -2483,11 +2452,11 @@ function renderCalendarView() {
         `data-subview="${sv}" aria-pressed="${sv === subview}">${CAL_SUBVIEW_LABELS[sv]}</button>`).join('') +
     `</span>`;
   container.appendChild(controls);
-  // card #99: the status-filter row renders first and UNCONDITIONALLY — same
-  // reasoning as the map's #56 row and the gantt's #98 row: if it vanished on
+  // The status-filter row renders first and UNCONDITIONALLY — same
+  // reasoning as the map's row and the gantt's row: if it vanished on
   // an everything-filtered-out empty grid, there'd be no control left to
   // toggle a status back ON. Shared by BOTH branches below (month and every
-  // #58 sub-view read the same loadCalendarStatusFilter()).
+  // sub-view read the same loadCalendarStatusFilter()).
   container.appendChild(buildCalendarFilterRow());
 
   if (subview === 'month') renderCalendarMonthGrid(container);
@@ -2495,22 +2464,22 @@ function renderCalendarView() {
   wireCalendarDrag();
 }
 
-// The month grid — #37's layout, untouched by #58 beyond moving into its own
+// The month grid, in its own
 // function (the sub-view switcher branches between this and the time grid).
 function renderCalendarMonthGrid(container) {
   const { year, monthIndex } = currentCalendarMonth();
   // Same search composition as the board and map: read the live input value
   // each render (see currentSearchTerms), filter with the shared filterCards.
-  // card #40: a card appears via its RANGE (cardSchedule) and/or its DUE
+  // A card appears via its RANGE (cardSchedule) and/or its DUE
   // marker (dueMarker) — a due-only card has no schedule but still chips.
-  // card #108: the search pool spans live + archived unconditionally, same as
+  // The search pool spans live + archived unconditionally, same as
   // the gantt — harmless while the Archive pill is off, since no archived
   // card is ever added to `cards` below regardless of whether its id lands
   // in searchIds.
   const searchTerms = currentSearchTerms();
   const searchIds = searchTerms.length ? new Set(filterCards(state.active.concat(state.archived), searchTerms).map((c) => c.id)) : null;
-  // card #99: status filter composes with search by INTERSECTION — same rule
-  // as the map's #56 and the gantt's #98 composition. ganttFilterVisibleIds
+  // Status filter composes with search by INTERSECTION — same rule
+  // as the map's and the gantt's composition. ganttFilterVisibleIds
   // (not mapFilterVisibleIds) is the right helper here too: the calendar
   // doesn't bucket cards into board columns any more than the gantt's group
   // rows do — a card whose status has no pill just stays ungoverned by any
@@ -2518,8 +2487,7 @@ function renderCalendarMonthGrid(container) {
   const statusIds = ganttFilterVisibleIds(state.active, loadCalendarStatusFilter(), boardStatuses());
   const visibleIds = intersectVisibleIds(searchIds, statusIds);
   const cards = visibleIds ? state.active.filter((c) => visibleIds.has(c.id)) : state.active;
-  // card #108 ("show/hide archived cards the same way we do in ... gantt
-  // view"): the Archive pill's OWN boolean (=== true, not !== false) decides
+  // The Archive pill's OWN boolean (=== true, not !== false) decides
   // whether archived cards join the grid at all — its default is OFF, so a
   // missing/stale/false value must never render archived chips. Archived
   // cards aren't governed by the live status pills (same as the gantt's
@@ -2554,20 +2522,20 @@ function renderCalendarMonthGrid(container) {
     for (const { card, schedule, due } of scheduled) {
       const pos = chipPositionForDay(schedule, cell.date);
       if (pos) chips.push({ card, pos, time: schedule.time });
-      // card #40: the due chip renders even when the range already covers the
+      // The due chip renders even when the range already covers the
       // day — the deadline is a different thing from the working range.
       if (due && due.day === cell.date) chips.push({ card, pos: 'single', time: due.time, due: true });
     }
     const { visible, overflow } = capChips(chips, CALENDAR_MAX_CHIPS_PER_DAY);
     visible.forEach((c) => dayEl.appendChild(calendarChipEl(c.card, c.pos, c.time, c.due)));
     if (overflow.length) {
-      // Overflow is deliberately cheap (card #37's "nothing fancy"): a
+      // Overflow is deliberately cheap: a
       // tooltip-titled line listing the hidden cards — hover reads them, and
       // every card stays reachable via search or the board view.
       const more = document.createElement('div');
       more.className = 'cal-more';
       more.textContent = `+${overflow.length} more`;
-      // kanban.proj #211: same fallback as every other title-bearing surface.
+      // same fallback as every other title-bearing surface.
       more.title = overflow.map((c) => `#${c.card.id} ${cardTitleDisplay(c.card).text}`).join('\n');
       dayEl.appendChild(more);
     }
@@ -2576,15 +2544,15 @@ function renderCalendarMonthGrid(container) {
   container.appendChild(grid);
 }
 
-// --- card #58: the sub-month time grid (week / 3 days / day) --------------------
+// --- The sub-month time grid (week / 3 days / day) --------------------
 // One column per day, an "all day" band on top, hour rows below. All the
 // classification/packing math is calendar-model.js's timeGridLayout; this
-// builds DOM from its output. Chips reuse calendarChipEl, so the shared #39
+// builds DOM from its output. Chips reuse calendarChipEl, so the shared
 // card-el grammar (click/ctrl- or shift-click/right-click) and the month view's chip
 // styling apply unchanged. The all-day band + month grid drag BETWEEN day
 // columns via native HTML5 drag (onCalendarDrop: date moves, time preserved).
-// card #109 supersedes #58's "retime is out of scope" deferral: the timed
-// hour-grid blocks now retime + edge-resize at minute granularity via a custom
+// The timed
+// hour-grid blocks retime + edge-resize at minute granularity via a custom
 // pointer-drag (wireCalendarTimeDrag) — so they're draggable:false here.
 
 // Pixel height of one hour row. Must match app.css's .cal-tg-col background
@@ -2595,9 +2563,9 @@ const CAL_DOW_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']; // getU
 function renderCalendarTimeGrid(container, subview, keepScroll) {
   const days = calendarSubviewDays(subview, currentCalendarAnchor());
   // Same live search + status-filter composition as the month grid above —
-  // card #99: filtered-out statuses must drop their chips from the all-day
-  // band AND the timed hour grid alike, not just the month view. card #108:
-  // same live+archived search pool and Archive-pill composition as the month
+  // filtered-out statuses must drop their chips from the all-day
+  // band AND the timed hour grid alike, not just the month view. Same
+  // live+archived search pool and Archive-pill composition as the month
   // grid too, so the toggle applies to both grids alike.
   const searchTerms = currentSearchTerms();
   const searchIds = searchTerms.length ? new Set(filterCards(state.active.concat(state.archived), searchTerms).map((c) => c.id)) : null;
@@ -2690,7 +2658,7 @@ function renderCalendarTimeGrid(container, subview, keepScroll) {
       const el = calendarChipEl(block.card, 'single', block.time, block.due);
       el.classList.add('cal-timeblock');
       if (block.point) el.classList.add('point'); // default-height marker, not a real duration
-      // card #109: timed blocks use a custom pointer-drag (wireCalendarTimeDrag)
+      // Timed blocks use a custom pointer-drag (wireCalendarTimeDrag)
       // for minute-granular retime/resize — native HTML5 drag can't give the
       // continuous pixel deltas that needs. draggable:false overrides
       // calendarChipEl's default so the two drag systems never both fire; the
@@ -2700,7 +2668,7 @@ function renderCalendarTimeGrid(container, subview, keepScroll) {
       el.style.height = `${Math.max(18, ((block.endMin - block.startMin) / 60) * CAL_HOUR_PX - 2)}px`;
       el.style.left = `calc(${block.lane} * 100% / ${block.lanes})`;
       el.style.width = `calc(100% / ${block.lanes} - 4px)`;
-      // card #109: only a REAL same-day duration (not a point/due placeholder,
+      // Only a REAL same-day duration (not a point/due placeholder,
       // whose height is a synthetic 60-min marker) gets resize handles — the
       // point/due block's own `point`/`due` flags answer "resizable?" with no
       // separate classifier. An archived block is read-only (guarded at
@@ -2729,14 +2697,14 @@ function renderCalendarTimeGrid(container, subview, keepScroll) {
 // listeners attach fresh each time. isDragging / pendingDrops reuse the
 // board's poll guards, so the 5s auto-refresh never re-renders mid-gesture or
 // mid-PATCH here either.
-// card #40: whether the chip picked up was the DUE marker — captured at
+// Whether the chip picked up was the DUE marker — captured at
 // dragstart (same module-var discipline as bulkDragIds: the drop reads the
 // flag, dragend clears it so a cancelled drag can't leak into the next one).
 let calDragDue = false;
 
 function wireCalendarDrag() {
   const container = $('#calendar-view');
-  // card #109: exclude timed blocks — they're draggable:false now and handled
+  // Exclude timed blocks — they're draggable:false and handled
   // by the minute-granular pointer-drag (wireCalendarTimeDrag). The all-day
   // band + month chips keep native day-drag through this function.
   container.querySelectorAll('.cal-chip:not(.cal-timeblock)').forEach((el) => {
@@ -2745,14 +2713,14 @@ function wireCalendarDrag() {
       el.classList.add('dragging');
       isDragging = true;
       calDragDue = el.dataset.due === '1';
-      // card #58: while a drag is live, every chip yields hit-testing
+      // While a drag is live, every chip yields hit-testing
       // (pointer-events:none via this class, see app.css). The sub-month
       // all-day chips are grid-overlay SIBLINGS of their .cal-tg-allday-cell
-      // drop targets — a drag released over one never bubbled to any cell, so
-      // preventDefault never fired and the browser refused the drop (month
-      // chips are CHILDREN of .cal-day, which is why the same gesture worked
-      // there). Falling through to the cell underneath restores the month
-      // view's drop-anywhere-in-the-day semantics in week/3-day/day too.
+      // drop targets — a drag released over one would never bubble to any cell,
+      // preventDefault would never fire and the browser would refuse the drop
+      // (month chips are CHILDREN of .cal-day, which is why the same gesture
+      // needs no help there). Falling through to the cell underneath gives the
+      // month view's drop-anywhere-in-the-day semantics in week/3-day/day too.
       container.classList.add('cal-dragging');
     });
     el.addEventListener('dragend', () => {
@@ -2762,7 +2730,7 @@ function wireCalendarDrag() {
       container.classList.remove('cal-dragging');
     });
   });
-  // card #58: the sub-month views' drop targets (time columns + all-day band
+  // The sub-month views' drop targets (time columns + all-day band
   // cells) carry .cal-drop and the same data-day contract as the month cells.
   container.querySelectorAll('.cal-day, .cal-drop').forEach((cell) => {
     cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add('drag-over'); });
@@ -2781,14 +2749,14 @@ function wireCalendarDrag() {
   });
 }
 
-// Drop = reschedule (card #37, resemantic'd by card #40): dragging a RANGE
+// Drop = reschedule: dragging a RANGE
 // chip moves the working range — the drop day becomes the range END day
 // (time-of-day preserved) and the start shifts by the same delta so duration
 // is preserved, writing the fields the range actually used (a compat range
 // shifts start+due, never inventing an end_date); dragging the DUE chip moves
 // due_date alone. The math is calendar-model.js's rescheduleChanges /
 // rescheduleDueChanges — both return null for zero-delta drops, so a same-day
-// drop never spends a PATCH (or an `updated` bump, card #35). No optimistic
+// drop never spends a PATCH (or an `updated` bump). No optimistic
 // mutation on purpose: dates aren't positional like a drag between columns,
 // so the loadBoard() round-trip re-render is cheap and honest; failures toast.
 async function onCalendarDrop(id, day, isDue) {
@@ -2798,7 +2766,7 @@ async function onCalendarDrop(id, day, isDue) {
   if (!changes) return; // no matching date to move, or a same-day drop — never let a stray drop 500
   pendingDrops++; // same poll guard as the board's onDrop
   try {
-    await api('PATCH', `/api/cards/${id}`, changes); // `updated` bumps server-side (card #35)
+    await api('PATCH', `/api/cards/${id}`, changes); // `updated` bumps server-side
     await loadBoard();
   } catch (e) {
     toast('Reschedule failed: ' + e.message);
@@ -2807,8 +2775,8 @@ async function onCalendarDrop(id, day, isDue) {
   }
 }
 
-// --- card #109: minute-granular pointer-drag on the sub-month TIME GRID -----------
-// Card #58 deferred "drag-to-retime within a day's hour grid" — this is that v2,
+// --- Minute-granular pointer-drag on the sub-month TIME GRID -----------
+// Drag-to-retime within a day's hour grid,
 // plus gantt-style edge-resize. Native HTML5 drag (wireCalendarDrag, still used
 // by the all-day band + month grid) only gives discrete drop-target hits; the
 // time grid needs a continuous 2-axis delta (day column × minute), so it uses
@@ -2881,7 +2849,7 @@ async function onCalTimeDragEnd(drag) {
   if (!changes) return; // zero-delta or not-applicable — finish() already restored the geometry
   pendingDrops++; // same poll guard as onCalendarDrop / the gantt
   try {
-    await api('PATCH', `/api/cards/${drag.id}`, changes); // `updated` bumps server-side (card #35)
+    await api('PATCH', `/api/cards/${drag.id}`, changes); // `updated` bumps server-side
     await loadBoard();
   } catch (e) {
     renderCalendarView(); // snap back to disk truth
@@ -2963,7 +2931,7 @@ function wireCalendarTimeDrag() {
   });
 
   // pointerup commits a MOVED drag; an unmoved press is a click (its native
-  // click bubbles to the shared #39 card-el grammar → detail popup, same as the
+  // click bubbles to the shared card-el grammar → detail popup, same as the
   // gantt). pointercancel never commits. Either way the block's inline preview
   // styles are cleared first — the authoritative move is the post-PATCH re-render.
   const finish = (commit) => {
@@ -2985,7 +2953,7 @@ function wireCalendarTimeDrag() {
   container.addEventListener('pointercancel', (e) => { if (calTimeDrag && e.pointerId === calTimeDrag.pointerId) finish(false); });
 }
 
-// --- Calendar view wiring (card #37; reshaped by #39): header toggle + the
+// --- Calendar view wiring: header toggle + the
 // prev/today/next nav. #calendar-view is rebuilt by every renderCalendarView()
 // call, so clicks delegate to the stable parent — same pattern (and reason)
 // as #map-view's delegated listener above. Chip clicks (detail/selection/
@@ -2995,14 +2963,14 @@ function wireCalendarTimeDrag() {
 // board's background.
 window.addEventListener('DOMContentLoaded', () => {
   $('#calendar-toggle-btn').addEventListener('click', () => toggleView('calendar'));
-  wireCalendarTimeDrag(); // card #109: delegated once on the stable #calendar-view
+  wireCalendarTimeDrag(); // delegated once on the stable #calendar-view
   $('#calendar-view').addEventListener('click', (e) => {
-    // card #99: status-filter pills — control-row buttons, checked first for
-    // the same reason the map's #56 and the gantt's #98 pills are (never fall
+    // Status-filter pills — control-row buttons, checked first for
+    // the same reason the map's and the gantt's pills are (never fall
     // through to the sub-view switcher/nav/card-el handling below).
     const filterBtn = e.target.closest('.calendar-filter-toggle[data-col]');
     if (filterBtn) { toggleCalendarStatusFilter(filterBtn.dataset.col); return; }
-    // card #58: the sub-view switcher rides the same delegated listener as
+    // The sub-view switcher rides the same delegated listener as
     // prev/today/next — all four button sets are rebuilt every render.
     const sv = e.target.closest('.cal-subview-btn');
     if (sv) { setCalendarSubview(sv.dataset.subview); return; }
@@ -3010,15 +2978,15 @@ window.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('#cal-next-btn')) { shiftCalendarWindow(1); return; }
     if (e.target.closest('#cal-today-btn')) { calendarAnchor = null; renderCalendarView(); }
   });
-  // card #193: click-to-create. ADR 0006 pins plain-click-on-empty-cell to
+  // Click-to-create. ADR 0006 pins plain-click-on-empty-cell to
   // clearing the selection, so create rides double-click instead — a gesture
   // no existing calendar interaction uses, on the SAME empty-cell-space
   // Q0 relies on (a click landing on a chip never reaches here — see the
-  // .card-el guard below — so it can never fight the shared #39 grammar).
+  // .card-el guard below — so it can never fight the shared grammar).
   // Month/all-day cells only carry a day; time-grid columns also carry the
-  // pointer's y, converted to a snapped minute the same way the #109 drag
+  // pointer's y, converted to a snapped minute the same way the retime drag
   // math does (CAL_PX_PER_MIN). Status is left at the modal's own default —
-  // unlike the #54 column "+", a calendar cell doesn't imply a status.
+  // unlike the column "+", a calendar cell doesn't imply a status.
   $('#calendar-view').addEventListener('dblclick', (e) => {
     if (isDragging || ganttDrag || calTimeDrag) return; // same guard as the contextmenu listener below: never fire out from under a live drag
     if (e.target.closest('.card-el')) return; // a chip's dblclick is its own affair, not a create gesture
@@ -3030,11 +2998,11 @@ window.addEventListener('DOMContentLoaded', () => {
       openModal(null, null, calendarCreateStart(col.dataset.day, (e.clientY - r.top) / CAL_PX_PER_MIN));
     }
   });
-  // card #101: right-click SOLO on the calendar's own pills — same reasoning
+  // Right-click SOLO on the calendar's own pills — same reasoning
   // as the map's contextmenu listener above (own listener so a miss falls
-  // through untouched to the #39 shared chip contextmenu on document).
+  // through untouched to the shared chip contextmenu on document).
   $('#calendar-view').addEventListener('contextmenu', (e) => {
-    if (isDragging || ganttDrag || calTimeDrag) return; // verify-fix: same #39 guard (app.js ~3006) — a chorded right-click mid-.cal-chip-drag must not re-render out from under the gesture
+    if (isDragging || ganttDrag || calTimeDrag) return; // same guard as the gantt's contextmenu — a chorded right-click mid-.cal-chip-drag must not re-render out from under the gesture
     const filterBtn = e.target.closest('.calendar-filter-toggle[data-col]');
     if (!filterBtn) return;
     e.preventDefault();
@@ -3042,16 +3010,16 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// card #58: prev/next step by the ACTIVE sub-view's span (month / 7 / 3 / 1
+// prev/next step by the ACTIVE sub-view's span (month / 7 / 3 / 1
 // days) — shiftAnchorDay owns the math, one anchor cursor drives all four.
 function shiftCalendarWindow(delta) {
   calendarAnchor = shiftAnchorDay(loadCalendarSubview(), currentCalendarAnchor(), delta);
   renderCalendarView();
 }
 
-// --- Gantt view (card #38; date triad by card #40) -------------------------------
+// --- Gantt view -------------------------------
 // Dated LIVE cards on a day-granular timeline, rows grouped by status: the
-// working range (start→end, or the #36 compat pair start→due) renders as a
+// working range (start→end, or the compat pair start→due) renders as a
 // bar, the due date as an independent draggable diamond on the same row —
 // a due-only card shows only its diamond.
 // All window/row/drag math lives in gantt-model.js (pure, unit-tested,
@@ -3061,7 +3029,7 @@ function shiftCalendarWindow(delta) {
 // preserve (unlike the calendar), and the view mode itself persists via the
 // shared 'view.mode' mechanism. No dependency arrows on purpose — the map
 // view owns the waiting_for graph; here a waiting card just keeps the board's
-// amber left-accent cue (epic #137 renamed the old blocked visuals). No focusable controls in here either (bars are divs,
+// amber left-accent cue. No focusable controls in here either (bars are divs,
 // there's no prev/next nav), so boardControlFocused needs no new entry.
 
 function ganttBarEl(bar, win) {
@@ -3072,36 +3040,36 @@ function ganttBarEl(bar, win) {
   const from = bar.startDay < win.startDay ? win.startDay : bar.startDay;
   const to = bar.endDay > win.endDay ? win.endDay : bar.endDay;
   const el = document.createElement('div');
-  const pb = priorityBadge(bar.card, state.priorities); // card #30 emphasis, same as tiles/chips
-  // card #45: epic is a background-wash class now (`.gantt-bar.epic`,
+  const pb = priorityBadge(bar.card, state.priorities); // same emphasis as tiles/chips
+  // epic is a background-wash class (`.gantt-bar.epic`,
   // app.css — layered via box-shadow since the status fill below already
-  // owns `background`), not a dot glyph (card #91's epicBadge()). The status
+  // owns `background`), not a dot glyph. The status
   // border/fill stays untouched either way.
-  // card #98 reopen: an archived bar mutes to the neutral archive grey
-  // regardless of its parked on-disk status — the BAR keeps this mute (card
-  // #102 reopen: it's a row-level archived cue, like a board tile dimming,
-  // not the status-dot channel that reopen locked to "never mutes"; the
-  // gutter row's own dot, built lower down in renderGanttView, now colors off
+  // An archived bar mutes to the neutral archive grey
+  // regardless of its parked on-disk status — the BAR keeps this mute
+  // (it's a row-level archived cue, like a board tile dimming,
+  // not the status-dot channel locked to "never mutes"; the
+  // gutter row's own dot, built lower down in renderGanttView, colors off
   // the card's true status instead). 'archive' is also the literal key
   // ganttArchiveGroup uses for the group itself (gantt-model.js), so
-  // statusColor/isBuiltinStatus already know it (card #57) with no extra
+  // statusColor/isBuiltinStatus already know it with no extra
   // branching beyond this swap.
   const colorStatus = bar.card.archived ? 'archive' : bar.card.status;
-  el.className = `gantt-bar card-el status-${mapStatusClass(colorStatus)}` + // card #39: bars join the shared card-el grammar
+  el.className = `gantt-bar card-el status-${mapStatusClass(colorStatus)}` + // bars join the shared card-el grammar
     (pb.className ? ` ${pb.className}` : '') + (isWaiting(bar.card) ? ' waiting' : '') +
     (bar.card.epic ? ' epic' : '') +
     (selectedIds.has(bar.card.id) ? ' selected' : '') +
-    (bar.card.archived ? ' archived' : '') + // defect fix: an archived bar is drag-read-only — CSS swaps the grab cursor for not-allowed
+    (bar.card.archived ? ' archived' : '') + // an archived bar is drag-read-only — CSS swaps the grab cursor for not-allowed
     (bar.startDay < win.startDay ? ' clip-start' : '') + (bar.endDay > win.endDay ? ' clip-end' : '');
   el.dataset.id = bar.card.id;
   el.dataset.archived = bar.card.archived ? '1' : ''; // read by wireGanttPointerDrag's pointerdown guard, same signal used to swap the tooltips below
-  // card #31: non-built-in statuses (custom columns, unlisted values) color
+  // Non-built-in statuses (custom columns, unlisted values) color
   // inline from the deterministic hash — the .status-unknown class beneath
   // only supplies the shape defaults it overrides. This write is
   // unconditional: no `.epic` rule ever competes for `background` here
-  // (card #45's `.gantt-bar.epic` wash is a `box-shadow`, layered on top of
-  // whatever `background` resolves to, inline or class-based alike). card
-  // #98 reopen: 'archive' isn't built-in either, so an archived bar rides
+  // (the `.gantt-bar.epic` wash is a `box-shadow`, layered on top of
+  // whatever `background` resolves to, inline or class-based alike).
+  // 'archive' isn't built-in either, so an archived bar rides
   // this same inline-override path straight to ARCHIVE_COLOR.
   if (!isBuiltinStatus(colorStatus)) {
     el.style.borderColor = statusColor(colorStatus);
@@ -3109,15 +3077,15 @@ function ganttBarEl(bar, win) {
   }
   el.style.left = `${diffDays(win.startDay, from) * GANTT_DAY_PX}px`;
   el.style.width = `${(diffDays(from, to) + 1) * GANTT_DAY_PX}px`;
-  // defect fix: an archived card's bar used to keep the LIVE handle tooltips
-  // ("Drag to change...") even though the drag silently no-ops on release
+  // An archived card's bar must not keep the LIVE handle tooltips
+  // ("Drag to change...") — the drag silently no-ops on release
   // (onGanttDragEnd's own state.active lookup can never find an archived
-  // card) — the affordance invited a gesture that could never do anything.
+  // card), so the affordance would invite a gesture that can never do anything.
   const readOnlyHint = 'Archived — restore the card to reschedule';
   const startHint = bar.card.archived ? readOnlyHint : 'Drag to change the start date';
   const endHint = bar.card.archived ? readOnlyHint : 'Drag to change the range end';
-  // kanban.proj #211: same empty-title-shows-the-prompt fallback every other
-  // view got (cardTitleDisplay, card-title.js) — reused as-is, never re-derived.
+  // Same empty-title-shows-the-prompt fallback every other
+  // view uses (cardTitleDisplay, card-title.js) — reused as-is, never re-derived.
   const titleDisplay = cardTitleDisplay(bar.card);
   // plain-text property — full title/prompt + true dates survive the CSS truncation/clipping
   el.title = `#${bar.card.id} ${titleDisplay.text} (${bar.startDay}${bar.endDay !== bar.startDay ? ` → ${bar.endDay}` : ''})` +
@@ -3136,17 +3104,17 @@ function renderGanttView() {
   const prevScroll = container.querySelector('.gantt-scroll');
   const keepScrollLeft = prevScroll ? prevScroll.scrollLeft : null;
   container.innerHTML = '';
-  // card #98: the status-filter row renders first and UNCONDITIONALLY — same
-  // reasoning as the map's #56 row: if it vanished on the everything-
+  // The status-filter row renders first and UNCONDITIONALLY — same
+  // reasoning as the map's row: if it vanished on the everything-
   // filtered-out empty state, there'd be no control left to toggle a status
   // back ON. Everything from here on APPENDS (never innerHTML=, which would
   // wipe this row straight back out).
   container.appendChild(buildGanttFilterRow());
   // Same search composition as board/map/calendar: live input value each
-  // render, shared filterCards. card #98: status filter composes with search
+  // render, shared filterCards. Status filter composes with search
   // by INTERSECTION — a card is visible only if BOTH say so — same pure
-  // helper and same rule as the map's #56 composition (never a union, never
-  // one side dropped). card #98 reopen: the search pool spans live + archived
+  // helper and same rule as the map's composition (never a union, never
+  // one side dropped). The search pool spans live + archived
   // unconditionally (same as the map's own search pool) — harmless while the
   // Archive pill is off, since no archived bar is ever added to groups below
   // regardless of whether its id lands in searchIds.
@@ -3154,7 +3122,7 @@ function renderGanttView() {
   const searchIds = searchTerms.length
     ? new Set(filterCards(state.active.concat(state.archived), searchTerms).map((c) => c.id))
     : null;
-  // verify finding: NOT mapFilterVisibleIds — that folds an unlisted status
+  // NOT mapFilterVisibleIds — that folds an unlisted status
   // into the FIRST column's toggle, correct for the map/board but wrong here.
   // ganttGroups (below) buckets cards by their RAW status and gives an
   // unlisted one its own separate group row, unrelated to any board column;
@@ -3163,19 +3131,19 @@ function renderGanttView() {
   const statusIds = ganttFilterVisibleIds(state.active, loadGanttStatusFilter(), boardStatuses());
   const visibleIds = intersectVisibleIds(searchIds, statusIds);
   const cards = visibleIds ? state.active.filter((c) => visibleIds.has(c.id)) : state.active;
-  const groups = ganttGroups(cards, boardStatuses()); // card #31: group order follows the configured column list; card #98: a filtered-out status simply has no bucket, so its group row drops entirely (no ghost semantics — the gantt has no dependency edges)
-  // card #98 reopen ("we are missing archived status"): the Archive pill's
+  const groups = ganttGroups(cards, boardStatuses()); // group order follows the configured column list; a filtered-out status simply has no bucket, so its group row drops entirely (no ghost semantics — the gantt has no dependency edges)
+  // The Archive pill's
   // OWN boolean (=== true, not !== false) decides whether archived cards
   // render at all — its default is OFF, unlike every live status pill, so a
   // missing/stale/false value must never render archived rows. When on, ONE
   // more group is appended AFTER the live status groups just computed above —
   // same "location after live columns" placement as the board's Archive
-  // column (card #34) — search-filtered the same way the live groups were.
+  // column — search-filtered the same way the live groups were.
   const archiveOn = loadGanttStatusFilter().archive === true;
   if (archiveOn) {
     const archivedCards = searchIds ? state.archived.filter((c) => searchIds.has(c.id)) : state.archived;
     const archiveGroup = ganttArchiveGroup(archivedCards);
-    // Defect fix: a LIVE card's raw on-disk status can literally be
+    // A LIVE card's raw on-disk status can literally be
     // 'archive' (archive is a LOCATION, never validated per-card — same
     // tolerance liveStatuses/columnForStatus extend elsewhere), so
     // ganttGroups above may have already produced its own group keyed
@@ -3185,10 +3153,10 @@ function renderGanttView() {
     appendArchiveGroup(groups, archiveGroup);
   }
   if (!groups.length) {
-    // card #98: distinguish "nothing is dated at all" from "the current
-    // search/status filter hid everything" — the former keeps the original
-    // #38 guidance message, the latter matches the map's #56 wording. card
-    // #98 reopen: "nothing at all" also checks the archive group when the
+    // Distinguish "nothing is dated at all" from "the current
+    // search/status filter hid everything" — the former gets the
+    // guidance message, the latter matches the map's wording.
+    // "Nothing at all" also checks the archive group when the
     // pill is on, so an archive-only board doesn't misreport as fully empty.
     const noneAtAll = !ganttGroups(state.active, boardStatuses()).length && !(archiveOn && ganttArchiveGroup(state.archived));
     const empty = document.createElement('div');
@@ -3199,7 +3167,7 @@ function renderGanttView() {
     container.appendChild(empty);
     return;
   }
-  // card #40: the window covers each row's bar AND its due diamond (a
+  // The window covers each row's bar AND its due diamond (a
   // due-only row has no bar at all), hence rowWindowSpans between the rows
   // and ganttWindow.
   const rows = groups.flatMap((g) => g.bars);
@@ -3249,7 +3217,7 @@ function renderGanttView() {
   for (const group of groups) {
     const glabel = document.createElement('div');
     glabel.className = `gantt-row gantt-group-row status-${mapStatusClass(group.status)}`;
-    if (!isBuiltinStatus(group.status)) glabel.style.color = statusColor(group.status); // card #31: hashed color for custom groups
+    if (!isBuiltinStatus(group.status)) glabel.style.color = statusColor(group.status); // hashed color for custom groups
     glabel.textContent = columnLabel(group.status);
     gutter.appendChild(glabel);
     const gstrip = document.createElement('div');
@@ -3257,40 +3225,40 @@ function renderGanttView() {
     timeline.appendChild(gstrip);
     for (const bar of group.bars) {
       const label = document.createElement('div');
-      // card #39: gutter labels are card-el too — click opens detail,
+      // Gutter labels are card-el too — click opens detail,
       // ctrl/shift-click select, right-click menus, exactly like the bar itself
-      // (they were inert before; cheap parity win, and the only way to reach
+      // (cheap parity, and the only way to reach
       // a bar that's entirely outside the clamped window).
       label.className = 'gantt-row gantt-label card-el' + (bar.card.epic ? ' epic' : '') + (selectedIds.has(bar.card.id) ? ' selected' : '');
       label.dataset.id = bar.card.id;
-      // kanban.proj #211: same fallback every other view got — reused via
+      // Same fallback every other view uses — reused via
       // cardTitleDisplay, never re-derived (card-title.js).
       const titleDisplay = cardTitleDisplay(bar.card);
       label.title = `#${bar.card.id} ${titleDisplay.text}`;
-      // card #97: the gutter row carried NEITHER dot before this card (#91 only
-      // reached the bar itself) — "all components" means both join here too.
-      // card #45: epic's cue is now the row's own background wash (.gantt-
+      // The gutter row carries the dots too — "all components" means
+      // both surfaces.
+      // epic's cue is the row's own background wash (.gantt-
       // label.epic, app.css) rather than a second dot — a due-only row (no
       // bar at all) would otherwise lose the epic cue entirely, since the
       // label is the only element it has.
-      // card #102 FINAL DESIGN (#98R): the Archive group's rows share this
+      // The Archive group's rows share this
       // exact label builder — no separate branch — so the conditional
       // archivedBadge() covers those gutter rows too, gated on the row's own
-      // card.archived flag. The bar itself keeps its existing row-level mute
-      // (card #98 reopen) instead of gaining a redundant second archived cue.
+      // card.archived flag. The bar itself keeps its row-level mute
+      // instead of gaining a redundant second archived cue.
       label.innerHTML = `<span class="gantt-label-id">#${bar.card.id}</span>${statusBadge(bar.card)}${bar.card.archived ? archivedBadge() : ''} ` +
         `<span class="gantt-label-title${titleDisplay.isPromptFallback ? ' gantt-label-title--prompt-fallback' : ''}">${escapeHtml(titleDisplay.text)}</span>`;
       gutter.appendChild(label);
       const row = document.createElement('div');
       row.className = 'gantt-row gantt-bar-row';
-      const el = bar.startDay ? ganttBarEl(bar, win) : null; // due-only rows have no bar (card #40)
+      const el = bar.startDay ? ganttBarEl(bar, win) : null; // due-only rows have no bar
       if (el) row.appendChild(el);
-      // Due diamond (card #40): the independent deadline marker, rendered
+      // Due diamond: the independent deadline marker, rendered
       // whether or not a bar exists on the row; outside the window = omitted
       // (nothing clips a point marker meaningfully).
       if (bar.dueDay && bar.dueDay >= win.startDay && bar.dueDay <= win.endDay) {
         const d = document.createElement('div');
-        d.className = 'gantt-due-marker card-el' + (bar.card.archived ? ' archived' : ''); // joins the #39 grammar: still-click opens detail, shift/right-click select — the old finish()-opens-detail path is gone. defect fix: archived flag, same reasoning as ganttBarEl — the diamond is an equally dead drag surface on an archived row
+        d.className = 'gantt-due-marker card-el' + (bar.card.archived ? ' archived' : ''); // joins the shared grammar: still-click opens detail, shift/right-click select. archived flag, same reasoning as ganttBarEl — the diamond is an equally dead drag surface on an archived row
         d.dataset.id = bar.card.id;
         d.dataset.archived = bar.card.archived ? '1' : ''; // read by wireGanttPointerDrag's pointerdown guard
         d.style.left = `${diffDays(win.startDay, bar.dueDay) * GANTT_DAY_PX + GANTT_DAY_PX / 2}px`; // centered on its day column
@@ -3302,8 +3270,8 @@ function renderGanttView() {
       timeline.appendChild(row);
     }
   }
-  // card #98: gutter+scroll ride their OWN flex row (.gantt-body) now that the
-  // filter row is a sibling above them — #gantt-view itself went back to a
+  // gutter+scroll ride their OWN flex row (.gantt-body) — the
+  // filter row is a sibling above them: #gantt-view itself is a
   // plain block so the filter row stacks on top instead of joining the
   // side-by-side flex row as a third item.
   const body = document.createElement('div');
@@ -3327,7 +3295,7 @@ let ganttDrag = null;
 
 function applyGanttDragVisual(drag) {
   const px = GANTT_DAY_PX;
-  if (drag.mode === 'shift' || drag.mode === 'due') { // the due diamond translates like a body shift (card #40)
+  if (drag.mode === 'shift' || drag.mode === 'due') { // the due diamond translates like a body shift
     drag.barEl.style.transform = `translateX(${drag.dayDelta * px}px)`;
     return;
   }
@@ -3351,20 +3319,20 @@ function applyGanttDragVisual(drag) {
 }
 
 async function onGanttDragEnd(drag) {
-  // Same-position drop: no PATCH, no `updated` bump (card #35) — the model's
+  // Same-position drop: no PATCH, no `updated` bump — the model's
   // null covers the clamped-away cases the delta alone can't see.
   if (!drag.dayDelta) return;
   const card = state.active.find((c) => c.id === drag.id);
   if (!card) return; // vanished mid-gesture (deleted elsewhere) — the next poll will redraw
   const changes = drag.mode === 'due'
-    ? dueShiftChanges(card, drag.dayDelta) // diamond drag moves due_date alone (card #40)
+    ? dueShiftChanges(card, drag.dayDelta) // diamond drag moves due_date alone
     : drag.mode === 'shift'
       ? barShiftChanges(card, drag.dayDelta)
       : barResizeChanges(card, drag.mode, drag.dayDelta);
   if (!changes) return; // finish() already restored the pre-drag geometry
   pendingDrops++; // same poll guard as the board's onDrop / calendar's drop
   try {
-    await api('PATCH', `/api/cards/${drag.id}`, changes); // `updated` bumps server-side (card #35)
+    await api('PATCH', `/api/cards/${drag.id}`, changes); // `updated` bumps server-side
     await loadBoard();
   } catch (e) {
     renderGanttView(); // snap back to disk truth
@@ -3405,18 +3373,18 @@ function wireGanttPointerDrag() {
     e.preventDefault();
     e.stopPropagation(); // capture phase at document — nothing else sees this click
   }, true);
-  // card #98: status-filter pills — control-row buttons, checked first for
-  // the same reason the map's #56 pills are (never fall through to the
+  // Status-filter pills — control-row buttons, checked first for
+  // the same reason the map's pills are (never fall through to the
   // pointer-drag/card-el handling below).
   container.addEventListener('click', (e) => {
     const filterBtn = e.target.closest('.gantt-filter-toggle[data-col]');
     if (filterBtn) toggleGanttStatusFilter(filterBtn.dataset.col);
   });
-  // card #101: right-click SOLO on the gantt's own pills — same reasoning as
+  // Right-click SOLO on the gantt's own pills — same reasoning as
   // the map's contextmenu listener (own listener so a miss falls through
-  // untouched to the #39 shared bar/gutter-label contextmenu on document).
+  // untouched to the shared bar/gutter-label contextmenu on document).
   container.addEventListener('contextmenu', (e) => {
-    if (isDragging || ganttDrag || calTimeDrag) return; // verify-fix: same #39 guard (app.js ~3006) — a chorded right-click mid-bar-drag must not detach ganttDrag.barEl via re-render
+    if (isDragging || ganttDrag || calTimeDrag) return; // a chorded right-click mid-bar-drag must not detach ganttDrag.barEl via re-render
     const filterBtn = e.target.closest('.gantt-filter-toggle[data-col]');
     if (!filterBtn) return;
     e.preventDefault();
@@ -3424,7 +3392,7 @@ function wireGanttPointerDrag() {
   });
   container.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || ganttDrag) return;
-    // card #40: the due diamond is its own drag surface — mode 'due' moves
+    // The due diamond is its own drag surface — mode 'due' moves
     // due_date alone; bars keep their shift/resize modes. Same >3px
     // click-vs-drag rule applies to both (finish() below), so a still press
     // on the diamond opens the detail popup too.
@@ -3434,19 +3402,19 @@ function wireGanttPointerDrag() {
     const handle = diamondEl ? null : e.target.closest('.gantt-handle');
     const mode = diamondEl ? 'due' : handle ? (handle.classList.contains('start') ? 'start' : 'end') : 'shift';
     const card = state.active.find((c) => c.id === Number(barEl.dataset.id));
-    // Defect fix: an archived bar/diamond's id only ever lives in
-    // state.archived, so `card` is undefined here — before this guard the
-    // gesture started identically to a live drag (pointer capture claimed,
+    // An archived bar/diamond's id only ever lives in
+    // state.archived, so `card` is undefined here — without this guard the
+    // gesture would start identically to a live drag (pointer capture claimed,
     // .dragging class, the full pointermove preview), then silently
-    // no-opped on release because onGanttDragEnd's OWN state.active lookup
+    // no-op on release because onGanttDragEnd's OWN state.active lookup
     // (below) could never find the card either. Blocking here — with a
     // toast, since a fully-realized fake drag animation deserves an honest
-    // reason it did nothing — replaces that with an upfront, visible signal.
+    // reason it did nothing — gives an upfront, visible signal instead.
     if (!card) {
       toast('Archived cards are read-only — restore the card to reschedule it.');
       return;
     }
-    const rf = rangeFields(card); // triad-aware shape (card #40)
+    const rf = rangeFields(card); // triad-aware shape
     ganttDrag = {
       id: Number(barEl.dataset.id),
       mode,
@@ -3476,7 +3444,7 @@ function wireGanttPointerDrag() {
   // pointerup commits; pointercancel (touch scroll steal, window loss) never
   // does. Either way the bar snaps back to its pre-drag geometry first — on
   // commit the PATCH + loadBoard() re-render is what actually moves it.
-  // A press without movement is a click (card #38) — since #39 that click is
+  // A press without movement is a click — that click is
   // NOT handled here: the native click event that follows the unmoved
   // pointerup bubbles to the shared card-el grammar handlers, so bars get
   // detail/selection/Q0 semantics identical to every other view. Only a
@@ -3490,7 +3458,7 @@ function wireGanttPointerDrag() {
     drag.barEl.classList.remove('dragging');
     drag.barEl.style.transform = '';
     drag.barEl.style.left = `${drag.baseLeft}px`;
-    if (drag.mode !== 'due') drag.barEl.style.width = `${drag.baseWidth}px`; // the diamond sizes itself in CSS — writing 0px would collapse it (card #40)
+    if (drag.mode !== 'due') drag.barEl.style.width = `${drag.baseWidth}px`; // the diamond sizes itself in CSS — writing 0px would collapse it
     if (!commit) return;
     if (!drag.moved) return;
     suppressGanttPhantomClick();
@@ -3505,7 +3473,7 @@ window.addEventListener('DOMContentLoaded', () => {
   wireGanttPointerDrag();
 });
 
-// --- Notifications (card #22): agents append entries to the board's
+// --- Notifications: agents append entries to the board's
 // notifications.md; GET /api/board carries the parsed list on every load/poll.
 // sortNotificationsDesc/unreadCount/unseenUnread come from notifications.js
 // (bare globals, same dual-environment pattern as the other extracted modules).
@@ -3543,7 +3511,7 @@ function renderNotifList() {
     el.replaceChildren(empty);
     return;
   }
-  // Card #133: built as DOM nodes with textContent — agent-written text never
+  // Built as DOM nodes with textContent — agent-written text never
   // rides string-built HTML. The TLDR (text before the first "; more: ", splitTldr
   // from notifications.js) renders bold; the rest of the message — separator
   // included, so the entry stays verbatim — renders normally. level paints
@@ -3580,7 +3548,7 @@ async function openNotifModal() {
   renderNotifList(); // render BEFORE mark-read so this viewing keeps its unread styling
   $('#notif-modal').classList.remove('hidden');
   if (unreadCount(state.notifications || []) > 0) {
-    // Opening the popup is the read acknowledgment (card #22) — persisted to the file.
+    // Opening the popup is the read acknowledgment — persisted to the file.
     try {
       const { notifications } = await api('POST', '/api/notifications/mark-read');
       state.notifications = notifications;
@@ -3593,7 +3561,7 @@ function closeNotifModal() {
   $('#notif-modal').classList.add('hidden');
 }
 
-// Card #133 clear = archive: both removal paths MOVE entries to
+// Clear = archive: both removal paths MOVE entries to
 // archived/notifications.md server-side — nothing is deleted, so the copy
 // says "clear", not "delete".
 async function deleteNotification(id) {
@@ -3623,8 +3591,6 @@ async function clearAllNotifications() {
 window.addEventListener('DOMContentLoaded', () => {
   $('#notif-btn').addEventListener('click', openNotifModal);
   $('#notif-close').addEventListener('click', closeNotifModal);
-  // card #133: the button's static app.html tooltip predates clear-=-archive;
-  // corrected here so the markup stays untouched by this change.
   $('#notif-clear-btn').addEventListener('click', clearAllNotifications);
   $('#notif-modal').addEventListener('click', (e) => { if (e.target.id === 'notif-modal') closeNotifModal(); });
   $('#notif-list').addEventListener('click', (e) => {
@@ -3633,21 +3599,21 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// --- Multi-select + bulk actions (card #25; view parity card #39). Selection
+// --- Multi-select + bulk actions, with view parity. Selection
 // lives as a Set of ids (toggleSelection/pruneSelection/contextSelection/
 // partitionByMovable/rangeSelection from selection.js — pure, unit-tested);
 // every view's renderer paints .selected from it on every render, so it
-// survives polls AND view switches by construction. Card #25's board-only
-// exclusion is retired: board tiles, map nodes + isolated-row tiles, calendar
+// survives polls AND view switches by construction.
+// Board tiles, map nodes + isolated-row tiles, calendar
 // chips, and gantt bars + gutter labels all carry the card-el contract and
 // share one interaction grammar — click opens detail, ctrl/cmd+click toggles
 // one card in the selection, shift+click adds the whole range between the
-// anchor and the target (card #144's file-manager grammar), right-click
+// anchor and the target (the file-manager grammar), right-click
 // selects + opens the context menu (whose actions were already view-agnostic:
 // they act on selectedIds, not on DOM). Only the map's ghost stubs opt out
 // (see buildMapSvg).
 let selectedIds = new Set();
-// card #144: the range anchor — the last card a selection gesture landed on
+// The range anchor — the last card a selection gesture landed on
 // (ctrl+click, a range-starting shift+click, or a right-click that replaced
 // the selection). Never persisted, and never trusted blindly: shift+click
 // re-validates it against the rendered order and re-plants it when the card
@@ -3655,7 +3621,7 @@ let selectedIds = new Set();
 let selectionAnchor = null;
 let bulkDragIds = null; // captured at dragstart; null = single-card drag
 
-// The rendered order shift+click ranges over (card #144): every card-el in
+// The rendered order shift+click ranges over: every card-el in
 // the ACTIVE view's container, document order, deduped to first occurrence
 // (a multi-day calendar run repeats one id across chips; gantt rows pair a
 // gutter label with a bar). Hidden views keep stale DOM — applyViewMode only
@@ -3672,7 +3638,7 @@ function hideContextMenu() {
 
 function showContextMenu(x, y) {
   const menu = $('#context-menu');
-  // card #74: "Dependency tree"/"Dependency path" only make sense against a
+  // "Dependency tree"/"Dependency path" only make sense against a
   // single card — hidden whenever the effective selection is more than one.
   // The caller (the document contextmenu handler) has already resolved
   // selectedIds via contextSelection() and reassigned it before calling here,
@@ -3689,7 +3655,7 @@ function showContextMenu(x, y) {
   menu.style.top = `${Math.min(y, window.innerHeight - rect.height - 8)}px`;
 }
 
-// card #74: writes "tree:<id>"/"path:<id>" into the search box (REPLACING its
+// Writes "tree:<id>"/"path:<id>" into the search box (REPLACING its
 // content — not appended), closes the menu, and runs the normal search flow
 // via renderBoard() — same direct-call convention as clearSearch(), no
 // synthetic 'input' event, and no view switch. Single-card only; showContextMenu
@@ -3705,12 +3671,12 @@ function focusOn(kind) {
 
 async function bulkArchive() {
   hideContextMenu();
-  const skipped = selectedCards().filter((c) => c.archived).length; // already archived (card #34: mixed selections)
+  const skipped = selectedCards().filter((c) => c.archived).length; // already archived (mixed selections)
   const toArchive = selectedCards().filter((c) => !c.archived);
   const ids = toArchive.map((c) => c.id);
   if (!ids.length) { if (skipped) toast('Everything selected is already archived.'); return; }
-  // one speedbump for the batch, not one per card (#26) — skipped entirely
-  // when every card being archived is already done (card #92)
+  // one speedbump for the batch, not one per card — skipped entirely
+  // when every card being archived is already done
   if (archiveNeedsConfirm(toArchive) && !confirm(`Archive ${ids.length} card(s)? (moves their files to archived/)`)) return;
   const failed = [];
   for (const id of ids) {
@@ -3723,7 +3689,7 @@ async function bulkArchive() {
   toast(failed.length ? `Archived ${ids.length - failed.length}${skipNote}; failed: ${failed.join(', ')}` : `Archived ${ids.length} card(s)${skipNote}.`);
 }
 
-// Restore selected (card #34): the reversible direction — no confirm, same
+// Restore selected: the reversible direction — no confirm, same
 // exemption as the tile button; status stays untouched (drag names a
 // destination, the menu doesn't). Live cards in a mixed selection skip.
 async function bulkRestore() {
@@ -3756,9 +3722,9 @@ async function bulkDelete() {
   toast(failed.length ? `Deleted ${ids.length - failed.length}; failed: ${failed.join(', ')}` : `Deleted ${ids.length} card(s).`);
 }
 
-// Bulk move (drag): the doing entry gate (waiting + blocked, epic #137)
+// Bulk move (drag): the doing entry gate (waiting + blocked)
 // stays per card — refused cards are skipped with one honest summary toast
-// naming which gate, the rest move (card #25's no all-or-nothing rule).
+// naming which gate, the rest move (no all-or-nothing rule).
 async function onBulkDrop(ids, status) {
   const byId = new Map(state.active.map((c) => [c.id, c]));
   // same in-place rule as onDrop: cards already rendering in the target
@@ -3788,7 +3754,7 @@ async function onBulkDrop(ids, status) {
   if (parts.length) toast(parts.join('; ') + '.');
 }
 
-// --- Bulk edits (card #32): assign / set-priority share one single-choice
+// --- Bulk edits: assign / set-priority share one single-choice
 // popup, tags get a workbench. N per-card PATCHes, per-card failures don't
 // abort (bulk-move semantics). No confirm — the popup's Apply IS the
 // speedbump (edits are reversible, unlike archive/delete) — and the
@@ -3886,10 +3852,10 @@ async function bulkRemoveTags() {
   renderBulkTags();
 }
 
-// --- Schedule… popup (card #42): bulk set/clear across the date triad, same
+// --- Schedule… popup: bulk set/clear across the date triad, same
 // contract as the other bulk edits — no confirm (Apply is the speedbump,
 // dates are reversible), per-card failures don't abort, selection survives.
-// The three rows reuse #41's date-picker through the shared .date-pick-btn
+// The three rows reuse the date-picker through the shared .date-pick-btn
 // loop below (the popup's buttons are static markup, so the loop wires them
 // like the form's); the pure rules (scheduleChanges/scheduleSummary) live in
 // bulk-edit.js.
@@ -3942,10 +3908,8 @@ async function applyBulkSchedule() {
   await bulkPatch([...selectedIds], () => changes, (n) => `Scheduled ${n} card(s): ${scheduleSummary(changes)}`);
 }
 
-// verify finding: card #96's own doc comment called these three "unchanged —
-// still no explicit Esc handling", leaving Esc a true no-op on a fullscreen
-// bulk popup (the old fullscreen-exit step it relied on was removed and
-// nothing replaced it here). Esc now closes whichever one is open, directly,
+// Esc must never be a true no-op on a fullscreen
+// bulk popup. Esc closes whichever one is open, directly,
 // same as its own backdrop-click — no confirm, since bulk edits are
 // speedbump-exempt (Apply is the speedbump, same reasoning as backdrop-close).
 function closeAnyBulkPopup() {
@@ -3957,7 +3921,7 @@ function closeAnyBulkPopup() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  // --- Shared card-el grammar (card #39): ONE delegated click + contextmenu
+  // --- Shared card-el grammar: ONE delegated click + contextmenu
   // pair on document covers every card-representing element in every view —
   // board tiles, map nodes/isolated tiles, calendar chips, gantt bars/gutter
   // labels — instead of per-view duplicates that would drift. Document is the
@@ -3975,12 +3939,11 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!el) return;
     if (e.target.closest('button, select, input, a')) return;
     const id = Number(el.dataset.id);
-    // kanban.proj #189: an assignee cue or a tag is a search shortcut, not a
+    // An assignee cue or a tag is a search shortcut, not a
     // way to open/select the card underneath it — handled here, ahead of the
-    // select/open logic below, additive guard only (no restructuring of
-    // either element; #183 is concurrently touching .card-assignee's inner
-    // markup on its own branch). See addSearchTerm for the additive/no-op
-    // contract. ADR 0009 (card #181): the blocked/review pills join the same
+    // select/open logic below, an additive guard
+    // only. See addSearchTerm for the additive/no-op
+    // contract. ADR 0009: the blocked/review pills join the same
     // shortcut — always the bare presence term, read from state, never the
     // pill's own text (the reason itself isn't a search key).
     const cue = e.target.closest('.card-assignee, .tag, .blocked-pill, .review-pill');
@@ -3994,7 +3957,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-    // card #144: file-manager selection grammar (was: shift toggles one, #25).
+    // File-manager selection grammar:
     // Shift+click ADDS the whole range between the anchor and the target, in
     // the active view's rendered order; ctrl/cmd+click toggles one card and
     // plants the anchor. renderBoard() repaints whichever view is active —
@@ -4020,8 +3983,8 @@ window.addEventListener('DOMContentLoaded', () => {
     openDetailModal(id);
   });
   // Right-click on any card-el opens the bulk menu; anywhere else keeps the
-  // browser's own context menu (card #25: don't hijack the whole page).
-  // card #33 semantics via contextSelection: an unselected card becomes THE
+  // browser's own context menu (don't hijack the whole page).
+  // contextSelection semantics: an unselected card becomes THE
   // selection in the same gesture; a selected one keeps the whole batch.
   document.addEventListener('contextmenu', (e) => {
     if (isDragging || ganttDrag || calTimeDrag) return; // a chorded right-click mid-drag must not re-render under the gesture
@@ -4030,7 +3993,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const next = contextSelection(selectedIds, Number(el.dataset.id));
     if (next !== selectedIds) {
       selectedIds = next;
-      selectionAnchor = Number(el.dataset.id); // the gesture restarted the selection — ranges extend from here (card #144)
+      selectionAnchor = Number(el.dataset.id); // the gesture restarted the selection — ranges extend from here
       renderBoard();
     }
     e.preventDefault();
@@ -4039,13 +4002,13 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#ctx-archive').addEventListener('click', bulkArchive);
   $('#ctx-restore').addEventListener('click', bulkRestore);
   $('#ctx-delete').addEventListener('click', bulkDelete);
-  // Bulk edits (card #32)
+  // Bulk edits
   $('#ctx-assign').addEventListener('click', () => openBulkSingle('assignee'));
   $('#ctx-priority').addEventListener('click', () => openBulkSingle('priority'));
   $('#ctx-tags').addEventListener('click', openBulkTags);
-  // Schedule… popup (card #42)
+  // Schedule… popup
   $('#ctx-schedule').addEventListener('click', openBulkSchedule);
-  // Dependency tree / path search sugar (card #74)
+  // Dependency tree / path search sugar
   $('#ctx-tree').addEventListener('click', () => focusOn('tree'));
   $('#ctx-path').addEventListener('click', () => focusOn('path'));
   $('#bulk-schedule-apply').addEventListener('click', applyBulkSchedule);
@@ -4081,28 +4044,28 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('click', (e) => {
     if (!$('#context-menu').classList.contains('hidden') && !e.target.closest('#context-menu')) hideContextMenu();
   });
-  // Q0 (card #32): any plain click that isn't inside the context menu or a
+  // Q0: any plain click that isn't inside the context menu or a
   // bulk popup drops the multi-selection. Ctrl-, cmd- and shift-clicks build
-  // it (card #144); the menu and popups are exempt so they don't kill their
-  // own target batch. The view toggle buttons are exempt too (card #39): the
-  // selection must survive a view switch. Card #41's date-picker popover
-  // renders into document.body (outside #modal), so it and #42's schedule
+  // it; the menu and popups are exempt so they don't kill their
+  // own target batch. The view toggle buttons are exempt too: the
+  // selection must survive a view switch. The date-picker popover
+  // renders into document.body (outside #modal), so it and the schedule
   // popup are exempt as well.
   document.addEventListener('click', (e) => {
     if (!selectedIds.size || e.shiftKey || e.ctrlKey || e.metaKey) return;
-    if (e.target.closest('#context-menu, #bulk-single, #bulk-tags, #bulk-schedule, .date-picker-pop, #map-toggle-btn, #calendar-toggle-btn, #gantt-toggle-btn, .cal-nav, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle')) return; // curate-the-view controls: month paging (.cal-nav), the #56 map pills, the #97 section collapse toggles, the #98 gantt pills, and the #99 calendar pills must not wipe a building selection
+    if (e.target.closest('#context-menu, #bulk-single, #bulk-tags, #bulk-schedule, .date-picker-pop, #map-toggle-btn, #calendar-toggle-btn, #gantt-toggle-btn, .cal-nav, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle')) return; // curate-the-view controls: month paging (.cal-nav), the map pills, the section collapse toggles, the gantt pills, and the calendar pills must not wipe a building selection
     selectedIds = new Set();
-    selectionAnchor = null; // a dead selection must not leave an invisible range anchor behind (card #144)
+    selectionAnchor = null; // a dead selection must not leave an invisible range anchor behind
     renderBoard();
   });
   window.addEventListener('resize', hideContextMenu);
-  // Backdrop click on the edit/new-card form goes through the dirty guard (#26).
+  // Backdrop click on the edit/new-card form goes through the dirty guard.
   $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') requestCloseModal(); });
 });
 
-// --- Assignees registry (card #27): config.yaml's assignees feed the form's datalist.
+// --- Assignees registry: config.yaml's assignees feed the form's datalist.
 // The registry suggests, it never validates — free text stays allowed, and an
-// unregistered assignee on an existing card saves fine. Card #132: a board
+// unregistered assignee on an existing card saves fine. A board
 // with NO registry falls back to the canonical @human/@hitl/@afk role trio
 // (resolveAssignees/DEFAULT_ASSIGNEES, assignee-badge.js) — a configured
 // registry still wins untouched, and free text stays legal either way.
@@ -4110,7 +4073,7 @@ function applyAssignees(list) {
   state.assignees = resolveAssignees(list); // the combobox menus read state live — nothing to render here
 }
 
-// --- Official lists (card #30): config.yaml's priorities/tags feed the form's
+// --- Official lists: config.yaml's priorities/tags feed the form's
 // datalists — same suggest-never-validate contract as the assignee registry.
 // Priorities fall back to the built-in High/Normal/Low so the combobox is
 // never empty; tags suggest one full value at a time (a comma-separated field
@@ -4120,26 +4083,25 @@ function applyLists(priorities, tags) {
   state.tags = tags;
 }
 
-// --- Hand-rolled comboboxes (card #30): native <datalist> misrenders inside
+// --- Hand-rolled comboboxes: native <datalist> misrenders inside
 // VSCode's Simple Browser (popup at wrong screen coordinates) and its
 // filter-by-current-value hides every option on a prefilled field. The rules
 // (which options to show, how a pick lands in the text) live in combobox.js;
 // this is only the menu DOM. Focus/typing opens, mousedown picks (fires
 // before blur), blur/Esc closes — Esc is swallowed so the modal stays open.
 //
-// card #95 adds keyboard grammar on top: Up/Down move a visible `highlightIndex`
+// Keyboard grammar on top: Up/Down move a visible `highlightIndex`
 // through the CURRENTLY RENDERED `items` (wrap math is nextHighlightIndex,
 // combobox.js; the highlighted row is also scrolled into view — a menu longer
 // than its 180px max-height must never leave the active row invisible). Enter
 // falls through to the surrounding <form>'s native submit-on-Enter ONLY when
-// the menu is CLOSED (card #95 AC1, verify finding) — an open menu always
+// the menu is CLOSED — an open menu always
 // consumes Enter itself: picks the highlighted row, or (nothing highlighted)
 // just closes the menu so the very next Enter is the one that reaches the
-// form. #50/#85's minimal-create flow is unaffected: a mouse pick already
+// form. The minimal-create flow is unaffected: a mouse pick already
 // closes the menu before Enter is ever pressed, and the plain title-only
 // flow never opens the assignee menu at all — a keyboard-driven pick
-// (ArrowDown+Enter) now takes a second Enter to submit, which is the
-// literal reading of the AC. Esc keeps #96's contract: it closes the
+// (ArrowDown+Enter) takes a second Enter to submit. Esc closes the
 // menu ONLY and stops propagation so the document-level popup-close handler
 // never sees that keypress — the next Esc is the one that closes the popup.
 function attachCombobox(input, getOptions, opts = {}) {
@@ -4154,10 +4116,10 @@ function attachCombobox(input, getOptions, opts = {}) {
   const setHighlight = (idx) => {
     highlightIndex = idx;
     [...menu.children].forEach((el, i) => el.classList.toggle('active', i === idx));
-    // verify finding: .combobox-menu is max-height:180px/overflow-y:auto — a
+    // .combobox-menu is max-height:180px/overflow-y:auto — a
     // classList toggle alone never scrolls an unfocused div into view, so a
-    // menu with more rows than fit (8+ tags/assignees) left the highlight
-    // invisible past the fold, wrap-around included.
+    // menu with more rows than fit (8+ tags/assignees) would leave the
+    // highlight invisible past the fold, wrap-around included.
     const active = menu.children[idx];
     if (active && active.scrollIntoView) active.scrollIntoView({ block: 'nearest' });
   };
@@ -4173,7 +4135,7 @@ function attachCombobox(input, getOptions, opts = {}) {
   // matches nothing (e.g. an unregistered assignee on an old card) must not
   // leave the menu empty on click.
   //
-  // card #187: opts.preFiltered opts a caller OUT of the comboboxSuggestions
+  // opts.preFiltered opts a caller OUT of the comboboxSuggestions
   // re-filter pass — for the search box, getOptions() (searchSuggestionItems)
   // already IS the filter: it generates candidates fresh from the segment
   // being typed rather than filtering a static vocabulary, so re-filtering
@@ -4181,7 +4143,7 @@ function attachCombobox(input, getOptions, opts = {}) {
   // scoped candidate as soon as the box holds more than one term (their
   // `value` embeds the untouched earlier terms, which no longer appear
   // verbatim inside the newly-scoped tail). The three form fields (priority/
-  // assignee/tags) don't pass this — unchanged behavior.
+  // assignee/tags) don't pass this.
   const open = (filtered) => {
     items = (filtered && !opts.preFiltered) ? comboboxSuggestions(getOptions(), input.value, opts) : getOptions();
     if (!items.length) return close();
@@ -4199,8 +4161,8 @@ function attachCombobox(input, getOptions, opts = {}) {
     menu.hidden = false;
   };
   let typed = false; // has the user typed since the menu opened?
-  // card #187: opts.selectOnFocus (default true, unchanged for the form
-  // fields) — the search box holds a multi-term query, not one replaceable
+  // opts.selectOnFocus (default true, the form
+  // fields' behavior) — the search box holds a multi-term query, not one replaceable
   // value, so select-all-on-focus would arm every next keystroke to wipe the
   // whole thing. It also opens with nothing (open(false) → getOptions() → []
   // for an empty/untyped segment, see searchSuggestionItems), so skipping
@@ -4222,15 +4184,15 @@ function attachCombobox(input, getOptions, opts = {}) {
       return;
     }
     if (e.key === 'Enter') {
-      if (e.altKey) return; // Alt+Enter belongs to the fullscreen hotkey (card #145), never a pick
-      // verify finding: card #95 AC1 says Enter falls through to the form's
+      if (e.altKey) return; // Alt+Enter belongs to the fullscreen hotkey, never a pick
+      // Enter falls through to the form's
       // native submit ONLY when the menu is closed — an open menu must always
-      // consume it, never just the highlighted case. Without this, typing to
+      // consume it, never just the highlighted case. Otherwise, typing to
       // re-filter after an Arrow-highlight (open() resets highlightIndex to
-      // -1 on every re-filter) let Enter silently reach the form instead of
-      // picking. #50/#85 are unaffected: a mouse pick already closes the menu
-      // (mousedown fires before Enter), and the plain title-only flow never
-      // opens the assignee menu at all.
+      // -1 on every re-filter) would let Enter silently reach the form instead
+      // of picking. Minimal create is unaffected: a mouse pick already closes
+      // the menu (mousedown fires before Enter), and the plain title-only
+      // flow never opens the assignee menu at all.
       e.preventDefault();
       if (highlightIndex >= 0) pick(items[highlightIndex]);
       else close(); // nothing highlighted — accept the typed text and close; a second Enter then submits, menu now closed
@@ -4245,18 +4207,18 @@ attachCombobox($('#f-assignee'), () => state.assignees.map((a) => ({
 })));
 attachCombobox($('#f-tags'), () => state.tags.map((v) => ({ value: v })), { tagMode: true });
 
-// --- Date-picker popover (card #41): every date field (f-start/f-end/f-due)
+// --- Date-picker popover: every date field (f-start/f-end/f-due)
 // pairs its free-text input with a 📅 button that opens a hand-rolled month
 // grid. Native <input type="date"> is off the table for the same reason as
-// <datalist> (card #30): native widgets misrender inside VSCode's Simple
+// <datalist>: native widgets misrender inside VSCode's Simple
 // Browser. Manual typing stays fully legal — the picker only ever writes
 // values the free-text contract already allows (pickDay reuses shiftValue, so
 // a typed time tail survives a pick). The pure rules (pickDay/initialMonth)
-// live in date-picker.js; month math is calendar-model.js's. Card #197 added
-// a 🕒 clock toggle inside the popover: ON reveals a hand-rolled HH:MM text
+// live in date-picker.js; month math is calendar-model.js's. The popover
+// carries a 🕒 clock toggle: ON reveals a hand-rolled HH:MM text
 // control and writes a THH:MM tail (hasTime/withTime/withoutTime, also in
 // date-picker.js); OFF strips it back to a bare day. Picking a day still
-// preserves whatever tail is already there, exactly as before #197.
+// preserves whatever tail is already there.
 //
 // ONE popover instance serves all fields (the combobox-menu discipline of one
 // menu per anchor doesn't fit here — the grid is heavy, and only one can be
@@ -4297,7 +4259,7 @@ function datePickerPop() {
       renderDatePicker();
       return;
     }
-    // Card #197: the clock toggle. ON attaches DEFAULT_TIME (or whatever tail
+    // The clock toggle. ON attaches DEFAULT_TIME (or whatever tail
     // is already there — can't happen since the button only shows "add" when
     // hasTime is false, but withTime's replace semantics make this safe
     // either way); OFF strips back to the bare day. Re-renders in place
@@ -4387,17 +4349,17 @@ function renderDatePicker() {
     b.title = cell.date;
     grid.appendChild(b);
   }
-  // Card #197: clock toggle + HH:MM control. State is DERIVED from the
+  // Clock toggle + HH:MM control. State is DERIVED from the
   // field's value on every render (same discipline as `currentDay`/selected
   // above) — no separate ON/OFF flag that could fall out of sync with what's
   // actually in the input. Disabled when there's no parseable day: "add a
   // time to the date" presupposes a date already exists (the button stays
-  // greyed out until one does, same disabled-control idiom the #42 bulk
+  // greyed out until one does, same disabled-control idiom the bulk
   // schedule row uses for its 📅 button). No native <input type="time"> —
   // ADR 0003's rationale (native popups misplace themselves in Simple
   // Browser) applies just as much to time as to date, so this reuses the
   // exact plain-text-input style the date fields themselves already use:
-  // free text, never validated, from the same card #36 contract.
+  // free text, never validated, from the same free-text date contract.
   const timeRow = document.createElement('div');
   timeRow.className = 'date-picker-time';
   const timeOn = hasTime(datePickerFor.value);
@@ -4462,8 +4424,7 @@ document.addEventListener('click', (e) => {
 
 // Esc closes the picker and ONLY the picker — the combobox Esc rule. Capture
 // phase so this runs before the document-level bubble Esc handler (popup
-// close / search clear — card #96 dropped the old fullscreen-exit step from
-// that list) no matter where focus sits (input, 📅 button, or a popover
+// close / search clear) no matter where focus sits (input, 📅 button, or a popover
 // button), and stopPropagation keeps that handler from also firing on the
 // same press.
 document.addEventListener('keydown', (e) => {
@@ -4480,7 +4441,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('resize', closeDatePicker);
 document.addEventListener('scroll', closeDatePicker, true);
 
-// Text-selection guard scoped to the gesture (card #25): tiles are only
+// Text-selection guard scoped to the gesture: tiles are only
 // unselectable while shift is actually held, so their text stays copyable the
 // rest of the time. blur clears the class in case keyup lands off-window.
 window.addEventListener('keydown', (e) => { if (e.key === 'Shift') document.body.classList.add('shift-held'); });

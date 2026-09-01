@@ -14,7 +14,7 @@ const {
   calendarCreateStart,
 } = require('../web/calendar-model');
 
-// --- view mode (card #37: board / map / calendar; card #38 added gantt) ------
+// --- view mode (board / map / calendar / gantt) ------
 
 test('VIEW_MODES lists exactly board / map / calendar / gantt', () => {
   assert.deepStrictEqual(VIEW_MODES, ['board', 'map', 'calendar', 'gantt']);
@@ -35,14 +35,14 @@ test('mergeViewMode falls back to board for unknown/missing/corrupt saved values
   assert.strictEqual(mergeViewMode({ mode: 'map' }), 'board');
 });
 
-// --- date value parsing (card #36 values: YYYY-MM-DD or YYYY-MM-DDTHH:MM) ---
+// --- date value parsing (YYYY-MM-DD or YYYY-MM-DDTHH:MM) ---
 
 test('dayPart extracts the calendar day from a date or datetime value', () => {
   assert.strictEqual(dayPart('2026-07-09'), '2026-07-09');
   assert.strictEqual(dayPart('2026-07-09T14:30'), '2026-07-09');
 });
 
-test('dayPart returns empty for missing or non-date values (tolerant, card #36: no validation)', () => {
+test('dayPart returns empty for missing or non-date values (tolerant: no validation)', () => {
   assert.strictEqual(dayPart(''), '');
   assert.strictEqual(dayPart(undefined), '');
   assert.strictEqual(dayPart(null), '');
@@ -73,7 +73,7 @@ test('addDays walks backward and handles leap February', () => {
   assert.strictEqual(addDays('2025-03-01', -1), '2025-02-28');
 });
 
-test('dayToUtc and shiftValue are exported for gantt-model.js to reuse (card #38)', () => {
+test('dayToUtc and shiftValue are exported for gantt-model.js to reuse', () => {
   assert.strictEqual(dayToUtc('2026-07-09'), Date.UTC(2026, 6, 9));
   assert.strictEqual(shiftValue('2026-07-09T14:30', '2026-07-15'), '2026-07-15T14:30');
   assert.strictEqual(shiftValue('2026-07-09', '2026-07-15'), '2026-07-15');
@@ -158,11 +158,11 @@ test('shiftMonth moves across year boundaries in both directions', () => {
   assert.deepStrictEqual(shiftMonth(2026, 6, -18), { year: 2025, monthIndex: 0 });
 });
 
-// --- rangeFields: which fields form the working range? (card #40) --------------
+// --- rangeFields: which fields form the working range? --------------
 // The single shape-decider under cardSchedule AND every drag-math function:
 // the range is start_date -> end_date; when end_date is absent but start AND
-// due are both present, the range falls back to start_date -> due_date (#36
-// compat) — and whatever writes back must KEEP the pair it reports here.
+// due are both present, the range falls back to start_date -> due_date
+// (compat) — and whatever writes back must KEEP the pair it reports here.
 
 test('rangeFields: real range reports start_date/end_date', () => {
   assert.deepStrictEqual(rangeFields({ start_date: '2026-07-03', end_date: '2026-07-06' }),
@@ -197,7 +197,7 @@ test('rangeFields: start-only / end-only / nothing', () => {
     { startDay: null, startField: null, endDay: null, endField: null });
 });
 
-// --- dueMarker: the independent deadline marker (card #40) ----------------------
+// --- dueMarker: the independent deadline marker ----------------------
 
 test('dueMarker: parseable due gives day + time', () => {
   assert.deepStrictEqual(dueMarker({ due_date: '2026-07-09' }), { day: '2026-07-09', time: '' });
@@ -210,7 +210,7 @@ test('dueMarker: absent or unparseable due is null — and it ignores the range 
   assert.strictEqual(dueMarker({ start_date: '2026-07-01', end_date: '2026-07-05' }), null);
 });
 
-// --- cardSchedule: the RANGE shapes (card #37, resemantic'd by card #40) -------
+// --- cardSchedule: the RANGE shapes -------
 // The schedule is the working range only — due participates solely via the
 // compat fallback. A due-only card has NO schedule (its deadline renders as
 // the separate due marker in both views).
@@ -221,7 +221,7 @@ test('cardSchedule: no range-forming dates means no run', () => {
   assert.deepStrictEqual(cardSchedule({ end_date: 'whenever' }), { kind: 'none' }); // unparseable = absent, tolerant
 });
 
-test('cardSchedule: due-only is NOT a range any more (card #40) — the marker owns it', () => {
+test('cardSchedule: due-only is NOT a range any more — the marker owns it', () => {
   assert.deepStrictEqual(cardSchedule({ due_date: '2026-07-09' }), { kind: 'none' });
   assert.deepStrictEqual(cardSchedule({ due_date: '2026-07-09T14:30' }), { kind: 'none' });
 });
@@ -240,7 +240,7 @@ test('cardSchedule: a due alongside a real range changes nothing about the range
     { kind: 'range', startDay: '2026-07-03', endDay: '2026-07-06', time: '' });
 });
 
-test('cardSchedule: COMPAT — start + due with no end_date still ranges start->due (#36 cards keep rendering)', () => {
+test('cardSchedule: COMPAT — start + due with no end_date still ranges start->due (pre-end_date cards keep rendering)', () => {
   assert.deepStrictEqual(cardSchedule({ start_date: '2026-07-03', due_date: '2026-07-06T17:00' }),
     { kind: 'range', startDay: '2026-07-03', endDay: '2026-07-06', time: '17:00' });
 });
@@ -264,7 +264,7 @@ test('cardSchedule: reversed range (start after end) collapses to 1 day at the r
     { kind: 'single', day: '2026-07-05', time: '11:00' });
 });
 
-test('cardSchedule: reversed COMPAT range (start after due, no end) collapses at due — same as #37', () => {
+test('cardSchedule: reversed COMPAT range (start after due, no end) collapses at due — same as the reversed range rule', () => {
   assert.deepStrictEqual(cardSchedule({ start_date: '2026-07-10', due_date: '2026-07-05' }),
     { kind: 'single', day: '2026-07-05', time: '' });
 });
@@ -305,7 +305,7 @@ test('chipPositionForDay: none schedule never matches', () => {
   assert.strictEqual(chipPositionForDay(cardSchedule({}), '2026-07-09'), null);
 });
 
-// --- rescheduleChanges: RANGE chip drag (card #37, resemantic'd by card #40) -----
+// --- rescheduleChanges: RANGE chip drag -----
 // Moves the working range: the drop day becomes the range END day and the
 // range start shifts by the same delta. Writes go to THE FIELDS THE RANGE
 // ACTUALLY USED (rangeFields): a real range shifts start+end, a compat range
@@ -372,7 +372,7 @@ test('reschedule zero-delta: dropping a chip on its own day is null (no PATCH, n
   assert.strictEqual(rescheduleChanges({ start_date: '2026-07-03' }, '2026-07-03'), null);
 });
 
-// --- rescheduleDueChanges: DUE marker drag (card #40) ----------------------------
+// --- rescheduleDueChanges: DUE marker drag ----------------------------
 // Moves due_date alone, time preserved; zero-delta and no-parseable-due are null.
 
 test('rescheduleDueChanges moves due_date alone, time-of-day preserved', () => {
@@ -394,7 +394,7 @@ test('rescheduleDueChanges: zero-delta and unparseable/absent due are null', () 
   assert.strictEqual(rescheduleDueChanges({}, '2026-07-15'), null);
 });
 
-// --- chips-per-day capping (card #37: "+N more") ---------------------------------
+// --- chips-per-day capping ("+N more") ---------------------------------
 
 test('CALENDAR_MAX_CHIPS_PER_DAY is 4', () => {
   assert.strictEqual(CALENDAR_MAX_CHIPS_PER_DAY, 4);
@@ -410,11 +410,11 @@ test('capChips: over the cap keeps the first N visible and overflows the rest in
   assert.deepStrictEqual(capChips([1, 2, 3, 4, 5, 6], 4), { visible: [1, 2, 3, 4], overflow: [5, 6] });
 });
 
-// === card #58: calendar sub-views (month / week / 3-day / day) =================
+// === calendar sub-views (month / week / 3-day / day) =================
 
 // --- sub-view set + persistence merge -------------------------------------------
 
-test('CALENDAR_SUBVIEWS lists exactly month / week / 3day / day (card #58)', () => {
+test('CALENDAR_SUBVIEWS lists exactly month / week / 3day / day', () => {
   assert.deepStrictEqual(CALENDAR_SUBVIEWS, ['month', 'week', '3day', 'day']);
 });
 
@@ -731,13 +731,13 @@ test('timeGridLayout: an empty window day still gets an (empty) timed list — t
   assert.strictEqual(allDayRows, 0);
 });
 
-// === card #109: time-grid drag-to-retime + edge-resize math ========================
-// The sub-month time grid (card #58) deferred "drag-to-retime within a day's
+// === time-grid drag-to-retime + edge-resize math ========================
+// The sub-month time grid deferred "drag-to-retime within a day's
 // hour grid" — these are the pure functions that supersede that deferral: body
 // -drag a timed block to a new day+time, and edge-resize a duration block's
 // start/end. All reuse rangeFields/shiftValue/timeToMinutes/pruneNoopChanges,
 // so the triad + compat contract (ADR 0007) holds by construction. Null = no
-// PATCH, no `updated` bump (card #35), same convention as rescheduleChanges.
+// PATCH, no `updated` bump, same convention as rescheduleChanges.
 
 test('minutesToTime: converts minutes to HH:MM', () => {
   assert.strictEqual(minutesToTime(90), '01:30');
@@ -928,7 +928,7 @@ test('resizeRangeAtTime: an unknown edge value returns null', () => {
   assert.strictEqual(resizeRangeAtTime(card, 'middle', 600), null);
 });
 
-// --- calendarCreateStart (card #193: click-to-create prefill) ---------------------
+// --- calendarCreateStart (click-to-create prefill) ---------------------
 
 test('calendarCreateStart: no rawMin (month/all-day double-click) prefills a date-only day', () => {
   assert.strictEqual(calendarCreateStart('2026-07-20'), '2026-07-20');

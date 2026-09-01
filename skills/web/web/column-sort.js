@@ -1,31 +1,31 @@
 'use strict';
-// Pure helpers for per-column sorting (card #18). No DOM/localStorage access
+// Pure helpers for per-column sorting. No DOM/localStorage access
 // here on purpose — same dual-environment pattern as column-state.js /
 // refresh-policy.js / search.js: unit-testable from node --test AND loaded as
 // a plain <script> in the browser (app.js calls these as bare globals).
 //
 // localStorage discipline: reuses column-state.js's storageKey() scheme
 // (`kanban.<projectName>.<feature>`), under the feature name
-// 'columns.sort' — a sibling key to #15's 'columns.collapsed', never
+// 'columns.sort' — a sibling key to 'columns.collapsed', never
 // colliding since each feature gets its own key.
 
-// card #45: the old 'date' field was ambiguous (deadline? recency?) and split
-// into 'due' (the #43 triad-aware schedule sort, renamed) and 'modified' (the
-// #35 machine-maintained `updated` stamp). card #46 adds 'assignee'.
+// The old 'date' field was ambiguous (deadline? recency?) and split
+// into 'due' (the triad-aware schedule sort) and 'modified' (the
+// machine-maintained `updated` stamp); mergeSortState still migrates a saved 'date'.
 const SORT_FIELDS = ['id', 'priority', 'due', 'modified', 'assignee'];
 const SORT_FIELD_LABELS = { id: 'ID', priority: 'Priority', due: 'Due date', modified: 'Last modified', assignee: 'Assignee' };
 // Natural starting direction when a column is switched to a field for the
 // first time: id/due ascending (oldest id / earliest due date first),
-// priority descending (High first, matching the card's "High-first by
+// priority descending (High first, matching the "High-first by
 // default" rule), modified descending (most recently touched first — recency
 // is what you switch to that sort for), assignee ascending (registry order —
-// human first — is the reading order you switch to that sort for, card #46).
+// human first — is the reading order you switch to that sort for).
 const DEFAULT_SORT_DIRECTION = { id: 'asc', priority: 'desc', due: 'asc', modified: 'desc', assignee: 'asc' };
 
-// Default per column = current pre-#18 behavior, unchanged until the user
-// picks a sort: the four live columns were priority-desc/id-tiebreak, Archive
-// was plain id-asc. Kept as the static default shape; card #31 derives the
-// same rule for any dynamic column set via defaultSort() below.
+// Default per column, until the user picks a sort: live columns
+// priority-desc/id-tiebreak, Archive plain id-asc. Kept as the static
+// default shape; defaultSort() below derives the same rule for any dynamic
+// column set.
 const DEFAULT_SORT = {
   backlog: { field: 'priority', direction: 'desc' },
   todo: { field: 'priority', direction: 'desc' },
@@ -34,8 +34,8 @@ const DEFAULT_SORT = {
   archive: { field: 'id', direction: 'asc' },
 };
 
-// Per-column sort default derived for whatever column set is in play (card
-// #31): live columns priority-desc, archive id-asc — the rule DEFAULT_SORT
+// Per-column sort default derived for whatever column set is in play:
+// live columns priority-desc, archive id-asc — the rule DEFAULT_SORT
 // encodes for the built-in set.
 function defaultSort(columnIds) {
   const out = {};
@@ -58,9 +58,8 @@ function isValidSortEntry(entry) {
 // defaults — same defensive shape as column-state.js's mergeCollapsedState:
 // unknown keys are dropped, missing/invalid entries fall back to the
 // default, only a structurally valid {field, direction} pair is trusted.
-// card #31: pass the board's current column ids to merge against a dynamic
-// column set; omitting them keeps the built-in five (existing callers
-// unchanged).
+// Pass the board's current column ids to merge against a dynamic
+// column set; omitting them keeps the built-in five.
 function mergeSortState(saved, ids) {
   const defaults = defaultSort(ids);
   const result = {};
@@ -70,7 +69,7 @@ function mergeSortState(saved, ids) {
   if (saved && typeof saved === 'object') {
     for (const col of Object.keys(defaults)) {
       let entry = saved[col];
-      // card #45 rename migration: a pre-split saved 'date' sort keeps working
+      // rename migration: a pre-split saved 'date' sort keeps working
       // as 'due' (same comparator it always resolved to), direction preserved.
       if (entry && typeof entry === 'object' && entry.field === 'date') {
         entry = { field: 'due', direction: entry.direction };
@@ -83,7 +82,7 @@ function mergeSortState(saved, ids) {
   return result;
 }
 
-// card #30: rank comes from the board's configured `priorities` list (ordered,
+// Rank comes from the board's configured `priorities` list (ordered,
 // highest first) — falling back to the built-in list. Earlier in the list =
 // higher rank; a priority not in the list at all ranks 0 (unknown).
 const DEFAULT_PRIORITIES = ['High', 'Normal', 'Low'];
@@ -96,11 +95,10 @@ function priorityRank(card, priorities) {
 
 // Comparator for a single column's active sort. Direction only flips the
 // PRIMARY comparison; tie-breaks (priority ties, both-missing-date ties, and
-// same-due-date ties) always fall back to id ascending — same "stable order
-// doesn't reshuffle on a direction toggle" behavior the pre-#18 code already
-// had for priority ties, extended to the other two fields for consistency.
+// same-due-date ties) always fall back to id ascending — a stable order
+// never reshuffles on a direction toggle.
 //
-// card #44: one source of truth for "which date drives this card" — the tile
+// One source of truth for "which date drives this card" — the tile
 // label and the Due date sort share it, so what you see is what sorted.
 function scheduleKey(card) {
   return card.due_date || card.end_date || card.start_date || null;
@@ -131,7 +129,7 @@ function compareCards(a, b, sort, priorities, assignees) {
       return diff !== 0 ? diff : a.id - b.id;
     }
     case 'due': {
-      // card #43: triad-aware key — the deadline wins, else the range's end,
+      // triad-aware key — the deadline wins, else the range's end,
       // else its start, so scheduled-but-not-due cards join the order instead
       // of clumping with the dateless. Lexicographic ISO compare orders time
       // within a day; a date-only value reads as start-of-day.
@@ -143,9 +141,9 @@ function compareCards(a, b, sort, priorities, assignees) {
       return diff !== 0 ? diff : a.id - b.id;
     }
     case 'modified': {
-      // card #45: keys on the #35 machine-maintained `updated` stamp
+      // keys on the machine-maintained `updated` stamp
       // (YYYY-MM-DDTHH:MM:SS local — lexicographic ISO compare, same as due).
-      // Cards a stamp never reached (pre-#35, hand-authored) sort last in
+      // Cards a stamp never reached (hand-authored) sort last in
       // both directions, same rule as missing due_date.
       const ka = a.updated || null;
       const kb = b.updated || null;
@@ -155,7 +153,7 @@ function compareCards(a, b, sort, priorities, assignees) {
       return diff !== 0 ? diff : a.id - b.id;
     }
     case 'assignee': {
-      // card #46: group by owner handle. Registered handles rank by the
+      // group by owner handle. Registered handles rank by the
       // config.yaml assignees REGISTRY order (`assignees` = ordered handle
       // list — human first, then HITL, then AFK reads better than
       // alphabetical); unregistered handles come after ALL registered ones,

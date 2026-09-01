@@ -1,6 +1,5 @@
 'use strict';
-// config.yaml: board-level configuration (card #27, pivoted from a
-// single-purpose assignees.md) — currently two concerns:
+// config.yaml: board-level configuration — currently two concerns:
 //
 //   nextId: 28            # monotonic id counter — ids stay unique even when
 //                         # the max card is deleted or two writers race a scan
@@ -9,7 +8,7 @@
 //       name: "Alex"
 //       kind: human       # suggested: human | ai-hitl | ai-afk (free string)
 //       description: "…"
-//       color: "#a371f7"  # card #183: OPTIONAL reserved color; absent = hashed
+//       color: "#a371f7"  # OPTIONAL reserved color; absent = hashed
 //
 // Same tolerant hand-rolled parsing discipline as notifications-store: skip
 // what doesn't parse, never fatal. The registry suggests, it never validates.
@@ -32,8 +31,8 @@ function parseFlowList(raw) {
   return inner.split(',').map((item) => scalar(item)).filter((v) => v !== '');
 }
 
-// card #30: priorities/tags — suggest, never validate. card #31: statuses —
-// the official COLUMN list (ordered = column order; absent = built-in four).
+// priorities/tags — suggest, never validate. statuses — the official COLUMN
+// list (ordered = column order; absent = built-in four).
 // It drives the board's layout but still never validates a card's on-disk
 // value: an unlisted status renders in the first column until promoted.
 const LIST_KEYS = ['priorities', 'tags', 'statuses'];
@@ -51,7 +50,7 @@ function parseConfig(text) {
           name: scalar(cur.name !== undefined ? cur.name : ''),
           kind: scalar(cur.kind !== undefined ? cur.kind : ''),
           description: scalar(cur.description !== undefined ? cur.description : ''),
-          // card #183: OPTIONAL reserved color, same suggest-never-validate
+          // OPTIONAL reserved color, same suggest-never-validate
           // contract as every other field here — an empty string means
           // "no reservation", not an invalid one; the color picks a hashed
           // fallback in that case (assignee-colors.js), never this store's job.

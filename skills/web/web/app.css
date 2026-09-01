@@ -1,6 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; }
-/* kanban.proj #207: the top bar (title, search, view-switch/refresh/notif
+/* The top bar (title, search, view-switch/refresh/notif
    buttons) stays visible above the board — position: sticky against the
    document's own scroll. Needs an opaque background (matches <body>'s) so
    content scrolling underneath doesn't show through, and a z-index above
@@ -11,20 +11,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
    board area under it, instead of guessing a fixed px offset that would
    drift the moment the header wraps to a second line (narrow viewport, a
    long project name, the notif badge appearing).
-   Verify finding (adversarial review, kanban.proj #207): the original cut of
-   this card gave EACH `.column-header` `position: sticky` against a
+   Why the COLUMN headers carry no position: sticky of their own: giving
+   each `.column-header` `position: sticky` against a
    `height: auto` main#board, banking on the page/document doing the
-   scrolling. That never worked: main#board also carries `overflow-x: auto`
-   (pre-existing, unrelated to this card — the row of columns scrolls
+   scrolling, never works: main#board also carries `overflow-x: auto`
+   (the row of columns scrolls
    sideways on a narrow viewport without dragging the page header with it),
    and the CSS Overflow spec forces overflow-y to compute to auto too
    whenever overflow-x is non-visible and overflow-y isn't set — so
-   main#board silently became the scroll container .column-header's sticky
-   resolved against, not the document, yet had no bounded height to ever
-   scroll on its own axis. The "sticky" headers behaved exactly like
-   `position: static` and scrolled off-screen with the rest of the page
-   (confirmed via computed-style + getBoundingClientRect before/after a
-   scroll). Bounding main#board's height and adding `overflow-y: auto`
+   main#board silently becomes the scroll container .column-header's sticky
+   resolves against, not the document, yet has no bounded height to ever
+   scroll on its own axis. Such "sticky" headers behave exactly like
+   `position: static` and scroll off-screen with the rest of the page.
+   Bounding main#board's height and adding `overflow-y: auto`
    sounds like the fix, but empirically it isn't ENOUGH on its own: with
    align-items: stretch and a single nowrap flex line, a definite main#board
    height caps every `.column` at exactly that height — a column's own card
@@ -32,9 +31,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
    broken), and the sticky header's containing block (.column) exhausts its
    own bounds long before the user has scrolled through all the cards, so it
    still un-sticks partway through (reproduced against a real 25-card
-   column, not just a short synthetic one — see the doubled-back CDP
-   verification in the PR notes).
-   The actual fix drops per-column `position: sticky` entirely and scrolls
+   column, not just a short synthetic one).
+   So: no per-column `position: sticky` at all — the board scrolls
    PER COLUMN instead of scrolling main#board as one shared unit (Trello-
    style): main#board is bounded to the viewport under the page header, each
    `.column` stretches to fill that exact height and is a column flexbox
@@ -42,15 +40,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
    main#board — is the one with `overflow-y: auto`. The header is simply the
    first flex child, outside the scrolling region, so it never needs sticky
    positioning: it can't scroll away because it was never inside the thing
-   that scrolls. Bonus: columns no longer need to match "the tallest
+   that scrolls. Bonus: columns don't need to match "the tallest
    sibling's content height" (impossible to do AND have a bounded, working
-   scroll container at the same time) — every column now fills the same
+   scroll container at the same time) — every column fills the same
    fixed height and scrolls its own overflow independently, same as real
    kanban boards. */
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 15; background: #0d1117; }
 h1 { color: #58a6ff; font-size: 1.4em; }
 .project-name { color: #8b949e; font-size: 0.65em; font-weight: 400; margin-left: 4px; }
-/* card #55: copy-board-path button — lives inside the h1, so size back down
+/* Copy-board-path button — lives inside the h1, so size back down
    from its 1.4em to control scale; muted until hovered, like .project-name */
 .board-copy-btn { font-size: 0.55em; font-weight: 400; color: #8b949e; padding: 2px 7px; margin-left: 6px; vertical-align: middle; }
 .board-copy-btn:hover { color: #c9d1d9; }
@@ -65,32 +63,32 @@ button:hover { background: #30363d; }
 .search-input::placeholder { color: #6e7681; }
 .search-clear { background: transparent; border: none; color: #8b949e; padding: 4px 6px; cursor: pointer; font-size: 0.85em; flex-shrink: 0; }
 .search-clear:hover { color: #f85149; background: transparent; }
-/* Signals a collapsed column that still has hits (card #17) — the count itself
+/* Signals a collapsed column that still has hits — the count itself
    already reads matching/total, this just adds a visual nudge to notice it. */
 .column.search-match .column-count { color: #58a6ff; font-weight: 700; }
-/* kanban.proj #207: align-items: stretch makes every live column (Archive
-   included) fill the row's shared height, so column length no longer
-   depends on how many cards it holds — a short column no longer stops short
+/* align-items: stretch makes every live column (Archive
+   included) fill the row's shared height, so column length never
+   depends on how many cards it holds — a short column never stops short
    of a tall neighbor with a ragged bottom edge. main#board is bounded to
    the viewport under the fixed page header (--board-header-h, see above) so
    that shared height is a real, definite one; 48px is body's own top+bottom
    padding (16+16) plus header's margin-bottom (16). Horizontal scroll
-   (overflow-x, pre-existing, unrelated to this card) still applies when the
+   (overflow-x) still applies when the
    columns overflow the viewport width — vertical overflow is each column's
-   own concern now (.column-cards below), not main#board's, so overflow-y
+   own concern (.column-cards below), not main#board's, so overflow-y
    here stays at its default (nothing to scroll vertically at this level). */
 main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; height: calc(100vh - var(--board-header-h, 64px) - 48px); }
 .column { background: #161b22; border: 1px solid #30363d; border-radius: 8px; min-width: 260px; flex: 1; display: flex; flex-direction: column; overflow: hidden; transition: min-width 0.15s, width 0.15s, flex 0.15s; }
 .column.drag-over { border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff inset; }
-/* kanban.proj #207: the header is the column's first flex child, ABOVE the
+/* The header is the column's first flex child, ABOVE the
    independently-scrolling .column-cards below — it stays visible for free
    while a long card list scrolls past, with no position: sticky needed (see
    main#board's comment above for why sticky-against-a-shared-scroll doesn't
    actually work here). flex-shrink: 0 keeps it its natural height even if
    sort controls or a long column name make the row wrap. */
 .column-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #30363d; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; background: #161b22; border-radius: 8px 8px 0 0; }
-/* card #57: backlog is cyan, not its old grey #8b949e — one shade from the
-   archive header below, the two columns read alike at a glance. Grey now means
+/* Backlog is cyan, not grey — its old grey #8b949e sat one shade from the
+   archive header below, so the two columns read alike at a glance. Grey means
    archived (a location, not a status) and nothing else; hexes mirror
    status-colors.js (BUILTIN_STATUS_COLORS / ARCHIVE_COLOR), sync pinned by
    status-colors.test.js. */
@@ -101,24 +99,24 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .col-archive .column-header { color: #6e7681; }
 .column-name { flex: 1; }
 .column-count { font-weight: 400; opacity: 0.8; }
-/* card #97: .map-section-toggle (the map's graph/no-dependencies collapse
+/* .map-section-toggle (the map's graph/no-dependencies collapse
    chevrons) shares this exact look — one rule, not a per-view duplicate. */
 .column-toggle, .map-section-toggle { background: transparent; border: none; color: inherit; padding: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .column-toggle:hover, .map-section-toggle:hover { color: #c9d1d9; }
 .column-toggle svg, .map-section-toggle svg { width: 14px; height: 14px; display: block; }
-/* Sort controls (card #18) — share the header with the collapse toggle above;
+/* Sort controls — share the header with the collapse toggle above;
    hidden entirely while collapsed (see renderBoard()), so there's nothing to
    fight for space with there. font-weight normal so the field label doesn't
    compete visually with the bold column name next to it. */
-.column-sort-field { flex-shrink: 0; max-width: 104px; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 2px 4px; border-radius: 4px; font-size: 0.72em; font-weight: 400; font-family: inherit; } /* card #45: cap sized for the longest label, "Last modified" (~99px incl. arrow), was 84px */
+.column-sort-field { flex-shrink: 0; max-width: 104px; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 2px 4px; border-radius: 4px; font-size: 0.72em; font-weight: 400; font-family: inherit; } /* cap sized for the longest label, "Last modified" (~99px incl. arrow) */
 .column-sort-field:focus { outline: none; border-color: #58a6ff; }
 .column-sort-dir { background: transparent; border: none; color: inherit; padding: 2px 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 0.85em; line-height: 1; }
 .column-sort-dir:hover { color: #c9d1d9; background: transparent; }
-/* + quick-create (card #54) — same quiet inline-icon treatment as the sort
+/* + quick-create — same quiet inline-icon treatment as the sort
    direction toggle; renderBoard gates it off archive and collapsed strips. */
 .column-add { background: transparent; border: none; color: inherit; padding: 2px 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 1.1em; line-height: 1; font-weight: 600; }
 .column-add:hover { color: #c9d1d9; background: transparent; }
-/* kanban.proj #202: the + button's sparkle twin — same quiet inline-icon
+/* The + button's sparkle twin — same quiet inline-icon
    treatment, opens the same modal with the AI prompt row pre-revealed. */
 .column-add-ai { background: transparent; border: none; color: inherit; padding: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .column-add-ai:hover { color: #c9d1d9; background: transparent; }
@@ -129,7 +127,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    attribute (set in JS) carries the hover tooltip naming the column. */
 .column.collapsed { min-width: 44px; width: 44px; flex: 0 0 44px; }
 .column.collapsed .column-header { flex-direction: column; padding: 10px 4px; gap: 6px; border-bottom: none; }
-/* kanban.proj #207: flex: 1 (fills whatever height .column-header didn't
+/* flex: 1 (fills whatever height .column-header didn't
    use) + min-height: 0 (flex items default to their content's min size,
    which would otherwise refuse to shrink below it and defeat the scroll)
    + overflow-y: auto together make each column's OWN card list scroll
@@ -137,22 +135,22 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    .column-header's comment). */
 .column-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; overflow-y: auto; }
 .card { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; cursor: grab; }
-/* card #45: epic reads as a faint background wash instead of #91's small
-   orange dot — circles are reserved for STATUS alone now (the status dot
-   below keeps its own untouched channel). EPIC_COLOR at 12% alpha
+/* Epic reads as a faint background wash, not a
+   dot — circles are reserved for STATUS alone (the status dot
+   below keeps its own channel). EPIC_COLOR at 12% alpha
    (epicColorSoft() in status-colors.js, sync-pinned by
    status-colors.test.js), the same wash-language the gantt bar's per-status
-   fill already used. The calendar chip and gantt gutter label share this
+   fill already uses. The calendar chip and gantt gutter label share this
    exact rule (identical value, no conflict there); the gantt BAR and map
    node each need their own twin below since their backgrounds are already
    spoken for (.gantt-bar.epic near the status fill rules, .map-node.epic
    rect near the map view rules). */
 .card.epic, .cal-chip.epic, .gantt-label.epic { background: rgba(240, 136, 62, 0.12); }
-/* card #97: the shared status dot — same 8px shape as .archived-dot below.
-   card #49 (verify finding): color used to be an inline `style="background:..."`
-   written by statusBadge() (status-colors.js), but a strict `style-src 'self'`
+/* The shared status dot — same 8px shape as .archived-dot below.
+   Color never rides an inline `style="background:..."`
+   written by statusBadge() (status-colors.js): a strict `style-src 'self'`
    CSP blocks the browser from applying HTML-attribute inline styles at all,
-   silently rendering every dot colorless. Color now comes from one of the
+   silently rendering every dot colorless. Color comes from one of the
    `.status-dot--*` classes below — one rule per statusColorClass() outcome
    (the four built-ins, archive-mute, or one of the 8 hashed palette slots) —
    so the full statusColor() value space is covered with no inline style. */
@@ -170,23 +168,22 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .status-dot--palette-5 { background: #39c5cf; }
 .status-dot--palette-6 { background: #f0883e; }
 .status-dot--palette-7 { background: #ff7b72; }
-/* card #102 final design: the third shared dot — the archived LOCATION ball.
+/* The third shared dot — the archived LOCATION ball.
    Fixed ARCHIVE_COLOR (never varies per-card), so it's a plain class rule,
-   same as every .status-dot--* rule above now. */
+   same as every .status-dot--* rule above. */
 .archived-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #6e7681; vertical-align: middle; flex-shrink: 0; }
-/* card #102 final design: archivedBadge() always follows statusBadge()
+/* archivedBadge() always follows statusBadge()
    directly with no whitespace between them on .cal-chip/.gantt-label (no
    flex/gap there) — this adjacent-sibling rule keeps the two dots from
-   fusing into one blob, same fix card #91 originally gave epic+status (card
-   #45 retired the epic dot, so status+archived is the one pair left to fuse). */
+   fusing into one blob (status+archived is the one adjacent dot pair). */
 .status-dot + .archived-dot { margin-left: 4px; }
 .card.high { border-left: 3px solid #f85149; }
-.card.low { border-left: 3px solid #6e7681; opacity: 0.85; } /* card #30: muted last-tier priority */
-/* card #30: hand-rolled combobox menu — native datalist misrenders in VSCode's Simple Browser */
+.card.low { border-left: 3px solid #6e7681; opacity: 0.85; } /* muted last-tier priority */
+/* hand-rolled combobox menu — native datalist misrenders in VSCode's Simple Browser */
 .combobox-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 30; background: #161b22; border: 1px solid #30363d; border-radius: 6px; max-height: 180px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
 .combobox-item { padding: 5px 10px; cursor: pointer; font-size: 13px; }
-.combobox-item:hover, .combobox-item.active { background: #1f6feb33; } /* card #95: Up/Down highlight reuses the hover treatment */
-/* card #32: bulk-edit popups */
+.combobox-item:hover, .combobox-item.active { background: #1f6feb33; } /* Up/Down highlight reuses the hover treatment */
+/* bulk-edit popups */
 .bulk-modal { max-width: 380px; }
 /* the suggestions render IN FLOW inside these small popups: the popup grows
    while the menu is open and shrinks back when it closes — no inner
@@ -200,28 +197,27 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 #bulk-tag-list { display: flex; flex-wrap: wrap; gap: 2px 16px; margin-top: 8px; }
 .modal label.bulk-tag-row { flex-direction: row; align-items: center; gap: 6px; padding: 3px 2px; cursor: pointer; font-size: 0.9em; color: #c9d1d9; }
 .bulk-tag-count { color: #8b949e; font-size: 12px; }
-/* card #42: Schedule… popup — the date field takes the row, the clear
+/* Schedule… popup — the date field takes the row, the clear
    checkbox hangs off its end, baseline-aligned with the input */
 .bulk-schedule-row { align-items: flex-end; }
 .modal label.bulk-clear-label { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 4px; padding-bottom: 7px; cursor: pointer; }
 .bulk-schedule-row input:disabled { opacity: 0.45; }
 .bulk-schedule-row .date-pick-btn:disabled { opacity: 0.45; cursor: default; }
-/* epic #137: the amber accent marks WAITING (unresolved waiting_for deps —
-   it inherits the old blocked visual slot, renamed); it disappears on its
+/* The amber accent marks WAITING (unresolved waiting_for
+   deps); it disappears on its
    own when every dep lands. */
 .card.waiting { border-left: 3px solid #d29922; }
 .card.dragging { opacity: 0.4; }
 .card.archived-card { cursor: pointer; opacity: 0.82; }
 .card-head { display: flex; align-items: center; gap: 4px; }
 .card-id { color: #8b949e; font-size: 0.8em; }
-/* card #31: raw-status chip on a tile whose on-disk status isn't in the
+/* Raw-status chip on a tile whose on-disk status isn't in the
    board's statuses list — parked in the first column until promoted */
 .status-chip { background: #21262d; border: 1px dashed #6e7681; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #8b949e; margin-left: 6px; }
-.card-schedule { margin-left: auto; color: #8b949e; font-size: 0.72em; white-space: nowrap; } /* card #44: the Due date sort's key, visible */
+.card-schedule { margin-left: auto; color: #8b949e; font-size: 0.72em; white-space: nowrap; } /* the Due date sort's key, visible */
 .card-assignee { display: inline-flex; align-items: center; gap: 4px; background: #21262d; border: 1px solid #30363d; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #8b949e; margin-left: 6px; }
-/* kanban.proj #191: the assignee cue was a small colored dot next to the
-   handle (card #183); this replaces it — the handle TEXT itself wears the
-   color instead, no separate glyph. The HASHED case gets a class per palette
+/* The handle TEXT itself wears the assignee
+   color — no separate dot glyph. The HASHED case gets a class per palette
    slot (same 8 hexes/numbering as status-colors.js's STATUS_PALETTE and its
    .status-dot--palette-N twin — parallel class family, not a reuse, since
    this sets `color` not `background`); source order alone breaks the tie
@@ -239,7 +235,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .assignee-text--palette-6 { color: #f0883e; }
 .assignee-text--palette-7 { color: #ff7b72; }
 .card-title { font-size: 0.9em; margin: 4px 0; }
-/* kanban.proj #202: the empty-title prompt-fallback reads as clearly
+/* The empty-title prompt-fallback reads as clearly
    temporary (italic + muted), not a real title — gone the instant the card
    gets one. The sparkle sits inline before the prompt text, same 14px size
    as the column-toggle chevrons above. */
@@ -248,17 +244,17 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .tag { background: #1f2937; border: 1px solid #374151; border-radius: 12px; padding: 1px 8px; font-size: 0.7em; color: #9ca3af; }
 .waiting-badge { color: #d29922; font-size: 0.75em; margin-top: 4px; }
-/* epic #137: the manual impediment sticker — a red PILL, not a border
+/* The manual impediment sticker — a red PILL, not a border
    (borders stay priority/status territory). The reason rides the tooltip
    (title property), set via textContent/property assignment only. */
 .blocked-pill { background: rgba(248,81,73,0.15); border: 1px solid #f85149; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #f85149; margin-left: 4px; flex-shrink: 0; }
-/* epic #137: the edit form's blocked input goes red exactly while its value
+/* The edit form's blocked input goes red exactly while its value
    passes the predicate — colorless otherwise. */
 #f-blocked.blocked-active { border-color: #f85149; }
-/* ADR 0009 (card #181): review is blocked's sibling sticker — "finished,
+/* ADR 0009: review is blocked's sibling sticker — "finished,
    approve me" rather than a stop sign, so its own gold/yellow pill, distinct
    from the waiting amber accent (#d29922), the epic orange wash (#f0883e),
-   and the blocked red (#f85149). Exact shade pending Franc's sign-off. */
+   and the blocked red (#f85149). */
 .review-pill { background: rgba(234,197,79,0.15); border: 1px solid #eac54f; border-radius: 10px; padding: 1px 7px; font-size: 0.7em; color: #eac54f; margin-left: 4px; flex-shrink: 0; }
 #f-review.review-active { border-color: #eac54f; }
 .card-menu { display: flex; gap: 8px; margin-top: 8px; }
@@ -267,9 +263,9 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 30; }
 .modal { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; width: min(560px, 92vw); max-height: 90vh; overflow: auto; display: flex; flex-direction: column; gap: 10px; }
 .modal h2 { color: #58a6ff; font-size: 1.1em; }
-/* card #87/#90 moved the row layout off .modal-header onto the shared
-   .popup-header class (see it near .detail-actions below) — this selector
-   is now just the classname app.html keeps for readability, no rule of its own. */
+/* Row layout lives on the shared
+   .popup-header class (see it near .detail-actions below) — .modal-header
+   is just the classname app.html keeps for readability, no rule of its own. */
 .modal label { display: flex; flex-direction: column; font-size: 0.8em; color: #8b949e; gap: 4px; }
 .modal input, .modal select, .modal textarea { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 8px; border-radius: 6px; font-family: inherit; }
 /* field-sizing: content grows the textarea with its input (Chromium 123+). This is a
@@ -281,27 +277,27 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .modal textarea { field-sizing: content; min-height: 160px; resize: vertical; }
 .modal .row { display: flex; gap: 10px; }
 .modal .row label { flex: 1; }
-/* card #47: the edit form's fields track the modal's REAL width instead of
+/* The edit form's fields track the modal's REAL width instead of
    their intrinsic floors. An <input>'s min-width:auto resolves to its ~170px
    default size, and that automatic minimum beats both flex-shrink and
-   align-items:stretch — which is why the assignee+dates row was a fixed
-   ~790px strip: it overflowed the 560px popup with a horizontal scrollbar
-   and stayed that exact size in fullscreen on narrow viewports. min-width:0
+   align-items:stretch — which would make the assignee+dates row a fixed
+   ~790px strip: it overflows the 560px popup with a horizontal scrollbar
+   and stays that exact size in fullscreen on narrow viewports. min-width:0
    lifts those clamps (on the row labels, the controls, and the .date-field
    span — each is a clamp of its own); flex-basis 170px + wrap makes rows
    REFLOW instead of scroll: the four-field dates row renders 2×2 in the
    default popup (each field the same ~254px the two-field rows already use)
    and one 4-across line once fullscreen/viewport width allows. Scoped to
    #card-form so the bulk popups' rows (.bulk-schedule-row) keep their
-   current layout untouched. */
+   own layout. */
 #card-form .row { flex-wrap: wrap; }
 #card-form .row label { flex: 1 1 170px; min-width: 0; }
-/* card #59: the Epic checkbox rides the Status/Priority row at its natural
+/* The Epic checkbox rides the Status/Priority row at its natural
    width, text+box side by side, baseline-aligned with the inputs beside it —
    same row-direction checkbox grammar as .bulk-clear-label. */
 #card-form label.epic-check { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 6px; align-self: flex-end; padding-bottom: 7px; cursor: pointer; }
 #card-form input, #card-form select, #card-form textarea, #card-form .date-field { min-width: 0; }
-/* card #50: minimal-first create. openModal() puts .minimal on #card-form for
+/* Minimal-first create. openModal() puts .minimal on #card-form for
    new cards only; the .modal-extra groups hide as a block and the show-more
    button (hidden everywhere else, so edit never sees it) is the only thing
    that lifts the class. Presentation only — the hidden fields keep the
@@ -311,33 +307,31 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 #card-form.minimal .modal-extra { display: none; }
 #show-more-btn { display: none; align-self: flex-start; }
 #card-form.minimal #show-more-btn { display: block; }
-/* card #85: Assignee joins Title in the minimal form; kanban.proj #199 made
-   that pairing permanent, so Title -> Assignee is the tab order in the
-   expanded/edit form too (see app.html: the #47 assignee+dates row now sits
-   right after Title always, its own static position). The row no longer
-   hides wholesale like the other .modal-extra groups (its three date labels
+/* Assignee joins Title in the minimal form, and Title -> Assignee is the tab
+   order in the
+   expanded/edit form too (see app.html: the assignee+dates row sits
+   right after Title always, its own static position). The row doesn't
+   hide wholesale like the other .modal-extra groups (its three date labels
    each carry .modal-extra individually instead — see app.html), so the row
    itself — showing just Assignee while minimal, all four fields once
    expanded — stays in the flex flow.
-   A prior version faked the Title -> Assignee -> "Show more fields" visual
-   sequence with flex `order` instead of moving anything in the DOM — but
-   `order` only repaints, it does not retarget Tab: DOM/tab order stayed
-   Title -> button -> row, a WCAG 2.4.3 focus-order bug (audit #85 defect 2).
-   A later version fixed it by having app.js physically move the row between
-   two slots at runtime (before #show-more-btn while minimal, back before
-   Description once expanded) — #199 removed even that: one static slot now
-   serves both states, so there is nothing left for script to move. */
-/* card #85 defect 1 (audit): the assignee combobox menu opens with the FULL
+   Don't fake the Title -> Assignee -> "Show more fields" visual
+   sequence with flex `order` instead of moving anything in the DOM —
+   `order` only repaints, it does not retarget Tab: DOM/tab order would stay
+   Title -> button -> row, a WCAG 2.4.3 focus-order bug.
+   One static slot
+   serves both states, so there is nothing for script to move. */
+/* The assignee combobox menu opens with the FULL
    registry list positioned absolutely under a modal that, in minimal mode, is
-   only Title+Assignee+button tall — it clipped past the modal's overflow:auto
-   edge (an inner scrollbar hid entries as ordinary as the 3rd assignee).
+   only Title+Assignee+button tall — it would clip past the modal's overflow:auto
+   edge (an inner scrollbar hiding entries as ordinary as the 3rd assignee).
    Scoped to .minimal, same fix as .bulk-modal's popups above: render the menu
    IN FLOW so the modal grows to fit it instead of floating past its edge. */
 #card-form.minimal .combobox-menu { position: static; margin-top: 4px; }
 #modal-save { background: #238636; border-color: #2ea043; color: #fff; }
 .hidden { display: none !important; }
 
-/* --- Fullscreen toggle (card #20) ------------------------------------------
+/* --- Fullscreen toggle ------------------------------------------
    Viewport-fill CSS, not the browser Fullscreen API — fixed + inset:0 escapes
    the .modal-backdrop's flex-centering (the backdrop itself has no transform/
    filter, so a fixed descendant positions against the real viewport) and wins
@@ -350,55 +344,55 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 /* field-sizing: content sizes the textarea from its OWN content, not from
    available container space — a wider/taller fullscreen .modal does not, by
    itself, make the textarea any taller (that's the trap: "the panel grew" is
-   not the same claim as "the field grew"). card #47 supersedes #20's fixed
-   60vh bump here: a static share left dead space under the form on tall
-   viewports and overflowed short ones. Instead, flex-grow down the chain
+   not the same claim as "the field grew"). No fixed
+   60vh bump here: a static share leaves dead space under the form on tall
+   viewports and overflows short ones. Instead, flex-grow down the chain
    (form column → .modal-desc label → textarea) hands the description the
    REAL leftover height — whatever the header/title/rows don't use, at any
    viewport size, tracking live resizes. field-sizing:content still supplies
    the flex-basis (auto = content size), so a long body keeps growing past
-   the viewport and the form's overflow:auto scroll fallback kicks in exactly
-   as before; the base 160px min-height floor also stays. */
+   the viewport and the form's overflow:auto scroll fallback kicks
+   in; the base 160px min-height floor also holds. */
 .modal.fullscreen .modal-desc { flex: 1 1 auto; }
 .modal.fullscreen .modal-desc textarea { flex: 1 1 auto; }
 
 .detail-modal { width: min(680px, 92vw); }
-/* kanban.proj #196: the detail popup's own twin of card #45's tile wash
+/* The detail popup's own twin of the tile wash
    (.card.epic above) — same epicColorSoft() 12% alpha, same override-the-base
    `background` pattern (.modal's solid #161b22 loses to this on specificity,
    three classes vs. one, same mechanism as .card.epic over .card). */
 .modal.detail-modal.epic { background: rgba(240, 136, 62, 0.12); }
-/* card #87/#90: row layout moved to .popup-header (below) — see there. */
+/* row layout lives on .popup-header (below) — see there. */
 .detail-header h2 { color: #58a6ff; font-size: 1.1em; }
-/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback (board tile) */
+/* same italic/muted read as .card-title--prompt-fallback (board tile) */
 .detail-title--prompt-fallback { font-style: italic; opacity: 0.85; }
 .detail-path-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .detail-path { color: #8b949e; font-size: 0.78em; word-break: break-all; }
 #detail-copy-btn { flex-shrink: 0; }
 #detail-copy-btn.copy-success { color: #3fb950; border-color: #3fb950; }
 #detail-copy-btn.copy-failed { color: #f85149; border-color: #f85149; }
-/* card #87/#90: every popup's header is TWO flex rows, not one — row 1 is
-   the control-icon group ALONE, still pinned top-left (card #61); row 2 is
+/* Every popup's header is TWO flex rows, not one — row 1 is
+   the control-icon group ALONE, pinned top-left; row 2 is
    the title/content block, full width, never sharing the icons' line. ONE
    class carries the split for every popup: .popup-header, added alongside
-   the pre-existing .modal-header/.detail-header classnames on all six
+   the .modal-header/.detail-header classnames on all six
    header containers in app.html (the edit/create form, the three bulk
    popups, the detail popup, notifications) — a shared header-ROW grammar
    instead of a flex-direction rule duplicated per popup id. The action-group
-   classes below needed NO changes at all to get there: flex `order` reorders
+   classes below need NO changes to get there: flex `order` reorders
    along whichever axis flex-direction picks, so flipping the container from
-   row (#61) to column (#87/#90) turns the same order:-1 rules from "icons
+   row to column turns the same order:-1 rules from "icons
    lead the row" into "icons own row 1" for free — DOM stays title-first, so
-   tab order and the #20 title-before-fullscreen-button html contract are
-   still untouched. The right-click context menu has no header controls, so
-   it carries neither class and is untouched (card #90: "stays as-is"). */
+   tab order and the title-before-fullscreen-button html contract are
+   untouched. The right-click context menu has no header controls, so
+   it carries neither class. */
 .popup-header { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
 .detail-actions { display: flex; gap: 6px; flex-shrink: 0; order: -1; }
 .icon-btn { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; flex-shrink: 0; }
 .modal-header-actions { display: flex; gap: 6px; flex-shrink: 0; order: -1; } /* icon-btn is flex (block-level) — without this the header icons stack vertically */
 .icon-btn svg { width: 16px; height: 16px; display: block; }
 .icon-btn.danger:hover { background: #3d1418; border-color: #f85149; color: #f85149; }
-/* kanban.proj #200: same active-toggle treatment as #map-toggle-btn/
+/* Same active-toggle treatment as #map-toggle-btn/
    #calendar-toggle-btn/#gantt-toggle-btn below — a filled highlight while
    #row-prompt is revealed. */
 #modal-ai-btn[aria-pressed="true"] { background: #1f6feb; border-color: #388bfd; color: #fff; }
@@ -423,38 +417,38 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .detail-body strong { color: #e6edf3; }
 .detail-body hr { border: none; border-top: 1px solid #30363d; margin: 14px 0; }
 
-/* --- Dependency map view (card #19) ---------------------------------------
-   Hand-rolled layered SVG (see the card's "Rendering decision" note for why:
+/* --- Dependency map view ---------------------------------------
+   Hand-rolled layered SVG:
    board-scale graphs are tens of nodes, well within vanilla reach without
-   pulling in a graph lib or vendoring Mermaid). #map-view sits alongside
+   pulling in a graph lib or vendoring Mermaid. #map-view sits alongside
    #board and the two swap visibility via .hidden — same toggle pattern as
    every modal in this file, no overlay/z-index needed. Status colors below
    are the exact hex values the kanban-cli skill's Mermaid
    output styles nodes with, so the two views read as the same graph. */
 #map-toggle-btn[aria-pressed="true"] { background: #1f6feb; border-color: #388bfd; color: #fff; }
-/* kanban.proj #209 verify finding: overflow: auto alone never triggers on a
+/* overflow: auto alone never triggers on a
    plain block child of body — with no height/max-height of its own (and body
    sets none either), the box just grows to fit the graph, so the html
-   element's own scrollbar handled the overflow and .map-view's themed
-   ::-webkit-scrollbar* rules never fired. Bounded to the viewport under the
+   element's own scrollbar would handle the overflow and .map-view's themed
+   ::-webkit-scrollbar* rules would never fire. Bounded to the viewport under the
    fixed page header the same way main#board is (see main#board above for the
-   --board-header-h/48px accounting) so the map now scrolls itself instead of
+   --board-header-h/48px accounting) so the map scrolls itself instead of
    the whole page. */
 .map-view { overflow: auto; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; height: calc(100vh - var(--board-header-h, 64px) - 48px); }
-/* card #56: the status-filter pill row. Border color is inline per pill
+/* The status-filter pill row. Border color is inline per pill
    (statusColor() — covers custom statuses' hashed hues, which have no CSS
    rule; same reasoning as the column headers), so the rules here only shape
    the pill and encode ON/OFF. An OFF pill dims + dashes — the same visual
-   vocabulary the ghost stubs below use for "filtered out". card #98: the
+   vocabulary the ghost stubs below use for "filtered out". The
    gantt's own pill row (.gantt-filter-row/.gantt-filter-toggle, see the Gantt
    view section below) shares these declarations via comma — one pill LOOK
-   for both views, not a duplicated rule per view. card #99: the calendar's
+   for both views, not a duplicated rule per view. The calendar's
    own row (.calendar-filter-row/.calendar-filter-toggle, see the Calendar
    view section) joins the same comma group — a third view, still one rule. */
 .map-filter-row, .gantt-filter-row, .calendar-filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .map-filter-toggle, .gantt-filter-toggle, .calendar-filter-toggle { background: #0d1117; border: 2px solid #30363d; border-radius: 999px; color: #c9d1d9; font-size: 0.78em; padding: 2px 10px; cursor: pointer; }
 .map-filter-toggle.off, .gantt-filter-toggle.off, .calendar-filter-toggle.off { opacity: 0.45; border-style: dashed; color: #8b949e; }
-/* kanban.proj #222: the map's "Epics" tap-chip — rides in the SAME row as
+/* The map's "Epics" tap-chip — rides in the SAME row as
    the status pills above (buildMapFilterRow appends it last; the row's flex
    `gap` spaces it identically). Base look matches .map-filter-toggle's, but
    the ON state is its own rule rather than reusing .off: a status pill
@@ -465,29 +459,29 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-epic-chip { background: #0d1117; border: 2px solid #30363d; border-radius: 999px; color: #c9d1d9; font-size: 0.78em; padding: 2px 10px; cursor: pointer; }
 .map-epic-chip.on { border-color: #f0883e; color: #f0883e; background: rgba(240, 136, 62, 0.12); }
 .map-canvas { display: block; }
-/* card #91: the node border is ONE neutral weight regardless of status — the
-   old per-status stroke (card #57) and the epic stroke (card #59) both used
-   to fight over this single channel with each other AND with the archived
-   mute below; status and epic now live on their own dots instead, so this
+/* The node border is ONE neutral weight regardless of status — a
+   per-status stroke and an epic stroke would
+   fight over this single channel with each other AND with the archived
+   mute below; status and epic live on their own channels instead, so this
    rect only ever draws the plain neutral border (or archived's grey — the
-   one exception the card names, same as selection glow / ghost dashing /
-   the back-edge amber all keeping their own existing treatments). */
+   one exception, same as selection glow / ghost dashing /
+   the back-edge amber all keeping their own treatments). */
 .map-node rect { fill: #0d1117; stroke: #30363d; stroke-width: 2px; cursor: pointer; }
 .map-node text { fill: #c9d1d9; font-family: inherit; }
 .map-node-id { font-size: 10px; fill: #8b949e; }
 .map-node-title { font-size: 11.5px; }
-/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback
+/* Same italic/muted read as .card-title--prompt-fallback
    (board tile, card-title.js) — SVG text has no font-style shorthand tricks
    beyond the two properties that actually apply to it. */
 .map-node-title--prompt-fallback { font-style: italic; fill-opacity: 0.75; }
-/* card #57: archived nodes still stroke the neutral archive grey — archive
-   is a location, so a card's parked pre-archive status (or, since card #91,
+/* Archived nodes stroke the neutral archive grey — archive
+   is a location, so a card's parked pre-archive status (or
    its plain neutral default) shouldn't read live on the map. */
 .map-node.archived rect { stroke: #6e7681; }
-/* card #107: board-tile parity — same red/amber the board (.card.high/
+/* Board-tile parity — same red/amber the board (.card.high/
    .card.waiting), calendar (.cal-chip.high/.waiting), and gantt
    (.gantt-bar.high/.waiting) already use, applied to the rect stroke since
-   the map is SVG (epic #137 renamed the amber cue from blocked to waiting —
+   the map is SVG (the amber cue is waiting —
    it marks unresolved waiting_for deps, not the manual sticker). Declared
    waiting-after-high so waiting wins when both apply, same ordering as
    every other surface. Never co-applied with .archived (buildMapSvg gates
@@ -495,32 +489,32 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    the rule above. */
 .map-node.high rect { stroke: #f85149; }
 .map-node.waiting rect { stroke: #d29922; }
-/* epic #137: the manual blocked sticker's red pill, SVG twin of the board
+/* The manual blocked sticker's red pill, SVG twin of the board
    tile's .blocked-pill — same red, reason in its own <title> tooltip. */
 .map-blocked-pill rect { fill: rgba(248,81,73,0.15); stroke: #f85149; stroke-width: 1px; }
 .map-blocked-pill text { fill: #f85149; font-size: 9px; }
-/* card #91: the status dot — a small filled circle carrying exactly the color
-   the rect stroke used to. Built-in four via class (below); any other name
+/* The status dot — a small filled circle carrying exactly the node's status
+   color. Built-in four via class (below); any other name
    (custom column, unlisted on-disk value) gets one of the 8 hashed
-   `status-palette-N` classes (card #49 verify finding: buildMapSvg used to
-   inline the deterministic statusColor() hash as `style="fill:..."` instead,
-   which a strict `style-src 'self'` CSP silently blocks — see
+   `status-palette-N` classes (never an inline `style="fill:..."` of
+   the deterministic statusColor() hash:
+   a strict `style-src 'self'` CSP silently blocks that — see
    statusColorClass() in status-colors.js, the single source both this dot
    and .status-dot--* above key off).
-   card #102 REOPEN (STATUS DOTS NEVER MUTE): there used to be an archived-
-   scoped override on this dot's selector here, out-specificity-ing the rules
-   below so an archived node's dot always muted grey — that's what
-   made 18/18 nodes on the real board (all archived-done) render as one
-   undifferentiated grey mass. That override is GONE: the dot always shows
-   the node's true status color now. The archived cue lives solely in the
-   rect's border mute above (the one exception both #91 and this reopen name),
+   STATUS DOTS NEVER MUTE: no archived-
+   scoped override on this dot's selector out-specificity-ing the rules
+   below — muting an archived node's dot grey
+   renders a mature board's map (archived-done chains dominate it) as one
+   undifferentiated grey mass. The dot always shows
+   the node's true status color. The archived cue lives solely in the
+   rect's border mute above (the one exception),
    the "(archived)" SVG tooltip, and the ghost/selection treatments below. */
-.map-status-dot.status-backlog { fill: #39c5cf; } /* card #57: cyan (was grey — read as archived) */
+.map-status-dot.status-backlog { fill: #39c5cf; } /* cyan (was grey — read as archived) */
 .map-status-dot.status-todo { fill: #58a6ff; }
 .map-status-dot.status-doing { fill: #3fb950; }
 .map-status-dot.status-done { fill: #a371f7; }
 .map-status-dot.status-unknown { fill: #6e7681; }
-.map-status-dot.status-archive { fill: #6e7681; } /* literal on-disk status: archive/archived (card #57 mute) */
+.map-status-dot.status-archive { fill: #6e7681; } /* literal on-disk status: archive/archived — mute */
 .map-status-dot.status-palette-0 { fill: #58a6ff; }
 .map-status-dot.status-palette-1 { fill: #3fb950; }
 .map-status-dot.status-palette-2 { fill: #d29922; }
@@ -529,16 +523,15 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-status-dot.status-palette-5 { fill: #39c5cf; }
 .map-status-dot.status-palette-6 { fill: #f0883e; }
 .map-status-dot.status-palette-7 { fill: #ff7b72; }
-/* card #45: the map's SVG twin of .card.epic — same faint EPIC_COLOR wash,
+/* The map's SVG twin of .card.epic — same faint EPIC_COLOR wash,
    tinting the node's rect fill instead of drawing a circle (circles are
-   status-only now; this REPLACES card #91's small orange SVG circle
-   entirely). Higher specificity than the plain `.map-node rect` fill above wins outright, but a ghost
+   status-only). Higher specificity than the plain `.map-node rect` fill above wins outright, but a ghost
    stub's dimmed-transparent fill below is declared AFTER this rule (same
    specificity, source order breaks the tie) so a ghosted epic still reads as
    a ghost first. No archived-mutes rule: epic is a durable identity, not a
-   location, so the wash keeps showing on an archived node same as before. */
+   location, so the wash keeps showing on an archived node. */
 .map-node.epic rect { fill: rgba(240, 136, 62, 0.12); }
-/* card #102 final design: the archived LOCATION ball's SVG twin — same fixed
+/* The archived LOCATION ball's SVG twin — same fixed
    ARCHIVE_COLOR as .archived-dot, a dot in the node's right-edge column
    (buildMapSvg, app.js) beside the status dot, vertically centered. */
 .map-archived-dot { fill: #6e7681; }
@@ -557,8 +550,8 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    the board's own "waiting" amber so a cycle reads as a visible anomaly
    rather than blending into the normal top-down flow. */
 .map-edge.back-edge { stroke: #d29922; stroke-dasharray: 3 3; }
-/* card #151: membership edge (epic -> child, from the child's `parent` field)
-   — the epic's own orange (EPIC_COLOR, the #59/#91 dot color) with a dash
+/* Membership edge (epic -> child, from the child's `parent` field)
+   — the epic's own orange (EPIC_COLOR) with a dash
    longer than the back-edge's 3 3, so membership, sequencing (plain grey),
    and cycle-break (amber 3 3) all read as three distinct relations. The
    back-edge amber cedes to epic orange when a membership edge is itself the
@@ -571,7 +564,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-edge.epic-chain { stroke: #f0883e; }
 .map-arrow-epic-head { fill: #f0883e; }
 .map-empty { color: #8b949e; font-size: 0.85em; padding: 8px 2px; }
-/* card #97: the graph and the "No dependencies" list are each a collapsible
+/* The graph and the "No dependencies" list are each a collapsible
    section — one shared header shape (buildMapSectionHeader in app.js) for
    both, so the two toggles read the same and there's no per-section markup. */
 .map-graph-section { margin-bottom: 4px; }
@@ -580,7 +573,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .map-isolated-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .map-isolated-row .card { min-width: 160px; max-width: 220px; cursor: pointer; }
 
-/* --- Calendar view (card #37) ----------------------------------------------
+/* --- Calendar view ----------------------------------------------
    Month grid, Monday-first. #calendar-view sits alongside #board/#map-view
    and the three swap visibility via .hidden — same toggle pattern as the map.
    Chips reuse the board's priority emphasis (hot/muted left accent) and the
@@ -601,11 +594,11 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .cal-day.today .cal-day-num { color: #58a6ff; font-weight: 700; }
 .cal-chip { background: #161b22; border: 1px solid #30363d; border-left: 3px solid #30363d; border-radius: 5px; padding: 2px 6px; font-size: 0.72em; color: #c9d1d9; cursor: grab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-chip-id { color: #8b949e; }
-/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback (board tile) */
+/* same italic/muted read as .card-title--prompt-fallback (board tile) */
 .cal-chip-title--prompt-fallback { font-style: italic; opacity: 0.75; }
-/* card #45: epic washes the whole chip background (.cal-chip.epic, defined
+/* Epic washes the whole chip background (.cal-chip.epic, defined
    near .card.epic above — identical value, no conflict, so one shared rule
-   covers both) instead of #91's dot — the priority/waiting left accents and
+   covers both) — no dot; the priority/waiting left accents and
    the due rule below need no gating, nothing to win over. */
 .cal-chip.high { border-left-color: #f85149; }
 .cal-chip.low { border-left-color: #6e7681; opacity: 0.85; }
@@ -617,19 +610,19 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .cal-chip.range-start { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .cal-chip.range-mid { border-radius: 0; }
 .cal-chip.range-end { border-top-left-radius: 0; border-bottom-left-radius: 0; }
-/* Due marker chip (card #40): the deadline is a separate chip from the range
+/* Due marker chip: the deadline is a separate chip from the range
    run — warning-accent border all around + a flag glyph so it can't be read
    as another range segment. Declared after the priority/waiting accents so
    the deadline styling wins on its own chip. */
 .cal-chip.cal-chip-due { border-color: #d29922; border-left-color: #d29922; }
 .cal-chip-due-glyph { color: #d29922; }
-/* card #108: read-only affordance for an archived chip — same not-allowed
+/* Read-only affordance for an archived chip — same not-allowed
    cursor as .gantt-bar.archived. draggable is already false on the element
    (calendarChipEl), so this is discoverability, not a functional guard. */
 .cal-chip.archived { cursor: not-allowed; }
 .cal-more { color: #8b949e; font-size: 0.7em; padding: 1px 6px; cursor: help; }
 
-/* --- Calendar sub-views (card #58): Month | Week | 3 days | Day -------------
+/* --- Calendar sub-views: Month | Week | 3 days | Day -------------
    The switcher sits at the right end of .cal-controls; the sub-month layout
    is a header row + an "all day" band + a scrollable 24h grid, all sharing
    one column template (fixed hour gutter + a 1fr column per day, count via
@@ -663,13 +656,13 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
   background: repeating-linear-gradient(to bottom, transparent 0 39px, #21262d 39px 40px); } /* 40px = CAL_HOUR_PX */
 .cal-tg-col.today { background-color: rgba(88, 166, 255, 0.05); }
 .cal-tg-col.drag-over, .cal-tg-allday-cell.drag-over { background-color: #0d1b2a; box-shadow: 0 0 0 1px #58a6ff inset; }
-/* card #58: while a drag is live (wireCalendarDrag toggles the class), chips
+/* While a drag is live (wireCalendarDrag toggles the class), chips
    yield hit-testing so the drop lands on the day cell underneath. Load-bearing
    for the all-day band, where chips are grid-overlay SIBLINGS of the drop
    cells (not children like the month grid's) — without this, releasing over a
    chip fires no cell dragover, preventDefault never runs, and the browser
    refuses the drop with the not-allowed cursor.
-   card #195/#197 defect fix: `:not(.dragging)` excludes the chip actually
+   `:not(.dragging)` excludes the chip actually
    being dragged — Chromium cancels an in-flight native HTML5 drag outright
    (dragstart fires, dragend follows immediately, no dragover/drop ever
    reaches any target) the instant the DRAG SOURCE itself becomes
@@ -677,10 +670,10 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    real synthetic-input drive (CDP Input.dispatchMouseEvent, headless Edge;
    NOT a JS DragEvent dispatch, which bypasses native drag-initiation and
    would have hidden this) both against an isolated repro and against this
-   view. Every OTHER chip still yields hit-testing as before; only the one
+   view. Every OTHER chip still yields hit-testing; only the one
    node the OS is actively tracking as the drag source keeps pointer-events
-   so the browser doesn't lose it. This silently broke EVERY native-drag
-   chip (month grid + all-day band, date-only/timed/range alike) — timed
+   so the browser doesn't lose it. Without the exclusion EVERY native-drag
+   chip silently breaks (month grid + all-day band, date-only/timed/range alike) — timed
    cards read as fine only because a datetime value moves them into the
    separate pointer-drag time grid (wireCalendarTimeDrag), which this rule
    never touches. */
@@ -690,7 +683,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    chips) — a tall block has room for two lines of title. */
 .cal-timeblock { position: absolute; box-sizing: border-box; white-space: normal; overflow: hidden; z-index: 1; }
 .cal-timeblock.point { border-top-width: 2px; } /* default-height time-point: heavier top edge = "starts here", the height is a placeholder */
-/* card #109: timed blocks are pointer-dragged for minute-granular retime/resize
+/* Timed blocks are pointer-dragged for minute-granular retime/resize
    (wireCalendarTimeDrag). touch-action:none stops the browser's own touch
    scroll/gesture from stealing the pointer mid-drag; user-select:none kills text
    selection — same idioms as the gantt bar. The .dragging state is a blue ring
@@ -709,7 +702,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .cal-resize-handle.bottom { bottom: 0; }
 .cal-timeblock:hover .cal-resize-handle { background: rgba(255, 255, 255, 0.12); }
 
-/* --- Gantt view (card #38) --------------------------------------------------
+/* --- Gantt view --------------------------------------------------
    Dated cards as bars on a day timeline, rows grouped by status. #gantt-view
    sits alongside #board/#map-view/#calendar-view — same .hidden swap. Bars
    use the map view's status palette (border + faint fill) so the two views
@@ -720,10 +713,10 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    mark positions) is written inline by app.js from gantt-model.js's
    GANTT_DAY_PX so layout and drag math can't drift apart; the CSS only fixes
    ROW heights, which both columns share so gutter and timeline stay aligned
-   row for row. card #98: #gantt-view itself went back to a plain block
-   container — the #56-style status-filter row (.gantt-filter-row) is now its
+   row for row. #gantt-view itself is a plain block
+   container — the status-filter row (.gantt-filter-row) is its
    first child, stacked ABOVE the gutter+timeline; .gantt-body carries the
-   side-by-side flex row .gantt-view used to own directly. */
+   side-by-side flex row. */
 #gantt-toggle-btn[aria-pressed="true"] { background: #1f6feb; border-color: #388bfd; color: #fff; }
 .gantt-view { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; }
 .gantt-body { display: flex; align-items: flex-start; }
@@ -737,14 +730,14 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .gantt-today-line { position: absolute; top: 22px; bottom: 0; width: 0; border-left: 2px solid #58a6ff; opacity: 0.65; z-index: 1; }
 .gantt-row { height: 26px; }
 .gantt-row.gantt-group-row { height: 20px; line-height: 20px; font-size: 0.7em; font-weight: 600; text-transform: uppercase; color: #8b949e; }
-.gantt-group-row.status-backlog { color: #39c5cf; } /* card #57: cyan (was grey — read as archived) */
+.gantt-group-row.status-backlog { color: #39c5cf; } /* cyan (was grey — read as archived) */
 .gantt-group-row.status-todo { color: #58a6ff; }
 .gantt-group-row.status-doing { color: #3fb950; }
 .gantt-group-row.status-done { color: #a371f7; }
 .gantt-group-row.status-unknown { color: #6e7681; }
-.gantt-label { font-size: 0.78em; color: #c9d1d9; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; /* card #39: labels are click targets now */ }
+.gantt-label { font-size: 0.78em; color: #c9d1d9; line-height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; /* labels are click targets */ }
 .gantt-label-id { color: #8b949e; }
-/* kanban.proj #211: same italic/muted read as .card-title--prompt-fallback
+/* Same italic/muted read as .card-title--prompt-fallback
    (board tile, card-title.js) for the two gantt surfaces. */
 .gantt-label-title--prompt-fallback, .gantt-bar-text--prompt-fallback { font-style: italic; opacity: 0.75; }
 .gantt-bar-row { position: relative; z-index: 2; }
@@ -754,13 +747,13 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .gantt-handle { flex: 0 0 7px; cursor: ew-resize; }
 .gantt-bar:hover .gantt-handle { background: rgba(255, 255, 255, 0.12); }
 /* status palette — the same built-in hexes as the column headers and the
-   map's status dot (card #91), as border + faint fill. UNTOUCHED by #91. */
-.gantt-bar.status-backlog { border-color: #39c5cf; background: rgba(57, 197, 207, 0.12); } /* card #57 */
+   map's status dot, as border + faint fill. */
+.gantt-bar.status-backlog { border-color: #39c5cf; background: rgba(57, 197, 207, 0.12); }
 .gantt-bar.status-todo { border-color: #58a6ff; background: rgba(88, 166, 255, 0.12); }
 .gantt-bar.status-doing { border-color: #3fb950; background: rgba(63, 185, 80, 0.12); }
 .gantt-bar.status-done { border-color: #a371f7; background: rgba(163, 113, 247, 0.12); }
 .gantt-bar.status-unknown { border-color: #6e7681; background: rgba(110, 118, 129, 0.12); }
-/* card #45: epic's wash can't reuse `background` here — the per-status fill
+/* Epic's wash can't reuse `background` here — the per-status fill
    above already owns that property (and ganttBarEl's inline style for a
    non-built-in status would beat a class rule on it anyway). box-shadow
    paints the same EPIC_COLOR wash on top of whatever's already there
@@ -781,13 +774,13 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 /* a bar clipped by the (possibly clamped) window: squared + dashed cut side */
 .gantt-bar.clip-start { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-style: dashed; }
 .gantt-bar.clip-end { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right-style: dashed; }
-/* defect fix: an archived bar's drag is a dead gesture (wireGanttPointerDrag
-   blocks it at pointerdown) — the grab/ew-resize cursors used to invite a
+/* An archived bar's drag is a dead gesture (wireGanttPointerDrag
+   blocks it at pointerdown) — the grab/ew-resize cursors would invite a
    drag that could only ever silently no-op. not-allowed on both the bar and
    its handles removes that false affordance; the handle rule needs the extra
    specificity to beat the plain .gantt-handle cursor: ew-resize above. */
 .gantt-bar.archived, .gantt-bar.archived .gantt-handle { cursor: not-allowed; }
-/* Due diamond (card #40): the independent deadline marker on a card's row —
+/* Due diamond: the independent deadline marker on a card's row —
    rendered with or without a bar. The rotation lives on the ::before, NOT the
    element itself, because the drag preview writes an inline translateX
    transform on the element (applyGanttDragVisual) which would otherwise
@@ -796,17 +789,17 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    grabbable when the range covers the due day. */
 /* top:-1px floats the diamond above the bar line so it never occludes (or
    steals pointerdowns from) the 7px end resize handle beneath it — on compat
-   cards due sits exactly on the rendered end day (card #40) */
+   cards due sits exactly on the rendered end day */
 .gantt-due-marker { position: absolute; top: -1px; width: 12px; height: 12px; margin-left: -6px; cursor: grab; touch-action: none; user-select: none; z-index: 3; }
 .gantt-due-marker::before { content: ''; position: absolute; inset: 1px; background: #d29922; border-radius: 2px; transform: rotate(45deg); }
 .gantt-due-marker:hover::before { background: #e3b341; }
 .gantt-due-marker.dragging { z-index: 6; cursor: grabbing; }
 .gantt-due-marker.dragging::before { box-shadow: 0 0 0 1px #58a6ff; }
-.gantt-due-marker.archived { cursor: not-allowed; } /* defect fix: same read-only affordance as .gantt-bar.archived — the diamond drag is blocked at pointerdown too */
+.gantt-due-marker.archived { cursor: not-allowed; } /* same read-only affordance as .gantt-bar.archived — the diamond drag is blocked at pointerdown too */
 
-/* --- Date-picker popover (card #41) -----------------------------------------
+/* --- Date-picker popover -----------------------------------------
    Hand-rolled month grid on the form's date fields (same "no native widgets
-   in Simple Browser" rule as the card #30 comboboxes). ONE .date-picker-pop
+   in Simple Browser" rule as the comboboxes). ONE .date-picker-pop
    lives directly under <body> with position:fixed — the form modal is
    overflow:auto, so a popover positioned inside it would clip at the modal
    edge; fixed-in-body escapes every overflow context (app.js computes
@@ -828,7 +821,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .dp-day.today { border-color: #58a6ff; box-shadow: 0 0 0 1px #58a6ff inset; }
 .dp-day.selected { background: #1f6feb; border-color: #388bfd; color: #fff; }
 .dp-day.selected:hover { background: #388bfd; }
-/* Card #197: clock toggle. ON state highlights like .dp-day.selected (same
+/* Clock toggle. ON state highlights like .dp-day.selected (same
    blue-fill vocabulary); disabled (no parseable day yet) fades like
    .dp-day.outside. The revealed HH:MM control is a plain text input styled
    like the date fields themselves — no native <input type="time">, same
@@ -842,14 +835,14 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    here rather than widening that selector for one field outside the form. */
 .dp-time-input { width: 72px; padding: 3px 6px; font-size: 0.8em; background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; font-family: inherit; }
 
-/* Notifications (card #22) */
+/* Notifications */
 .notif-btn { position: relative; display: inline-flex; align-items: center; padding: 6px 8px; }
 .notif-btn svg { width: 15px; height: 15px; }
 .notif-badge { position: absolute; top: -6px; right: -6px; background: #f85149; color: #fff; border-radius: 10px; padding: 0 5px; font-size: 0.68em; font-weight: 700; line-height: 1.5; }
 .notif-modal { width: min(560px, 92vw); }
 .notif-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .notif-row { display: flex; align-items: flex-start; gap: 8px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 10px; }
-/* card #133 levels — declared BEFORE .unread so the blue unread left-edge
+/* Levels — declared BEFORE .unread so the blue unread left-edge
    still wins on tinted rows (same specificity, later rule takes the edge) */
 .notif-row.level-debug { opacity: 0.55; }
 .notif-row.level-warning { background: #2a2114; border-color: #9e6a03; }
@@ -860,9 +853,9 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .notif-message { font-size: 0.88em; word-break: break-word; }
 .notif-empty { color: #8b949e; font-size: 0.85em; padding: 8px 2px; }
 
-/* Multi-select + context menu (card #25; every view since card #39) */
+/* Multi-select + context menu (every view) */
 .card.selected { outline: 2px solid #58a6ff; outline-offset: -1px; background: #0d1b2a; }
-/* per-view .selected markers (card #39): same blue + dark-blue wash as board
+/* per-view .selected markers: same blue + dark-blue wash as board
    tiles. Chips/bars keep their status/priority border cues (selection is an
    outline, not a border override); map nodes keep their status stroke and
    signal selection with the wash + a blue glow instead of an outline (an SVG
@@ -872,7 +865,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .gantt-label.selected { outline: 2px solid #58a6ff; outline-offset: -2px; border-radius: 4px; background: #0d1b2a; }
 .map-node.selected rect { fill: #0d1b2a; }
 .map-node.selected { filter: drop-shadow(0 0 4px #58a6ff); }
-/* kanban.proj #201: `.epic` (card #45, above) and `.selected` (this block)
+/* `.epic` (above) and `.selected` (this block)
    are both 2-class selectors setting the same property — background here,
    SVG fill on the map node — and `.selected` is declared later, so it wins
    the same-specificity tie outright and the epic wash silently disappears
@@ -883,7 +876,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
    2-class rules regardless of source order, so the epic wash reasserts
    itself while selection's own outline/glow (a property epic never
    touches) keeps showing too. The gantt BAR needs no twin here — its epic
-   wash is already a box-shadow (card #45), a different property than
+   wash is already a box-shadow, a different property than
    .gantt-bar.selected's background, so there was never a tie to lose. */
 .card.epic.selected, .cal-chip.epic.selected, .gantt-label.epic.selected { background: rgba(240, 136, 62, 0.12); }
 .map-node.epic.selected rect { fill: rgba(240, 136, 62, 0.12); }
@@ -891,18 +884,18 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .context-menu button { background: transparent; border: none; text-align: left; padding: 6px 10px; border-radius: 4px; }
 .context-menu button:hover { background: #30363d; }
 .context-menu button.danger:hover { background: #3d1d20; color: #f85149; }
-body.shift-held .card-el { user-select: none; } /* shift+click selects cards, not their text — only while shift is down, so text stays copyable otherwise (card #25; covers every view's card-el since #39) */
+body.shift-held .card-el { user-select: none; } /* shift+click selects cards, not their text — only while shift is down, so text stays copyable otherwise (covers every view's card-el) */
 
-/* kanban.proj #209: theme every visible scrollbar to match the dark palette
-   instead of default OS chrome — follow-up to #207's per-column scroll
-   containers. Covers: html (the page itself), main#board (#207's horizontal
-   column strip), .column-cards (#207's per-column vertical lists), .modal +
+/* Theme every visible scrollbar to match the dark palette
+   instead of default OS chrome. Covers: html (the page itself),
+   main#board (the horizontal
+   column strip), .column-cards (the per-column vertical lists), .modal +
    .modal textarea + .detail-body pre (popup/modal scroll areas), .map-view
    (dependency map) and .gantt-scroll (gantt horizontal scroller),
    .cal-tg-scroll (calendar hour grid), and the small popovers
    .combobox-menu / .notif-list. Firefox reads scrollbar-width/-color;
-   Chromium/Edge (incl. VSCode Simple Browser, the primary target per the
-   card) only obeys the ::-webkit-scrollbar* pseudo-elements, so both are
+   Chromium/Edge (incl. VSCode Simple Browser, the primary
+   target) only obeys the ::-webkit-scrollbar* pseudo-elements, so both are
    set. No new hex family: the thumb reuses the existing border tone
    (#30363d, same as every panel/input border in this file) so it reads as a
    quiet extension of the UI rather than a foreign control, brightening to

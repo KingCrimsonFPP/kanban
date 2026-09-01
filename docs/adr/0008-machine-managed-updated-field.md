@@ -1,6 +1,6 @@
 # 0008. Machine-managed `updated` frontmatter timestamp
 
-Date: 2026-07-09 · Status: accepted · Card: #35
+Date: 2026-07-09 · Status: accepted
 
 ## Context
 

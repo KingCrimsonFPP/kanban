@@ -1,5 +1,5 @@
 'use strict';
-// Pure helpers for the assignee badge (card #21) and the shared HTML-escaping
+// Pure helpers for the assignee badge and the shared HTML-escaping
 // used everywhere a card-derived string is interpolated into innerHTML. No DOM
 // access here on purpose — same dual-environment pattern as refresh-policy.js/
 // column-state.js: loaded as a plain <script> in the browser (app.js calls
@@ -17,8 +17,8 @@ function escapeHtml(s) {
 // Empty string when unset (server sends null) so no "undefined"/blank badge
 // ever renders; escaped like every other card-derived string.
 //
-// card #183 (kanban.proj #191 replaced the dot with tinted text): the handle
-// itself wears the assignee color — no separate dot glyph. `assignees` is
+// The handle itself wears the assignee color as tinted text — no separate
+// dot glyph. `assignees` is
 // the board's config registry (state.assignees) — optional so old call
 // sites/tests that don't pass one still render (no registry = every handle
 // hashes, same as statusColor with no custom statuses configured). The
@@ -38,7 +38,7 @@ function assigneeBadge(card, assignees) {
   return `<span class="card-assignee${textClass}" title="${escapeHtml(handle)}"${reserved}>${escapeHtml(handle)}</span>`;
 }
 
-// Card #132: the @human/@hitl/@afk role trio is THE canonical default — a
+// The @human/@hitl/@afk role trio is THE canonical default — a
 // board whose config.yaml has NO assignees registry still suggests exactly
 // these three. Shapes mirror config-store registry entries. Suggest, never
 // validate: free-text handles stay legal everywhere.

@@ -15,16 +15,16 @@ _Avoid_: project, list.
 One work item, stored as a single `<0000-id>.<slug>.card.md` file (frontmatter + Markdown body; the 4-digit-padded id prefix makes files sort by card id — the frontmatter `id` stays the source of truth, and unprefixed legacy names still work). The card file is the unit of identity, source of truth, and persistence.
 _Avoid_: task, ticket, item, issue.
 
-**Narrative Entry Shape** (kanban.proj#178):
-The scan-optimized format for every bullet in a card's `## Narrative` section: a **bold, verb-first TL;DR** (≤10 words, ends with a period), 1–2 plain supporting sentences, every identifier backticked (card ids, commits, filenames, branches), one event per bullet, and no sub-bullets or wrapped continuation lines. It exists because readers scan rather than read, and the web renderer flattens nested bullets to siblings and breaks on continuation lines — the shape is a rendering constraint, not just a style preference. Entries are forward-only: never rewritten to match. Full rules in `skills/kanban/SKILL.md`'s "Narrative Record" section; research backing in kanban.proj's `docs/afk-artifacts-2026-07-16/2026-07-16-narrative-readability-research.md`.
+**Narrative Entry Shape**:
+The scan-optimized format for every bullet in a card's `## Narrative` section: a **bold, verb-first TL;DR** (≤10 words, ends with a period), 1–2 plain supporting sentences, every identifier backticked (card ids, commits, filenames, branches), one event per bullet, and no sub-bullets or wrapped continuation lines. It exists because readers scan rather than read, and the web renderer flattens nested bullets to siblings and breaks on continuation lines — the shape is a rendering constraint, not just a style preference. Entries are forward-only: never rewritten to match. Full rules in `skills/kanban/SKILL.md`'s "Narrative Record" section.
 _Avoid_: fusing multiple events into one bullet, sub-bullets or nested lists, rewriting old entries to the new shape.
 
 **Status** (a.k.a. **Column**):
-A card's place in the workflow. The four built-ins — `backlog`, `todo`, `doing`, `done` — are the **default** live columns; a board may configure its own list via `config.yaml`'s `statuses` (ordered = column order, card #31), and that list then IS the live column set everywhere (web columns and drag targets, cli board print (view_board.sh honors the inline `[a, b]` form only; a block-form list falls back to the default four there), form options, gantt group order). "Status" is the frontmatter field; "column" is how that status renders on the board. A status value not in the list stays legal on disk — it renders in the list's **first** column with its raw value shown, and is never rewritten; promotion = the human adds it to the list. The `doing` entry gate (waiting + blocked, card #137) is pinned to the literal status `doing` regardless of the list. `archive` is **not** a status and never a list entry. The four built-ins carry distinct intents: `backlog` = shelved for later / someday (far queue); `todo` = ready, or paused for soon-ish resumption (near queue); `doing` = actively owned — a live AFK worker, or a human working or holding it; `done` = truly finished and approved (not merely PR-opened). `review` and `blocked` are **stickers, not columns** (below): a card keeps its real status and wears them as overlays, so "in `doing` and awaiting your review" is expressible.
+A card's place in the workflow. The four built-ins — `backlog`, `todo`, `doing`, `done` — are the **default** live columns; a board may configure its own list via `config.yaml`'s `statuses` (ordered = column order), and that list then IS the live column set everywhere (web columns and drag targets, cli board print (view_board.sh honors the inline `[a, b]` form only; a block-form list falls back to the default four there), form options, gantt group order). "Status" is the frontmatter field; "column" is how that status renders on the board. A status value not in the list stays legal on disk — it renders in the list's **first** column with its raw value shown, and is never rewritten; promotion = the human adds it to the list. The `doing` entry gate (waiting + blocked) is pinned to the literal status `doing` regardless of the list. `archive` is **not** a status and never a list entry. The four built-ins carry distinct intents: `backlog` = shelved for later / someday (far queue); `todo` = ready, or paused for soon-ish resumption (near queue); `doing` = actively owned — a live AFK worker, or a human working or holding it; `done` = truly finished and approved (not merely PR-opened). `review` and `blocked` are **stickers, not columns** (below): a card keeps its real status and wears them as overlays, so "in `doing` and awaiting your review" is expressible.
 _Avoid_: stage, state, lane, swimlane.
 
 **Archive**:
-A *location*, not a status — the `kanban/archived/` folder. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back. Since card #34 the web app's Archive *column* has full UI parity (drag in/out, selection) — a presentation change only; on disk archive is still the folder, never a status value.
+A *location*, not a status — the `kanban/archived/` folder. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back. The web app's Archive *column* has full UI parity (drag in/out, selection) — presentation only; on disk archive is still the folder, never a status value.
 _Avoid_: using "archive" as a status/column value; close, trash.
 
 **Delete**:
@@ -33,7 +33,7 @@ _Avoid_: remove, archive (for the destructive sense).
 
 **Waiting** (derived, via **waiting_for**):
 A card is waiting while any card listed in its `waiting_for` is not `done`. Derived at read time, never stored; a listed id with no matching card (dangling) does not count. A waiting card cannot enter the literal status `doing` — enforced, not advisory ("waiting on #34") — and stops reading as waiting the moment its last dep lands. A dependency is sequencing, not an impediment.
-_Avoid_: blocked (that's the sticker below), blocked_by (retired field name, card #137), gated.
+_Avoid_: blocked (that's the sticker below), blocked_by (retired field name), gated.
 
 **Blocked** (manual, via **blocked**):
 A human-placed impediment sticker whose value is the reason: `blocked: <text>`. A card is blocked iff the trimmed value contains ≥ 1 alphanumeric character; YAML boolean special-case: `false`/`no` → not blocked, `true` → blocked with reason unspecified. Omit the field entirely when clear (lean rule). A blocked card cannot enter `doing` ("blocked: <reason>"), and agents never grab it in any column; blocking a card already in `doing` does not evict it. The impediment may be a human decision, not only an external one: `blocked: waiting on your call about the schema` is the "stuck until you act" counterpart to `review`'s "finished, approve me" — the AFK dispatcher sets it when a card needs your input to proceed. External impediment and awaited decision mean the same thing: your action is needed before work resumes.
@@ -43,19 +43,19 @@ _Avoid_: waiting, dependency, blocked_by, review (that's "done, approve me"; blo
 A "finished — approve me" sticker: `review: <text>`, the text saying what to check. Overlays any status exactly like `blocked` — a sticker, never a column. Present iff the trimmed value contains ≥ 1 alphanumeric character (same predicate as `blocked`). A PR-shaped value (`review: PR #6`) is polled by the AFK dispatcher each tick (merged → clear it + card `done`; changes-requested → re-work); free text (`review: read the design doc`) is cleared by the human on approval. Agents skip a review card, and the corpse-sweep reads it as a human hold, not a dead worker. Surfaced by `review:` search (present) / `review:PR` (substring) and click-to-filter on the pill.
 _Avoid_: column, lane (it is a sticker, not a status); approved, done (a review card is not done yet).
 
-**Web** (skill `kanban-web`, formerly `kanban-app`):
-The human's live editor — localhost Node server + browser SPA, desktop only. "App" and "dashboard" in older docs/cards both refer to this skill (the static `kanban-dashboard` was deprecated 2026-07-08, retired 2026-07-09, and deleted 2026-07-10 — card #53; recoverable from git history).
+**Web** (skill `kanban-web`):
+The human's live editor — localhost Node server + browser SPA, desktop only. "App" and "dashboard" in older writing both refer to this skill (the static `kanban-dashboard` skill is deleted).
 _Avoid_: app, dashboard (in new writing).
 
-**CLI** (skill `kanban-cli`, formerly `kanban-browse`):
-The human's conversational editor — Claude-driven printed board + typed actions, works under remote control on mobile. Full CRUD as of 2026-07-09 (card #28); write contracts are defined once, in the `kanban` skill.
+**CLI** (skill `kanban-cli`):
+The human's conversational editor — Claude-driven printed board + typed actions, works under remote control on mobile. Full CRUD; write contracts are defined once, in the `kanban` skill.
 _Avoid_: browse, TUI.
 
-**Viewer** (skill `kanban-viewer`, formerly `kanban-remote` — card #110):
-The human's read-only tap surface — a generated single-file HTML board that works where web can't reach (phone, tablet, Cowork). Changes don't touch disk: they queue in a tray and come back as an "Apply kanban changes" payload that Claude applies under the `kanban` skill's write contracts.
+**Viewer** (skill `kanban-viewer`):
+The human's tap surface — a generated single-file HTML board that works where web can't reach (phone, tablet, Cowork). Changes don't touch disk: they queue in a tray and come back as an "Apply kanban changes" payload that Claude applies under the `kanban` skill's write contracts.
 _Avoid_: remote, editor (it renders and queues; Claude writes).
 
-## Role trio (card #132)
+## Role trio
 
 The canonical assignee tiers on every board and surface — this is the ONE
 write-up in this repo; every skill points here:
@@ -70,14 +70,14 @@ surface suggests exactly this trio as its default.
 
 ## Surfaces and parity
 
-Four skills, one board (card #28 is the restructure record; #110 added the viewer):
+Four skills, one board:
 
 | Surface | For | Medium |
 | --- | --- | --- |
 | `kanban` | the AI | file contracts + scripts; also defines `config.yaml` and `notifications.md` and when the AI must notify |
 | `kanban-web` | the human, desktop | live browser editor |
 | `kanban-cli` | the human, anywhere | printed board + `AskUserQuestion` |
-| `kanban-viewer` | the human, phone/tablet/Cowork | generated single-file HTML, read-only + queued-change payload |
+| `kanban-viewer` | the human, phone/tablet/Cowork | generated single-file HTML, edits queue as a change payload |
 
 **Parity rule:** web and cli implement the *same operations under the same rules*
 (CRUD, hard `doing` entry gate (waiting + blocked), bulk actions with per-card skips, speedbumps on every
@@ -87,18 +87,16 @@ Deliberately unmirrored in cli (medium mismatch): the calendar, gantt, and map
 views (a printed board has no continuous surfaces; ask cli for dated-card lists
 instead), the date-picker popover (cli input is already free text), drag & drop, collapse state,
 `localStorage` persistence, per-column persisted sort, the SVG map, the 5s poll,
-search-as-you-type, the header copy-board-path button (card #55 — a browser needs
-a clipboard affordance; a terminal transcript is already selectable text, and cli
+search-as-you-type, the header copy-board-path button (a browser needs a
+clipboard affordance; a terminal transcript is already selectable text, and cli
 prints the board path on request), popup fullscreen and its Alt+Enter hotkey
-(card #145 — a printed board has no popups or keyboard chords), the
-Ctrl+S/Cmd+S save-the-open-popup hotkey (card #172 — same no-popups-no-chords
-reasoning), and the Ctrl+F/Cmd+F search-focus hotkey (kanban.proj #198 — a
-printed board has no search box for a chord to focus). A feature added to
-one editor lands in the other (or gets a
-line in this table saying why not). Retired skills are deleted outright (git
-history keeps them recoverable — card #53).
-Web's `tree:<id>`/`path:<id>` dependency-focus search terms (card #74) are
-mirrored in cli as scoped "Dependencies tree/path for #id" Mermaid views (card
-#152) and in the viewer as `tree:`/`path:` search terms plus card-sheet
-"Dependency tree"/"Dependency path" tap actions (card #153); the context-menu
-sugar has no cli equivalent (no search box to write a term into).
+(a printed board has no popups or keyboard chords), the Ctrl+S/Cmd+S
+save-the-open-popup hotkey (same no-popups-no-chords reasoning), and the
+Ctrl+F/Cmd+F search-focus hotkey (a printed board has no search box for a
+chord to focus). A feature added to one editor lands in the other (or gets a
+line in this table saying why not). Retired skills are deleted outright.
+Web's `tree:<id>`/`path:<id>` dependency-focus search terms are mirrored in
+cli as scoped "Dependencies tree/path for #id" Mermaid views and in the viewer
+as `tree:`/`path:` search terms plus card-sheet "Dependency tree"/"Dependency
+path" tap actions; the context-menu sugar has no cli equivalent (no search box
+to write a term into).

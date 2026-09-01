@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- kanban.proj#178 follow-up: minimal inline formatting for card bodies -----
+// --- Minimal inline formatting for card bodies --------------------------------
 // **bold** -> <strong>, `code` -> <code>. Nothing else (no headings, lists,
 // links, or nesting inside a matched span); unmatched/unclosed markers render
 // literally. The viewer has no separate viewer/*.js file to require() (all its

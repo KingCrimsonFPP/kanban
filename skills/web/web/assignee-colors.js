@@ -1,5 +1,5 @@
 'use strict';
-// Pure assignee -> color rules (card #183). No DOM here — same dual-
+// Pure assignee -> color rules. No DOM here — same dual-
 // environment pattern as status-colors.js/column-state.js: loaded as a plain
 // <script> in the browser (assignee-badge.js/app.js call these as bare
 // globals) AND required directly by node --test.
@@ -42,7 +42,7 @@ function assigneeColor(handle, assignees) {
 // HASHED outcome lands on one of the 8 fixed palette slots, which already has
 // a hex — the SAME hexes status-colors.js's own `.status-dot--palette-N`
 // bakes in, mirrored by assignee-badge.js's own `.assignee-text--palette-N`
-// text-color rules (kanban.proj #191: assignee color tints the handle text,
+// text-color rules (assignee color tints the handle text,
 // not a dot, so it needs its own class family with the same numbering/hexes
 // rather than reusing the dot's `background` rule verbatim). A RESERVED
 // custom color is an open value space with no class to reuse, so this

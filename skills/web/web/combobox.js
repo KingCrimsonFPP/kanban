@@ -1,5 +1,5 @@
 'use strict';
-// Hand-rolled combobox rules (card #30 follow-up). Native <datalist> is
+// Hand-rolled combobox rules. Native <datalist> is
 // unusable inside VSCode's Simple Browser — the popup renders at wrong
 // coordinates and its filter-by-current-value hides every other option on a
 // prefilled field — so the form draws its own menu. Pure logic here, DOM
@@ -34,7 +34,7 @@ function applyChoice(text, choice, { tagMode = false, append = false } = {}) {
   return [...kept, choice].join(', ');
 }
 
-// Up/Down highlight math (card #95). `current` is the existing highlight
+// Up/Down highlight math. `current` is the existing highlight
 // index, -1 meaning none highlighted yet. `direction` is +1 (Down) or -1 (Up).
 // Wraps at both ends. An out-of-range `current` is treated the same as none —
 // purely defensive: app.js's own attachCombobox resets highlightIndex to -1

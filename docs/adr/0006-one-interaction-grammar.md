@@ -1,7 +1,7 @@
 # 0006. One interaction grammar across all views
 
-Date: 2026-07-09 · Status: accepted · Card: #39 (feature/view-parity)
-Amended: 2026-07-13 · Card: #144 (selection gestures — see Amendment below)
+Date: 2026-07-09 · Status: accepted
+Amended: 2026-07-13 (selection gestures — see Amendment below)
 
 ## Context
 
@@ -26,7 +26,7 @@ bulk-drag of a selection stays board-only. Gantt clicks ride the native
 post-pointerup click with a one-shot phantom-click suppressor — the one
 timing-sensitive spot (documented at suppressGanttPhantomClick).
 
-## Amendment (card #144, 2026-07-13): file-manager selection gestures
+## Amendment (2026-07-13): file-manager selection gestures
 
 The selection gestures changed; the one-grammar principle did not.
 Ctrl/cmd+click toggles one card in/out of the selection and plants the

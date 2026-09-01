@@ -1,5 +1,5 @@
 'use strict';
-// Ctrl+F / Cmd+F (kanban.proj #198): focuses the board's search box and
+// Ctrl+F / Cmd+F: focuses the board's search box and
 // pre-fills "#" with the caret right after it, so typing digits immediately
 // forms the #<id> exact-match term in a couple of keystrokes. Pure chord +
 // value-decision logic only, same dual-environment export pattern as
@@ -18,7 +18,7 @@
 // Decision — suppressed while a modal/popup is open: yes. Every popup shares
 // the .modal-backdrop convention (position:fixed, inset:0 — app.css), which
 // covers the whole viewport, so the search bar sits fully hidden behind it
-// whenever one is open. Unlike card #172's Ctrl+S, whose TARGET is the open
+// whenever one is open. Unlike Ctrl+S, whose TARGET is the open
 // popup itself, this hotkey's target is a board-level control the popup is
 // actively covering — focusing it there would silently steal keystrokes from
 // the popup's own fields with nothing on screen to explain why. Same
@@ -37,7 +37,7 @@ function searchHotkeyPrefill(chord, ctx) {
   return { value, selectionStart: 0, selectionEnd: value.length };
 }
 
-// kanban.proj #205: the "#" prefill above is only meant to stick while the
+// The "#" prefill above is only meant to stick while the
 // user is still typing an id (digits). Called on every 'input' event with
 // the box's current value — as long as everything after the "#" is digits
 // (or nothing yet), the "#" stays; the moment a non-numeric char shows up

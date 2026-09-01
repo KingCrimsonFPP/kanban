@@ -1,12 +1,13 @@
 # 0004. Config vocabularies suggest, never validate
 
-Date: 2026-07-09 · Status: accepted · Cards: #27, #30 (future: #31)
+Date: 2026-07-09 · Status: accepted
 
 ## Context
 
 Boards want curated vocabularies (assignees, priorities, tags) without the
 file format ever rejecting content — cards are hand-edited Markdown and the
-parser's prime directive is tolerance (ADR 0002).
+parser's prime directive is tolerance (the suggest-never-validate registry
+language in `CONTEXT.md` and the kanban skill's file contracts).
 
 ## Decision
 
@@ -21,5 +22,5 @@ are never errors. Only the human edits the lists; the app writes only the
 
 Vocabulary drift is visible (unknown values look unstyled/sort last) instead
 of forbidden. Planned extension: an official `statuses` list where unknown
-statuses render in backlog until promoted (card #31, draft→trusted applied
-to columns).
+statuses render in backlog until promoted — the same suggest-never-validate
+posture applied to columns.

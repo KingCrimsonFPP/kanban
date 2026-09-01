@@ -4,7 +4,7 @@
 // unquote/quote for notifications.md's top-level `- key: value` list;
 // config-store uses unquote/quote/scalar for config.yaml (its sectioned
 // structure needs its own line loop, so it deliberately does NOT reuse
-// parseBlocks — see card #24 for the possible unification).
+// parseBlocks).
 
 function unquote(raw) {
   const s = String(raw).trim();

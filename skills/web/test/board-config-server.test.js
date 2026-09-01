@@ -32,7 +32,7 @@ async function withServer(dir, fn) {
   try { return await fn(base); } finally { srv.close(); }
 }
 
-test('GET /api/board carries assignees from config.yaml (card #27)', async () => {
+test('GET /api/board carries assignees from config.yaml', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const data = await (await fetch(`${base}/api/board`)).json();
@@ -77,7 +77,7 @@ test('POST /api/cards without config.yaml keeps scan behavior and creates no con
   });
 });
 
-test('the SPA html carries the context menu and new modules in order — and no <datalist> (misrenders in VSCode Simple Browser, card #30)', async () => {
+test('the SPA html carries the context menu and new modules in order — and no <datalist> (misrenders in VSCode Simple Browser)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const html = await (await fetch(`${base}/`)).text();
@@ -93,9 +93,9 @@ test('the SPA html carries the context menu and new modules in order — and no 
   });
 });
 
-// --- card #30: /api/board carries the official priorities/tags lists ---
+// --- /api/board carries the official priorities/tags lists ---
 
-test('GET /api/board carries priorities and tags lists from config.yaml (card #30)', async () => {
+test('GET /api/board carries priorities and tags lists from config.yaml', async () => {
   const dir = tmpBoard({ withConfig: false });
   fs.writeFileSync(path.join(dir, 'config.yaml'),
     'nextId: 40\npriorities: [High, Normal, Low]\ntags:\n  - skills\n  - config\n');
@@ -115,9 +115,9 @@ test('GET /api/board returns empty priorities/tags when config.yaml is absent', 
   });
 });
 
-// --- card #31: /api/board carries the official statuses list ---
+// --- /api/board carries the official statuses list ---
 
-test('GET /api/board carries the statuses list from config.yaml (card #31)', async () => {
+test('GET /api/board carries the statuses list from config.yaml', async () => {
   const dir = tmpBoard({ withConfig: false });
   fs.writeFileSync(path.join(dir, 'config.yaml'), 'statuses: [triage, doing, review, done]\n');
   await withServer(dir, async (base) => {
@@ -134,7 +134,7 @@ test('GET /api/board returns statuses: [] when config.yaml is absent (built-in f
   });
 });
 
-// --- card #30 follow-up: no-store everywhere — a stale cached SPA mixing old
+// --- no-store everywhere — a stale cached SPA mixing old
 // markup with new scripts broke the form's datalists; localhost + tiny files
 // means caching buys nothing and costs correctness.
 

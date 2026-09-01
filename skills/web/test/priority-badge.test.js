@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const { priorityBadge } = require('../web/priority-badge');
 
-// card #30: emphasis comes from the card's rank in the configured priorities
+// emphasis comes from the card's rank in the configured priorities
 // list — no hardcoded 'High' string checks. First = hot, last (of a 3+ list)
 // = muted, everything else (middle, unknown) = neutral.
 

@@ -1,15 +1,15 @@
 'use strict';
-// Pure helpers for per-modal-type fullscreen state (card #20). No DOM/localStorage
+// Pure helpers for per-modal-type fullscreen state. No DOM/localStorage
 // access here on purpose — same dual-environment pattern as column-state.js /
 // column-sort.js / search.js: unit-testable from node --test AND loaded as a
 // plain <script> in the browser (app.js calls these as bare globals).
 //
 // localStorage discipline: reuses column-state.js's storageKey() scheme
 // (`kanban.<projectName>.<feature>`), under the feature name 'modal.fullscreen'
-// — a sibling key to #15's 'columns.collapsed' and #18's 'columns.sort', never
+// — a sibling key to 'columns.collapsed' and 'columns.sort', never
 // colliding since each feature gets its own key. One saved object covers every
-// modal type (edit, detail, and any future .modal-backdrop popup — e.g. #13's
-// AI-assist popup, when it lands, just adds its type to MODAL_TYPES/
+// modal type (edit, detail, and any future .modal-backdrop popup — a new
+// type just adds itself to MODAL_TYPES/
 // DEFAULT_FULLSCREEN below and gets the same persistence for free).
 
 const MODAL_TYPES = ['edit', 'detail', 'bulkSingle', 'bulkTags', 'bulkSchedule'];

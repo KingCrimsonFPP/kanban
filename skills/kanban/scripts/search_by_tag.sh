@@ -11,14 +11,30 @@ if [ -z "$TAG" ]; then
     exit 1
 fi
 
+# field()/title() are duplicated per script (same frontmatter-scoped awk as
+# view_board.sh / eligible_cards.sh) so each file stays copy-alone.
+field() {
+    awk -v f="$2" '/^---$/{fm++;next} fm==1 && $0 ~ "^"f":"{sub("^"f":[ \t]*","");print;exit}' "$1"
+}
+
+title() {
+    awk '/^---$/{fm++;next} fm==2 && /^# /{sub("^# ","");print;exit}' "$1"
+}
+
 echo "=== Cards tagged with: $TAG ==="
 echo
 
-grep -l "tags:.*$TAG" "$KANBAN_DIR"/*.card.md 2>/dev/null | while read -r file; do
-    # Extract ID, status, and title
-    id=$(grep "^id:" "$file" | sed 's/id: *//')
-    status=$(grep "^status:" "$file" | sed 's/status: *//')
-    title=$(grep "^# " "$file" | head -1 | sed 's/^# //')
+for file in "$KANBAN_DIR"/*.card.md; do
+    [ -f "$file" ] || continue
 
-    printf "#%-3s %-12s %s\n" "${id:-?}" "[$status]" "$title"
+    case "$(field "$file" tags)" in
+        *"$TAG"*) ;;
+        *) continue ;;
+    esac
+
+    id=$(field "$file" id)
+    status=$(field "$file" status)
+    t=$(title "$file")
+
+    printf "#%-3s %-12s %s\n" "${id:-?}" "[$status]" "$t"
 done

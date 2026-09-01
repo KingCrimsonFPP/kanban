@@ -2,7 +2,7 @@
 // notifications.md: a YAML list in the board dir that agents append to and the
 // app reads/mutates. Hand-rolled subset parser on purpose — the repo carries no
 // dependencies, and the writer contract (documented in the app SKILL.md) is a
-// flat, single-line-per-field entry (card #133 adds the optional level):
+// flat, single-line-per-field entry (the level field is optional):
 //
 //   - id: 1
 //     at: 2026-07-08T23:40:00
@@ -13,9 +13,9 @@
 //
 // Tolerance rule: an entry without a numeric id or a non-empty message is
 // skipped, never fatal. `level` is one of debug|info|warning|error; absent or
-// unknown reads as info (back-compat — card #133).
+// unknown reads as info (back-compat).
 //
-// Archive-not-delete (card #133): nothing is ever deleted. Any entry that
+// Archive-not-delete: nothing is ever deleted. Any entry that
 // leaves the live file — a per-row delete, clear-all, or a malformed block
 // that a rewrite would silently drop — is first APPENDED verbatim (its raw
 // block text) to <dir>/archived/notifications.md, creating the dir/file if
@@ -94,7 +94,7 @@ function classify(text) {
 
 function serializeNotifications(list) {
   // level serializes bare (normalized to the closed debug|info|warning|error
-  // set, so it never needs quoting), in the card #133 contract's field order.
+  // set, so it never needs quoting), in the writer contract's field order.
   return list
     .map((n) => `- id: ${n.id}\n  at: ${quote(n.at)}\n  from: ${quote(n.from)}\n  level: ${normalizeLevel(n.level)}\n  message: ${quote(n.message)}\n  read: ${n.read ? 'true' : 'false'}\n`)
     .join('');
@@ -108,7 +108,7 @@ function archiveFile(dir) {
   return path.join(dir, ARCHIVE_DIR, FILE);
 }
 
-// Append raw entry text to <dir>/archived/notifications.md — the card #133
+// Append raw entry text to <dir>/archived/notifications.md — the
 // clear-equals-archive rule. No-op on empty text so boards that never drop
 // anything never conjure up the file.
 function archiveRawText(dir, text) {
@@ -138,8 +138,8 @@ function markRead(dir, ids) {
   const file = notifFile(dir);
   if (!fs.existsSync(file)) return []; // nothing to persist, don't create the file
   const { valid, malformed } = classify(fs.readFileSync(file, 'utf8'));
-  // The rewrite below would silently drop malformed blocks (the old accepted
-  // behavior) — card #133 says they get archived instead of vanishing.
+  // The rewrite below would otherwise silently drop malformed blocks — they
+  // get archived instead of vanishing.
   archiveRawText(dir, malformed.join(''));
   const wanted = ids ? new Set(ids.map(Number)) : null;
   return writeNotifications(dir, valid.map(({ entry }) =>

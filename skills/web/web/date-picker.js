@@ -1,5 +1,5 @@
 'use strict';
-// Pure rules for the date-picker popover (card #41). No DOM here — same
+// Pure rules for the date-picker popover. No DOM here — same
 // dual-environment pattern as combobox.js: unit-testable from node --test AND
 // loaded as a plain <script> in the browser (app.js calls these as bare
 // globals). All date parsing/normalizing is REUSED from calendar-model.js
@@ -7,7 +7,7 @@
 // duplicated here. Named DP_CAL, not CAL: gantt-model.js already owns the
 // top-level name CAL, and all web/*.js share ONE page scope as classic
 // <script>s — a second `const CAL` killed this whole file at parse and every
-// 📅 button with it (card #60; test/global-scope.test.js now guards the
+// 📅 button with it (test/global-scope.test.js guards the
 // entire blind-spot class).
 const DP_CAL = (typeof module !== 'undefined' && module.exports)
   ? require('./calendar-model')
@@ -19,7 +19,7 @@ const DP_CAL = (typeof module !== 'undefined' && module.exports)
 // picker never destroys a typed time. That is exactly calendar-model's
 // shiftValue contract, tolerance included: a plain-date, empty, or garbage
 // current value just becomes the day — the picker only ever writes values the
-// free-text contract (card #36) already allows.
+// free-text date contract already allows.
 function pickDay(currentValue, dayStr) {
   return DP_CAL.shiftValue(currentValue, dayStr);
 }
@@ -37,7 +37,7 @@ function initialMonth(currentValue, todayStr) {
   return { year: y, monthIndex: m - 1 };
 }
 
-// --- Time toggle (card #197): the popover's clock icon adds/removes a time
+// --- Time toggle: the popover's clock icon adds/removes a time
 // tail on the field's value. Both funnel through calendar-model's
 // dayPart/timePart so they agree with pickDay/shiftValue's day+time split —
 // one place owns what a "day" or "time" substring looks like.

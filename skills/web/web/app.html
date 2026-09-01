@@ -8,7 +8,7 @@
 </head>
 <body>
 <header>
-  <!-- card #55: copy button INSIDE the h1 so it rides beside the title when the flex header wraps -->
+  <!-- copy button INSIDE the h1 so it rides beside the title when the flex header wraps -->
   <h1>Kanban<span id="project-name" class="project-name"></span> <button type="button" id="board-copy-btn" class="board-copy-btn" title="Copy the board folder's absolute path" aria-label="Copy the board folder's absolute path">&#x29C9;</button></h1>
   <div class="search-bar">
     <input type="search" id="search-input" class="search-input" autocomplete="off"
@@ -40,7 +40,7 @@
 
 <div id="modal" class="modal-backdrop hidden">
   <!-- autocomplete=off: the browser's form-history dropdown fights the
-       hand-rolled combobox menus and offers stale typed values (card #30) -->
+       hand-rolled combobox menus and offers stale typed values -->
   <form id="card-form" class="modal" autocomplete="off">
     <div class="modal-header popup-header">
       <h2 id="modal-title">New card</h2>
@@ -48,8 +48,8 @@
         <button type="submit" id="modal-save" class="icon-btn" title="Save" aria-label="Save">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
         </button>
-        <!-- kanban.proj #200: reveals/hides #row-prompt below (independent of
-             #50's "Show more fields" — see that row's own comment). Writes the
+        <!-- Reveals/hides #row-prompt below (independent of
+             "Show more fields" — see that row's own comment). Writes the
              `prompt` field, a signal FOR the AI to pick up (not a sticker). -->
         <button type="button" id="modal-ai-btn" class="icon-btn" title="AI prompt" aria-label="AI prompt" aria-pressed="false">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"></path><path d="M19 15l0.8 2.2L22 18l-2.2 0.8L19 21l-0.8-2.2L16 18l2.2-0.8L19 15z"></path></svg>
@@ -61,7 +61,7 @@
       </div>
     </div>
     <input type="hidden" id="f-id">
-    <!-- kanban.proj #211: `required` here is a JS-managed property, not a
+    <!-- `required` here is a JS-managed property, not a
          static attribute — updateTitleRequired() (the client script) clears
          it while the AI prompt row is shown with real text (an AI-prompt-
          only card can queue with no title of its own) and restores it the
@@ -69,59 +69,58 @@
          `required` attribute so a JS-less load never silently blocks the
          field. -->
     <label>Title <input id="f-title"></label>
-    <!-- card #85 put Assignee right after Title in the #50 minimal form (the
-         "+ -> title -> @afk -> Enter" queue-it flow). kanban.proj #199:
-         Franc wants that SAME Title -> Assignee tab order in the expanded/edit
-         form too, so this row (card #47's assignee+dates row) now lives here,
-         right after Title, as its one and only static position — no longer a
-         minimal-only detour. Unlike the two .modal-extra rows below, this row
+    <!-- Assignee sits right after Title in the minimal form (the
+         "+ -> title -> @afk -> Enter" queue-it flow), and
+         the same Title -> Assignee tab order holds in the expanded/edit
+         form — this assignee+dates row lives here,
+         right after Title, as its one and only static position.
+         Unlike the two .modal-extra rows below, this row
          does NOT hide wholesale: only the three DATE labels inside it carry
          modal-extra individually, so Assignee alone stays visible while
-         minimal (dates hidden with it) — the #85 minimal form is byte-for-byte
-         unchanged. Because the row's source position now matches its visual
-         position in EVERY state, no runtime DOM move is needed any more: #85's
-         placeAssigneeRow() (a real WCAG 2.4.3 focus-order fix in its day, a
-         `order`-faked position is not enough — Tab follows DOM order, not
-         paint order) is gone from the client script; the fix is now simply
+         minimal (dates hidden with it). Because the row's source position
+         matches its visual position in EVERY state, no runtime DOM move is
+         needed (an `order`-faked position would not be enough — WCAG 2.4.3:
+         Tab follows DOM order, not
+         paint order); the focus-order fix is simply
          where this div sits in the file. -->
     <div class="row" id="row-assignee-dates">
-      <!-- card #183 (kanban.proj #191 replaced the dot with tinted text): the
+      <!-- The
            input's own text is a live color cue, same handle-color tint the
            board tiles show (assignee-badge.js's assigneeBadge) — kept in
            sync with the input's current value by syncAssigneeColor(),
            populated on open and on every keystroke, same pattern as
            #f-blocked's live style sync. -->
       <label>Assignee <input id="f-assignee"></label>
-      <!-- card #40 date triad: start/end form the working range ("from"/"to"),
+      <!-- The date triad: start/end form the working range ("from"/"to"),
            due is the independent deadline; each takes a date or a local datetime.
-           card #41: every date field pairs its free-text input with a 📅 button
+           Every date field pairs its free-text input with a 📅 button
            that opens the shared date-picker popover (manual typing stays legal;
            the .date-field wrapper keeps input+button on one tidy row) -->
       <label class="modal-extra">Start date <span class="date-field"><input id="f-start" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-start" title="Pick a date" aria-label="Pick a start date">📅</button></span></label>
       <label class="modal-extra">End date <span class="date-field"><input id="f-end" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-end" title="Pick a date" aria-label="Pick an end date">📅</button></span></label>
       <label class="modal-extra">Due date <span class="date-field"><input id="f-due" placeholder="YYYY-MM-DD or ...THH:MM"><button type="button" class="date-pick-btn" data-date-input="f-due" title="Pick a date" aria-label="Pick a due date">📅</button></span></label>
     </div>
-    <!-- kanban.proj #200: the `prompt` field's own input, revealed/hidden by
-         the header's AI sparkle button — NOT by #50's "Show more fields"
+    <!-- The `prompt` field's own input, revealed/hidden by
+         the header's AI sparkle button — NOT by "Show more fields"
          (no .modal-extra class here), so it works from the minimal 3-click
          quick-capture flow too (title, click AI, type prompt, Enter). This
          markup position (after the Assignee+dates row) is only the row's
          HIDDEN/resting slot — setPromptRowVisible(), the client script's own
          toggle helper, physically relocates the node to be the form's
-         first field, ahead of Title, the instant it's shown (kanban.proj
-         #204: the prompt IS the thing you're about to type when you reach
+         first field, ahead of Title, the instant it's shown (the
+         prompt IS the thing you're about to type when you reach
          for the sparkle), and puts it right back here the instant it's
          hidden again. Assignee still stays the fixed 2nd focusable field
-         (kanban.proj #199) whenever the prompt row is hidden — #204 only
-         ever displaces the prompt row itself.
+         whenever the prompt row is hidden — only the prompt row itself is
+         ever displaced.
          openModal() auto-reveals it on edit when the card already carries a
          prompt (never hides existing data behind an unclicked toggle); a new
          card starts collapsed, same "don't show empty fields uninvited"
-         instinct as #50. -->
+         instinct as the minimal form. -->
     <div class="row hidden" id="row-prompt">
       <label>AI prompt <input id="f-prompt" placeholder="Instruction for the AI to pick up"></label>
     </div>
-    <!-- card #50: minimal-first create. Everything below this point down to
+    <!-- Minimal-first create. Everything below this point down to
          Description (the .modal-extra groups — two whole rows plus the
          description) starts hidden for NEW cards behind this button;
          openModal() drives it with one form-level class (#card-form.minimal),
@@ -130,7 +129,7 @@
     <div class="row modal-extra">
       <label>Status
         <!-- options are populated per open from the board's statuses list
-             (card #31) — the static four here are only a pre-first-load
+             — the static four here are only a pre-first-load
              fallback; an unlisted on-disk status is appended so editing a
              card never silently rewrites it -->
         <select id="f-status">
@@ -143,20 +142,19 @@
       <label>Priority
         <input id="f-priority">
       </label>
-      <!-- card #59: epic/wayfinder flag — a MANAGED boolean: checked writes
-           `epic: true`, unchecked removes the line (the #51 lean rule), never
-           validated. Rides this .modal-extra row, so the #50 minimal-first
-           create hides it behind "Show more fields" for free. card #91 gave it
-           a small orange dot everywhere it shows; card #45 retired the dot —
-           circles are reserved for status — so it's a faint orange background
-           wash instead. -->
+      <!-- epic/wayfinder flag — a MANAGED boolean: checked writes
+           `epic: true`, unchecked removes the line (the lean rule), never
+           validated. Rides this .modal-extra row, so the minimal-first
+           create hides it behind "Show more fields" for free. Circles are
+           reserved for status, so its cue is a faint orange background
+           wash, not a dot. -->
       <label class="epic-check" title="Epic/wayfinder — marks a stretch-of-work card; a faint orange background in every view">Epic <input type="checkbox" id="f-epic"></label>
     </div>
-    <!-- epic #137: waiting_for = dependency edges (sequencing), blocked = the
+    <!-- waiting_for = dependency edges (sequencing), blocked = the
          manual impediment sticker with the reason as its value. The blocked
          input wears a red border only while its value passes the shared
-         predicate (see the stylesheet's .blocked-active rule). ADR 0009
-         (card #181): review is blocked's sibling sticker — "finished,
+         predicate (see the stylesheet's .blocked-active rule). ADR
+         0009: review is blocked's sibling sticker — "finished,
          approve me" rather than "stuck, act so I can proceed" — same
          predicate, same live-border feedback, own gold .review-active rule. -->
     <div class="row modal-extra">
@@ -165,7 +163,7 @@
       <label>Blocked (reason) <input id="f-blocked" placeholder="empty = not blocked"></label>
       <label>Review (text) <input id="f-review" placeholder="empty = not in review"></label>
     </div>
-    <!-- card #47: .modal-desc marks the field that absorbs fullscreen's
+    <!-- .modal-desc marks the field that absorbs fullscreen's
          leftover height (flex-grow chain: form → this label → textarea) -->
     <label class="modal-desc modal-extra">Description (markdown) <textarea id="f-body" rows="8"></textarea></label>
   </form>
@@ -208,10 +206,10 @@
   <button type="button" id="ctx-priority" role="menuitem">Set priority…</button>
   <button type="button" id="ctx-tags" role="menuitem">Edit tags…</button>
   <button type="button" id="ctx-schedule" role="menuitem">Schedule…</button>
-  <!-- card #74: sugar over tree:<id>/path:<id> search terms — writes the term
+  <!-- Sugar over tree:<id>/path:<id> search terms — writes the term
        into the search box and runs the normal search flow, no view switch.
        Single-card only: hidden whenever the effective selection is >1 card
-       (toggled in showContextMenu, main script below) — first menu items ever hidden. -->
+       (toggled in showContextMenu, main script below). -->
   <button type="button" id="ctx-tree" role="menuitem">Dependency tree</button>
   <button type="button" id="ctx-path" role="menuitem">Dependency path</button>
   <button type="button" id="ctx-archive" role="menuitem">Archive selected</button>
@@ -219,7 +217,7 @@
   <button type="button" id="ctx-delete" role="menuitem" class="danger">Delete selected</button>
 </div>
 
-<!-- card #32: bulk-edit popups. Single-choice serves Assign… and Set
+<!-- Bulk-edit popups. Single-choice serves Assign… and Set
      priority…; the tags popup is the add/remove workbench. Same
      .modal-backdrop convention as every popup (pauses the poll). -->
 <div id="bulk-single" class="modal-backdrop hidden">
@@ -261,7 +259,7 @@
   </div>
 </div>
 
-<!-- card #42: Schedule… popup — bulk set/clear the date triad. Each row is
+<!-- Schedule… popup — bulk set/clear the date triad. Each row is
      the form's date-field grammar (free-text input + 📅 picker button, wired
      by the shared .date-pick-btn loop) plus a "clear" checkbox; clear wins
      over a typed value, empty+unchecked leaves the card's value alone. -->

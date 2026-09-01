@@ -1,6 +1,6 @@
 #!/bin/bash
 # Show cards carrying the manual `blocked:` impediment sticker, reason inline.
-# Blocked predicate (epic #137): trimmed value contains >=1 alphanumeric char;
+# Blocked predicate: trimmed value contains >=1 alphanumeric char;
 # YAML boolean special-case: false/no -> not blocked; true -> blocked, reason
 # unspecified. Dependency edges (`waiting_for`) are NOT blocked — that derived
 # state is show_waiting.sh's job.

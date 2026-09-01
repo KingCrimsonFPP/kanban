@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-// --- card #53: skills-deprecated/ deleted, no dangling references -------------
+// --- skills-deprecated/ deleted, no dangling references ----------------------
 // Repo-hygiene guard: the retired board/dashboard/dependencies skills were
 // deleted outright (tracked deletion, recoverable via git history), so the
 // folder must not resurface and the two docs that pointed at it must not

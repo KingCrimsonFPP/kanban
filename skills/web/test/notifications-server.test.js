@@ -32,7 +32,7 @@ async function withServer(dir, fn) {
   try { return await fn(base); } finally { srv.close(); }
 }
 
-test('GET /api/board carries notifications parsed from notifications.md (card #22 rides the poll)', async () => {
+test('GET /api/board carries notifications parsed from notifications.md (rides the poll)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     const data = await (await fetch(`${base}/api/board`)).json();
@@ -96,7 +96,7 @@ test('DELETE /api/notifications/:id removes one; DELETE /api/notifications clear
   });
 });
 
-test('both DELETE routes archive instead of deleting — entries land in archived/notifications.md (card #133)', async () => {
+test('both DELETE routes archive instead of deleting — entries land in archived/notifications.md', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {
     await fetch(`${base}/api/notifications/1`, { method: 'DELETE' });
@@ -111,7 +111,7 @@ test('both DELETE routes archive instead of deleting — entries land in archive
   });
 });
 
-test('GET /api/board carries each entry\'s level, defaulting absent to info (card #133)', async () => {
+test('GET /api/board carries each entry\'s level, defaulting absent to info', async () => {
   const dir = tmpBoard({ withNotifications: false });
   fs.writeFileSync(path.join(dir, 'notifications.md'),
     '- id: 1\n  at: 2026-07-12T10:00:00\n  from: afk\n  level: error\n  message: "boom; more: details"\n  read: false\n' +

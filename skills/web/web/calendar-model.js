@@ -1,17 +1,16 @@
 'use strict';
-// Pure date math + month-grid construction for the calendar view (card #37).
+// Pure date math + month-grid construction for the calendar view.
 // No DOM/localStorage access here on purpose — same dual-environment pattern
 // as column-sort.js / selection.js: unit-testable from node --test AND loaded
 // as a plain <script> in the browser (app.js calls these as bare globals).
 //
-// Card #36 values are tolerant, never validated: a date is 'YYYY-MM-DD', a
+// Date values are tolerant, never validated: a date is 'YYYY-MM-DD', a
 // local datetime 'YYYY-MM-DDTHH:MM'. Anything unparseable simply yields no
 // chip (dayPart '') rather than an error — the calendar shows what it can.
 
-// card #37: the view switcher grew from map's board/map boolean to a proper
-// closed set. Persisted under storageKey(projectName, 'view.mode'); an
-// unknown/corrupt saved value falls back to 'board', same defensive stance
-// as mergeSortState. Card #38 added 'gantt'.
+// The view switcher is a closed set. Persisted under
+// storageKey(projectName, 'view.mode'); an unknown/corrupt saved value falls
+// back to 'board', same defensive stance as mergeSortState.
 const VIEW_MODES = ['board', 'map', 'calendar', 'gantt'];
 
 function mergeViewMode(saved) {
@@ -64,7 +63,7 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
 // Flat list of day cells (weeks * 7, row-major) covering the given month,
-// weeks starting MONDAY (card #37). Leading/trailing cells outside the month
+// weeks starting MONDAY. Leading/trailing cells outside the month
 // carry inMonth:false so the glue can dim them. Always 5 or 6 rows: a 28-day
 // February starting on Monday would naturally be 4, but padding it with a
 // trailing week keeps the grid from visibly collapsing between months.
@@ -96,11 +95,11 @@ function shiftMonth(year, monthIndex, delta) {
   return { year: Math.floor(t / 12), monthIndex: ((t % 12) + 12) % 12 };
 }
 
-// --- range fields: which fields form the working range? (card #40) ------------------
+// --- range fields: which fields form the working range? ------------------
 // The date triad: from = start_date, to = end_date, due = due_date. The
 // working range is start_date -> end_date. COMPAT FALLBACK: when end_date is
 // absent (or unparseable — tolerant) but start AND due are both present, the
-// range is start_date -> due_date, so cards created under the old #36
+// range is start_date -> due_date, so cards created under the old start/due
 // semantics keep rendering as ranges. This is the single shape-decider:
 // cardSchedule renders from it, and every drag-math function (calendar
 // reschedule, gantt shift/resize) writes back through the SAME fields it
@@ -113,11 +112,11 @@ function rangeFields(card) {
   const endDay = dayPart(card.end_date);
   if (endDay) return { startDay, startField, endDay, endField: 'end_date' };
   const dueDay = dayPart(card.due_date);
-  if (startDay && dueDay) return { startDay, startField, endDay: dueDay, endField: 'due_date' }; // compat (#36)
+  if (startDay && dueDay) return { startDay, startField, endDay: dueDay, endField: 'due_date' }; // compat fallback
   return { startDay, startField, endDay: null, endField: null };
 }
 
-// --- due marker: the independent deadline (card #40) --------------------------------
+// --- due marker: the independent deadline --------------------------------
 // due_date stopped being the range end (except via the compat fallback) and
 // became its own marker: a deadline chip in the calendar, a diamond in the
 // gantt — rendered whether or not the card also has a range.
@@ -128,12 +127,12 @@ function dueMarker(card) {
 }
 
 // --- card schedule: which day(s) does the RANGE occupy? -------------------------------
-// Rewritten by card #40 (was #37's five start/due shapes): the schedule is
+// The schedule is
 // the working range only — rangeFields above decides which fields that is.
 // Shapes: start+end = inclusive range; start-only = 1-day at start; end-only
 // = 1-day at end; a REVERSED pair (range start after range end) collapses to
 // 1 day at the range END; due-only = NO schedule (kind 'none' — the due
-// marker owns that rendering now). `time` is the range end's time-of-day
+// marker owns that rendering). `time` is the range end's time-of-day
 // (start's, for start-only) for the chip text.
 
 function cardSchedule(card) {
@@ -162,10 +161,10 @@ function chipPositionForDay(schedule, day) {
   return 'range-mid';
 }
 
-// --- drag & drop reschedule math (card #37, resemantic'd by card #40) -----------------
+// --- drag & drop reschedule math -----------------
 // Given the card's current dates and the drop day, returns the PATCH changes
 // object, or null for "don't PATCH" — no working range, or a zero-delta drop
-// (same-day drops must not spend a PATCH or an `updated` bump, card #35).
+// (same-day drops must not spend a PATCH or an `updated` bump).
 // Dragging a RANGE chip moves the range: the drop day becomes the range END
 // day and the range start shifts by the same delta, so duration AND both
 // times-of-day are preserved. Writes go to THE FIELDS THE RANGE ACTUALLY USED
@@ -177,7 +176,7 @@ function chipPositionForDay(schedule, day) {
 //   - REVERSED range: the chip the user sees sits at the range END, so only
 //     that field moves and the nonsensical start is deliberately left
 //     untouched — shifting a field the user never dragged would be a surprise
-//     write (same #37 reasoning);
+//     write;
 //   - due-only: null — the due marker drags through rescheduleDueChanges.
 
 function shiftValue(value, newDay) {
@@ -216,7 +215,7 @@ function rescheduleDueChanges(card, targetDay) {
   return pruneNoopChanges(card, { due_date: shiftValue(card.due_date, targetDay) });
 }
 
-// --- chips-per-day capping (card #37) ---------------------------------------------
+// --- chips-per-day capping ---------------------------------------------
 // Crowded day cells show the first N chips plus a "+N more" line (the glue
 // renders overflow as a cheap tooltip-titled element, no popup).
 
@@ -227,9 +226,9 @@ function capChips(chips, max) {
   return { visible: chips.slice(0, max), overflow: chips.slice(max) };
 }
 
-// === card #58: calendar sub-views (month / week / 3-day / day) ====================
-// Outlook/Teams-style span switcher. The month grid stays exactly #37's; the
-// three sub-month views share one layout: a column per day, an "all day" band
+// === calendar sub-views (month / week / 3-day / day) ====================
+// Outlook/Teams-style span switcher. The month sub-view keeps monthGrid's
+// layout above; the three sub-month views share one layout: a column per day, an "all day" band
 // on top (date-only cards + multi-day ranges) and a time-of-day grid below
 // (datetime-carrying cards at their time). The choice persists per board under
 // storageKey(projectName, 'calendar.subview') with the same defensive merge
@@ -241,8 +240,8 @@ function mergeCalendarSubview(saved) {
   return CALENDAR_SUBVIEWS.includes(saved) ? saved : 'month';
 }
 
-// Monday of the containing week — the calendar's week convention since #37's
-// monthGrid (same (getUTCDay()+6)%7 lead math).
+// Monday of the containing week — the calendar's week convention, same
+// (getUTCDay()+6)%7 lead math as monthGrid.
 function weekStartOf(day) {
   return addDays(day, -((new Date(dayToUtc(day)).getUTCDay() + 6) % 7));
 }
@@ -262,7 +261,7 @@ function calendarSubviewDays(subview, anchorDay) {
 }
 
 // prev/next step by the ACTIVE view's span. One anchor day drives all four
-// sub-views (app.js replaced #37's {year,monthIndex} cursor with it), so the
+// sub-views, so the
 // month case normalizes to the FIRST of the shifted month — the grid only
 // needs y/m, and pinning day 1 keeps a Jan-31 anchor from skipping February.
 function shiftAnchorDay(subview, anchorDay, delta) {
@@ -311,7 +310,7 @@ function timeToMinutes(time) {
   return h * 60 + min;
 }
 
-// Inverse of timeToMinutes (card #109). Defensive clamp: a caller math bug
+// Inverse of timeToMinutes. Defensive clamp: a caller math bug
 // degrades to a valid time string (23:59 ceiling / 00:00 floor) rather than
 // writing an invalid time to disk. 1440 (24:00) caps at 23:59 — cross-midnight
 // is out of scope, so a block that would end exactly at midnight loses its last
@@ -330,7 +329,7 @@ function withDateTime(day, min) {
 // lone datetime start, a datetime due, a one-sided same-day range.
 const CALENDAR_DEFAULT_BLOCK_MIN = 60;
 
-// card #109: the minute the time-grid drag/resize snaps to, and the minimum
+// The minute the time-grid drag/resize snaps to, and the minimum
 // duration a resize can shrink a block to. 15 min = Outlook/Google's default.
 const CALENDAR_DRAG_SNAP_MIN = 15;
 
@@ -369,7 +368,7 @@ function assignLanes(blocks) {
 }
 
 // --- the sub-month layout: all-day band + per-day timed blocks -----------------------
-// Splits the window-visible cards in two, per the card's acceptance criteria:
+// Splits the window-visible cards in two:
 //   all-day band — date-only cards and EVERY multi-day range (times on a
 //     multi-day range's endpoints don't demote it to the grid: the span is the
 //     story). Entries carry window-column indices (clamped, clip-flagged like
@@ -381,7 +380,7 @@ function assignLanes(blocks) {
 //     point with the default block height. A REVERSED same-day time pair
 //     collapses to a point at the END time — the same collapse-at-end rule
 //     cardSchedule applies to reversed date ranges. Blocks clamp at midnight.
-// Due markers stay independent (card #40): a datetime due is a timed due
+// Due markers stay independent: a datetime due is a timed due
 // point, a date-only due an all-day due chip — rendered alongside the same
 // card's range, exactly like the month view.
 
@@ -456,16 +455,15 @@ function timeGridLayout(cards, days) {
   return { allDay, allDayRows: rowEnds.length, timed };
 }
 
-// === card #109: time-grid drag-to-retime + edge-resize =============================
-// Card #58's sub-month time grid deferred "drag-to-retime within a day's hour
-// grid" — these three pure functions supersede that deferral. They mirror the
+// === time-grid drag-to-retime + edge-resize =============================
+// These three pure functions mirror the
 // gantt's barShiftChanges/barResizeChanges/dueShiftChanges (day-granular) but
 // work in MINUTES within a day: the glue hit-tests the pointer to a day column
 // + snapped minute and passes them as absolute targets (targetDay/targetMin),
 // same absolute-target style as rescheduleChanges above (not the gantt's
 // deltas). All route through rangeFields, so the triad + compat contract (ADR
 // 0007) holds by construction — a compat range shifts/resizes start+due and
-// never invents an end_date. Null = no PATCH, no `updated` bump (card #35),
+// never invents an end_date. Null = no PATCH, no `updated` bump,
 // same convention as rescheduleChanges.
 
 // Body-drag of the RANGE block to a new day + start minute. Handles every
@@ -548,17 +546,17 @@ function resizeRangeAtTime(card, edge, targetMin) {
   return null; // unknown edge — defensive, never throw from a drag handler
 }
 
-// === card #193: click-to-create prefill =============================================
+// === click-to-create prefill =============================================
 // The calendar's create affordance (double-click on empty cell space — see
 // app.js's dblclick glue) hands this a day and, for the time grid only, the
 // raw pointer minute; this decides the create modal's `start_date` prefill.
 // A month/all-day double-click has only a DAY to offer, so the prefill is
 // date-only. A time-grid double-click also snaps to the same
-// CALENDAR_DRAG_SNAP_MIN grid #109's retime/resize gestures already use, so a
+// CALENDAR_DRAG_SNAP_MIN grid the retime/resize gestures already use, so a
 // card created here lands exactly where a dragged one would. Pre-fills START
 // only (ADR 0007: start_date is the working range's "from") — never
 // due_date, and the modal's status is left at its own default (unlike the
-// #54 column-header "+", which also presets status).
+// column-header "+", which also presets status).
 function calendarCreateStart(day, rawMin) {
   if (rawMin == null) return day;
   const snapped = Math.round(rawMin / CALENDAR_DRAG_SNAP_MIN) * CALENDAR_DRAG_SNAP_MIN;
@@ -568,16 +566,16 @@ function calendarCreateStart(day, rawMin) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VIEW_MODES, CALENDAR_MAX_CHIPS_PER_DAY,
-    mergeViewMode, dayPart, timePart, addDays, diffDays, dayToUtc, shiftValue, // dayToUtc/shiftValue exported for gantt-model.js (card #38)
+    mergeViewMode, dayPart, timePart, addDays, diffDays, dayToUtc, shiftValue, // dayToUtc/shiftValue exported for gantt-model.js
     monthGrid, monthTitle, shiftMonth,
-    rangeFields, dueMarker, cardSchedule, chipPositionForDay, // rangeFields/dueMarker also reused by gantt-model.js (card #40)
+    rangeFields, dueMarker, cardSchedule, chipPositionForDay, // rangeFields/dueMarker also reused by gantt-model.js
     rescheduleChanges, rescheduleDueChanges, capChips,
-    CALENDAR_SUBVIEWS, CALENDAR_DEFAULT_BLOCK_MIN, // card #58: sub-views
+    CALENDAR_SUBVIEWS, CALENDAR_DEFAULT_BLOCK_MIN, // sub-views
     mergeCalendarSubview, weekStartOf, calendarSubviewDays, shiftAnchorDay,
     subviewTitle, timeToMinutes, assignLanes, timeGridLayout,
-    minutesToTime, CALENDAR_DRAG_SNAP_MIN, // card #109: time-grid drag/resize
+    minutesToTime, CALENDAR_DRAG_SNAP_MIN, // time-grid drag/resize
     rescheduleRangeAtTime, rescheduleDueAtTime, resizeRangeAtTime,
-    calendarCreateStart, // card #193: click-to-create prefill
+    calendarCreateStart, // click-to-create prefill
   };
 } else {
   window.VIEW_MODES = VIEW_MODES;
@@ -587,19 +585,19 @@ if (typeof module !== 'undefined' && module.exports) {
   window.timePart = timePart;
   window.addDays = addDays;
   window.diffDays = diffDays;
-  window.dayToUtc = dayToUtc; // card #38: gantt-model.js reads these off window
+  window.dayToUtc = dayToUtc; // gantt-model.js reads these off window
   window.shiftValue = shiftValue;
   window.monthGrid = monthGrid;
   window.monthTitle = monthTitle;
   window.shiftMonth = shiftMonth;
-  window.rangeFields = rangeFields; // card #40: gantt-model.js + app.js read these off window
+  window.rangeFields = rangeFields; // gantt-model.js + app.js read these off window
   window.dueMarker = dueMarker;
   window.cardSchedule = cardSchedule;
   window.chipPositionForDay = chipPositionForDay;
   window.rescheduleChanges = rescheduleChanges;
   window.rescheduleDueChanges = rescheduleDueChanges;
   window.capChips = capChips;
-  window.CALENDAR_SUBVIEWS = CALENDAR_SUBVIEWS; // card #58: sub-views
+  window.CALENDAR_SUBVIEWS = CALENDAR_SUBVIEWS; // sub-views
   window.CALENDAR_DEFAULT_BLOCK_MIN = CALENDAR_DEFAULT_BLOCK_MIN;
   window.mergeCalendarSubview = mergeCalendarSubview;
   window.weekStartOf = weekStartOf;
@@ -609,10 +607,10 @@ if (typeof module !== 'undefined' && module.exports) {
   window.timeToMinutes = timeToMinutes;
   window.assignLanes = assignLanes;
   window.timeGridLayout = timeGridLayout;
-  window.minutesToTime = minutesToTime; // card #109: time-grid drag/resize
+  window.minutesToTime = minutesToTime; // time-grid drag/resize
   window.CALENDAR_DRAG_SNAP_MIN = CALENDAR_DRAG_SNAP_MIN;
   window.rescheduleRangeAtTime = rescheduleRangeAtTime;
   window.rescheduleDueAtTime = rescheduleDueAtTime;
   window.resizeRangeAtTime = resizeRangeAtTime;
-  window.calendarCreateStart = calendarCreateStart; // card #193: click-to-create prefill
+  window.calendarCreateStart = calendarCreateStart; // click-to-create prefill
 }

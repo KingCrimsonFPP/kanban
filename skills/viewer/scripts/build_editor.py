@@ -54,15 +54,15 @@ def parse_card(path):
         "tags": lst(fm.get("tags", "")),
         "w": lst(fm.get("waiting_for", "")),
         "bl": fm.get("blocked", ""),
-        # ADR 0009 (card #181): review is blocked's sibling sticker —
+        # ADR 0009: review is blocked's sibling sticker —
         # "finished, approve me" rather than "stuck, act so I can proceed" —
         # same raw-verbatim contract, never gates the doing entry check.
         "rv": fm.get("review", ""),
-        # card #151/#153: strict parent parse (digits only -> int, else null),
+        # Strict parent parse (digits only -> int, else null),
         # same contract as kanban-web's card-store.js parent field — used to
         # build epic-membership edges for the map + tree:/path: traversal.
         "pt": parent_id(fm.get("parent")),
-        # kanban.proj #222: epic-marked flag, same tolerant any-case 'true'
+        # Epic-marked flag, same tolerant any-case 'true'
         # read as kanban-web's card-store.js (`epic: get('epic').toLowerCase()
         # === 'true'`) — drives the epic: search term (qMatch's "epic" case).
         "ep": (fm.get("epic", "") or "").strip().lower() == "true",
@@ -74,7 +74,7 @@ def parse_card(path):
 DEFAULT_STATUSES = ["backlog", "todo", "doing", "done"]
 
 def read_statuses(kanban_dir):
-    """config.yaml's `statuses` list (card #31) drives column/group order; the
+    """config.yaml's `statuses` list drives column/group order; the
     built-in four apply when the file or key is absent. Flow and block YAML
     list styles both occur in the wild."""
     path = os.path.join(kanban_dir, "config.yaml")
@@ -107,7 +107,7 @@ def _assignees_block(kanban_dir):
     return m.group(1) if m else None
 
 def read_assignees(kanban_dir):
-    """config.yaml's `assignees` registry (card #132) drives the assignee
+    """config.yaml's `assignees` registry drives the assignee
     choices; the role trio (@human/@hitl/@afk) applies when the file or key
     is absent or empty. Registries suggest, never validate."""
     block = _assignees_block(kanban_dir)
@@ -134,7 +134,7 @@ def _scalar(raw):
     return s[:m.start()].strip() if m else s
 
 def read_assignee_colors(kanban_dir):
-    """config.yaml assignees registry — card #183: an OPTIONAL `color:` field
+    """config.yaml assignees registry: an OPTIONAL `color:` field
     reserves a color for that handle, same suggest-never-validate contract as
     every other registry field (kanban-web's config-store.js parses the same
     field). Returns {handle: color} only for entries that set one; a handle
@@ -156,7 +156,7 @@ def read_assignee_colors(kanban_dir):
     return colors
 
 def read_notifications(kanban_dir):
-    """notifications.md entries (card #134), tolerant like the web store:
+    """notifications.md entries, tolerant like the web store:
     blocks starting `- id:`; entries without a numeric id or message are
     skipped for display (the viewer is read-only over them)."""
     path = os.path.join(kanban_dir, "notifications.md")
@@ -198,7 +198,7 @@ def main():
              if f.endswith(".card.md") and os.path.isfile(os.path.join(a.kanban_dir, f))]
     if not cards:
         sys.exit(f"no *.card.md files found in {a.kanban_dir}")
-    # Archived cards ride along read-only (card #129, revised by #142): flagged
+    # Archived cards ride along read-only: flagged
     # arch, bodies re-capped at 1500 chars — tappable everywhere, opening a
     # read-only detail sheet, while the tighter cap keeps the file lean.
     arch_dir = os.path.join(a.kanban_dir, "archived")
@@ -212,8 +212,8 @@ def main():
                 cards.append(c)
     # "</" must be escaped inside the inline <script> — ANY embedded value a
     # human can type (card text, config statuses, assignee handles) could
-    # contain "</script>" (the board's own #10 XSS-history card does) and
-    # would otherwise terminate the script tag mid-JSON. "<\/" is legal JSON.
+    # contain "</script>" (a real board card has) and would otherwise
+    # terminate the script tag mid-JSON. "<\/" is legal JSON.
     emb = lambda v: json.dumps(v, ensure_ascii=False).replace("</", "<\\/")
     html = (TEMPLATE.replace("__BASE_LABEL__", label)
                     .replace("__BASE_ISO__", iso)
@@ -271,7 +271,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .cid{font-size:12px;color:var(--muted)}
 .badge{display:inline-block;font-size:11px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;background:var(--bgd);color:var(--high)}
 .wbadge{background:var(--bgw);color:var(--warn)}
-/* ADR 0009 (card #181): review is blocked's sibling sticker — its own gold
+/* ADR 0009: review is blocked's sibling sticker — its own gold
    family, distinct from --warn (waiting) and the red --high (blocked). */
 .rbadge{background:var(--bgr);color:var(--rev)}
 .ttl{font-size:14.5px;margin:3px 0 0;overflow-wrap:break-word}
@@ -323,7 +323,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .mnode.ghost .mtitle,.mnode.ghost .mid{fill:var(--muted)}
 .medge{fill:none;stroke:var(--ink2);stroke-width:1.5;opacity:.6}
 .medge.ghostedge{stroke:var(--muted);stroke-dasharray:3 3;opacity:.5}
-/* card #151 (ported for #153): epic membership edges draw in their own
+/* Epic membership edges draw in their own
    orange/dashed channel with their own arrowhead, mirroring kanban-web's
    app.css .map-edge.epic-edge — so containment never reads as a real
    sequencing dependency. */
@@ -383,7 +383,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .pillrow button{font-size:11px;border-radius:12px;padding:3px 10px;display:inline-flex;align-items:center;gap:5px;color:var(--ink2)}
 .pillrow button.off{opacity:.4}
 .pillrow .dot{width:8px;height:8px}
-/* kanban.proj #222: the map's "Epics" tap-chip — rides in the SAME pillrow
+/* The map's "Epics" tap-chip rides in the SAME pillrow
    as the status pills (renderMap appends it after statusPills()'s row; the
    row's flex gap spaces it identically). Inherits .pillrow button's base
    look; the ON state is its own rule (not .off, which means the OPPOSITE
@@ -435,21 +435,19 @@ const ccol=s=>CCOL[s]||"#888780";
 const ARCHC="#8a8880";
 const ASG=__ASSIGNEES__;
 const ASGCOL=__ASSIGNEE_COLORS__;
-// card #183: assignee color — a reserved config.yaml `color:` wins; else the
+// Assignee color: a reserved config.yaml `color:` wins; else the
 // handle hashes into the fixed 8-slot palette kanban-web's status-colors.js
 // STATUS_PALETTE uses (same djb2-xor hash, same hexes) so a handle colors the
-// same on both surfaces. Reuse, not reinvention: this viewer's own statuses
-// (ccol above) never grew that hashing, but assignees deliberately borrow it.
-// kanban.proj #191: acol()'s value now tints the handle TEXT (every call
-// site below sets it via `.style.color`), not a dot glyph — the color
-// derivation itself is unchanged, only the presentation.
+// same on both surfaces. This viewer's own statuses (ccol above) never grew
+// that hashing; assignees deliberately borrow it. acol()'s value tints the
+// handle TEXT — every call site below sets it via `.style.color`.
 const APALETTE=["#58a6ff","#3fb950","#d29922","#a371f7","#f778ba","#39c5cf","#f0883e","#ff7b72"];
 function ahash(s){let h=5381;for(let i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h}
 function acol(a){const t=(a||"").trim();if(!t)return null;if(ASGCOL[t])return ASGCOL[t];return APALETTE[ahash(t.toLowerCase())%APALETTE.length]}
 const DATA=__DATA__;
 const NOTIFS=__NOTIFS__;
 let view=JSON.parse(JSON.stringify(DATA)),ops=[],sel=null,ren=false,descEd=false,delArm=null,nseq=0,note="",copied=false,nfMore=false,activeView="board",colOpen={},creating=false,pillEd=null,fmOpen=false,calDayOpen={},calHrOpen={},notifView=false;
-// card #74's ratified design (point 6): the tree:/path: query's root card keeps
+// The tree:/path: query's root card keeps
 // the existing selection glow even after the sheet closes. `sel` can't do
 // double duty here (render() reopens the sheet whenever sel!==null), so
 // focusRoot is a second, glow-only marker set by the graphfocus action and
@@ -458,7 +456,7 @@ let focusRoot=null;
 const $=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n};
 const btn=(label,act,data)=>{const b=el("button",null,label);b.dataset.act=act;if(data)Object.assign(b.dataset,data);return b};
-// kanban.proj#178 follow-up: minimal inline formatting for card bodies —
+// Minimal inline formatting for card bodies —
 // **bold** and `code`, nothing else (no headings/lists/links, no nesting
 // inside a matched span). Pure segment splitter, no DOM: scans left to
 // right, and only treats a marker as an opener if its CLOSING partner
@@ -481,8 +479,8 @@ buf+=text[i];i++}
 flush();
 return segs}
 // Builds the card-body div from fmtBodySegs' output via el()/textContent
-// nodes only — card bodies are attacker-writable text (board's own card #10
-// XSS history), so this NEVER string-concatenates a segment into innerHTML.
+// nodes only — card bodies are attacker-writable text (an XSS got through
+// this path once), so this NEVER string-concatenates a segment into innerHTML.
 function bodyNode(text){
 const d=el("div","bodytxt");
 fmtBodySegs(text).forEach(s=>{
@@ -493,21 +491,21 @@ return d}
 const find=id=>view.find(c=>String(c.id)===String(id));
 const isProv=id=>String(id).startsWith("n");
 const lstJS=v=>String(v||"").replace(/^\\[|\\]$/g,"").split(",").map(s=>s.trim()).filter(Boolean);
-// Search (card #143): ported from kanban-web's search.js — space-separated
+// Search: ported from kanban-web's search.js — space-separated
 // terms AND; #id/id: exact; scoped substrings; bare terms hit title+body+tags;
 // an unrecognized foo:bar prefix searches as the literal string; a recognized
 // prefix with no value yet is dropped (mid-keystroke, matches nothing falsely).
 let qTerms=[];
 const SFIELDS=["title","body","status","priority","tags","file"];
-// card #74/#153: tree:/path: graph-focus terms, kept OUT of SFIELDS (numeric
+// tree:/path: graph-focus terms, kept OUT of SFIELDS (numeric
 // id semantics, not a lowercased substring) — mirrors kanban-web's search.js
 // GRAPH_FIELDS split from KNOWN_FIELDS.
 const GFIELDS=["tree","path"];
-// ADR 0009 (card #181): review:/blocked: sticker scopes — a bare value is
+// ADR 0009: review:/blocked: sticker scopes — a bare value is
 // itself a complete "sticker present" term, UNLIKE every SFIELDS scope
 // above (mirrors kanban-web's search.js STICKER_FIELDS split).
 const STFIELDS=["review","blocked"];
-// kanban.proj #222: epic: is its own single-field family — bare presence,
+// epic: is its own single-field family — bare presence,
 // never dropped (same shape as STFIELDS), but with NO value form: whatever
 // follows the colon is discarded rather than kept for a substring match,
 // mirrors kanban-web's search.js EPIC_FIELDS split.
@@ -522,7 +520,7 @@ if(SFIELDS.indexOf(k)!==-1){const v=m2[2].trim().toLowerCase();return v?{f:k,v:v
 if(STFIELDS.indexOf(k)!==-1)return{f:k,v:m2[2].trim().toLowerCase()}
 if(EFIELDS.indexOf(k)!==-1)return{f:k,v:""}}
 return{f:null,v:tok.toLowerCase()}}
-// card #74: tree:/path: terms need the full board's graph to resolve
+// tree:/path: terms need the full board's graph to resolve
 // (connected component / directed cone), which a single (term, card) pair
 // doesn't have — resolveGraphTerms (defined near buildDepGraph, below) pre-
 // resolves them into an {f:"ids"} term ONCE per query change, mirroring
@@ -545,7 +543,7 @@ case "file":return String(c.fn||"").toLowerCase().indexOf(t.v)!==-1;
 // case-insensitive substring on the sticker's own text.
 case "review":return t.v?String(rvReason(c)||"").toLowerCase().indexOf(t.v)!==-1:rvReason(c)!==null;
 case "blocked":return t.v?String(blkReason(c)||"").toLowerCase().indexOf(t.v)!==-1:blkReason(c)!==null;
-// kanban.proj #222: epic: is a pure presence check on the parsed boolean
+// epic: is a pure presence check on the parsed boolean
 // flag (c.ep, set by parse_card's tolerant any-case 'true' read) — t.v is
 // always "" (parseTerm discards it), so there's no substring branch to
 // mirror review:/blocked:'s.
@@ -553,8 +551,8 @@ case "epic":return c.ep===true;
 case "ids":return t.ids.has(Number(c.id));
 case "tree":case "path":return false;
 default:return title.indexOf(t.v)!==-1||body.indexOf(t.v)!==-1||tags.some(x=>String(x).toLowerCase().indexOf(t.v)!==-1)}})}
-// Waiting vs blocked/review (epic #137, card #140; review is ADR 0009, card
-// #181): waiting is DERIVED — a waiting_for id whose card isn't done
+// Waiting vs blocked/review (review is ADR 0009):
+// waiting is DERIVED — a waiting_for id whose card isn't done
 // (archived deps count as their status field; dangling ids are
 // non-blocking). blocked and review are the manual sticker fields, ONE
 // shared presence rule: text with >=1 alphanumeric char; false/no -> clear,
@@ -564,10 +562,10 @@ const unresolved=c=>(c.w||[]).filter(id=>{const d=depOf(id);return d&&d.s!=="don
 const blkTxt=v=>{v=String(v==null?"":v).trim();if(!v)return null;const lv=v.toLowerCase();if(lv==="false"||lv==="no")return null;if(!/[a-z0-9]/i.test(v))return null;return lv==="true"?"":v};
 const blkReason=c=>blkTxt(c.bl);
 const rvReason=c=>blkTxt(c.rv);
-// Status visibility pills (card #129): statuses default ON, archive default
+// Status visibility pills: statuses default ON, archive default
 // OFF (parity with kanban-web's opt-in archive pills). Unlisted statuses have
 // no pill: they follow the catch-all column (board renders them in the first
-// listed column, card #31 contract) and stay visible in the date/graph views.
+// listed column) and stay visible in the date/graph views.
 let statusVis={archive:false};
 const isVis=k=>k==="archive"?statusVis.archive===true:statusVis[k]!==false;
 const visList=()=>DATA.filter(c=>qMatch(c)&&(c.arch?isVis("archive"):(COLS.includes(c.s)?isVis(c.s):true)));
@@ -626,7 +624,7 @@ if(c.due)mp.push(document.createTextNode("due "+c.due));
 if(c.p==="Low")mp.push(document.createTextNode("Low"));
 if(mp.length){const meta=el("div","meta");mp.forEach((p,i)=>{if(i>0)meta.appendChild(document.createTextNode(" \\u00b7 "));meta.appendChild(p)});d.appendChild(meta)}
 if(detail&&ro){
-// Card #142: archived cards open READ-ONLY — pills are plain text, no
+// Archived cards open READ-ONLY — pills are plain text, no
 // editors/actions/all-fields; restore stays conversational.
 const top=el("div","toprow");
 const mk=(txt,color)=>{const s=el("span","fpill");if(color){const dt=el("span","dot");dt.style.background=color;s.appendChild(dt)}s.appendChild(document.createTextNode(txt));return s};
@@ -636,9 +634,9 @@ if(c.a){const s=el("span","fpill");s.style.color=acol(c.a);s.appendChild(documen
 top.appendChild(mk(c.p));
 d.insertBefore(top,d.firstChild)}
 else if(detail){
-// Card #121: the pills ARE the editors — tap one to open its chooser in the
-// slot below. Disposition (archive/delete) lives on the side stack, so the
-// old bottom action row is gone. Rename = tap the title.
+// The pills ARE the editors — tap one to open its chooser in the
+// slot below. Disposition (archive/delete) lives on the side stack.
+// Rename = tap the title.
 const top=el("div","toprow");
 const sp=el("button","fpill");sp.dataset.act="pill";sp.dataset.pill="status";
 const sdot=el("span","dot");sdot.style.background=ccol(c.s);
@@ -677,7 +675,7 @@ if(rr!==null)d.appendChild(el("div","meta rline","review: "+(rr||"text unspecifi
 if(c.tags&&c.tags.length){const tg=el("div","tags");c.tags.forEach(t=>tg.appendChild(el("span","tag",t)));d.appendChild(tg)}
 const det=[];if(c.start)det.push("start "+c.start);if(c.upd)det.push("updated "+c.upd);
 if(det.length)d.appendChild(el("div","meta",det.join(" \\u00b7 ")));
-// Cards #74/#153: "Dependency tree"/"Dependency path" write tree:/path: into
+// "Dependency tree"/"Dependency path" write tree:/path: into
 // the search box and close the sheet (sugar only, no view switch) — read-only
 // queries, so unlike the edit actions below they run on ro (archived) sheets
 // too; only a not-yet-created provisional card has no real id to focus on.
@@ -687,7 +685,7 @@ gr.appendChild(btn("Dependency tree","graphfocus",{gk:"tree"}));
 gr.appendChild(btn("Dependency path","graphfocus",{gk:"path"}));
 d.appendChild(gr)}
 if(!ro&&!isProv(c.id)){
-// Card #126: every frontmatter field is editable, raw and tolerant. The
+// Every frontmatter field is editable, raw and tolerant. The
 // staples are always offered; unknown keys a board grows show up dynamically.
 const fr=el("div","acts");fr.style.borderTop="none";fr.style.paddingTop="4px";
 fr.appendChild(btn((fmOpen?"\\u25be":"\\u25b8")+" All fields","fmtoggle"));
@@ -769,9 +767,9 @@ else if(note)p.appendChild(el("div","note",note))}
 function payload(){
 const clean=ops.map(o=>{const x=Object.assign({},o);delete x._pid;return x});
 return "Apply kanban changes ("+clean.length+" ops, base "+BASE+"):\\n"+JSON.stringify(clean)}
-// New-card form (card #123): renders inside the pop-up sheet; nothing joins
+// New-card form: renders inside the pop-up sheet; nothing joins
 // any list until Accept queues the create op — Cancel leaves zero trace.
-// Notifications pop-out (card #134): read-only render of the embedded
+// Notifications pop-out: read-only render of the embedded
 // notifications.md snapshot per contract v2 — TLDR bold, level tints,
 // unread accent. Read-flips and clears are board writes: they go through
 // the conversation, not this sheet.
@@ -810,7 +808,7 @@ return f}
 const SVGNS="http://www.w3.org/2000/svg";
 const svgEl=(tag,attrs)=>{const e=document.createElementNS(SVGNS,tag);if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);return e};
 const truncate=(s,n)=>{s=String(s||"");return s.length>n?s.slice(0,n-1)+"\\u2026":s};
-// Card #131: sideways finger-drags on a phone bleed into vertical scroll and
+// Sideways finger-drags on a phone bleed into vertical scroll and
 // the artifact view hijacks the gesture — give every horizontal scroll
 // container explicit step buttons, placed right above the thing they scroll.
 function hscrollNav(wrap){
@@ -833,11 +831,10 @@ $("calview").style.display=v==="calendar"?"":"none"}
 // Mirrors kanban-web's dependency-graph.js semantics (edge = dependency ->
 // waiter, same direction as the kanban-cli skill's Mermaid output) but reads
 // the viewer's own DATA snapshot; a waiting_for id not embedded renders as a
-// ghost stub, same as a stale/deleted reference. Nodes carry the #137 split:
+// ghost stub, same as a stale/deleted reference. Nodes carry both flags:
 // derived done-aware waiting + the manual blocked sticker.
 //
-// Card #151 (ported here for #153 — the viewer never had it): a child
-// card's `pt` (parsed `parent:` frontmatter) becomes a child->epic edge,
+// A child card's `pt` (parsed `parent:` frontmatter) becomes a child->epic edge,
 // kind "epic" (waiting_for edges are kind "dep"). Two suppression rules —
 // nonTerminal (a member some OTHER same-epic member already depends on
 // skips its own direct hop) and "sequencing wins the pair" (skip the epic
@@ -882,13 +879,13 @@ addEdge(cid,p,"epic")});
 const ghosts=[...ghostIds].filter(id=>!nodeIds.has(id)).sort((a,b)=>a-b).map(id=>({id:id,title:null,ghost:true}));
 const touchedByDep=new Set(),touchedByAny=new Set();
 edges.forEach(e=>{touchedByAny.add(e.from);touchedByAny.add(e.to);if(e.kind==="dep"){touchedByDep.add(e.from);touchedByDep.add(e.to)}});
-// Card #151: the "no dependencies" row is keyed off SEQUENCING (dep) edges
+// The "no dependencies" row is keyed off SEQUENCING (dep) edges
 // only; the layered graph draws every node touched by ANY edge — a node
 // whose only edge is epic membership joins BOTH.
 const isolated=nodes.filter(n=>!touchedByDep.has(n.id));
 const participants=nodes.filter(n=>touchedByAny.has(n.id));
 return {nodes:nodes,edges:edges,ghosts:ghosts,isolated:isolated,participants:participants}}
-// Card #74 — tree:<id>/path:<id> search terms. Both reuse buildDepGraph(DATA)
+// tree:<id>/path:<id> search terms. Both reuse buildDepGraph(DATA)
 // (the full live+archived board, ALWAYS — never a filtered slice, so a query
 // can't shrink its own graph) as the sole adjacency source: treeIds is the
 // undirected connected component (flood-fill both directions); pathIds is
@@ -925,7 +922,7 @@ const visited=new Set([id]);
 walkFrom(id,forward,visited);
 walkFrom(id,backward,visited);
 return visited}
-// card #74: pre-resolve tree:/path: terms into an already-resolved {f:"ids"}
+// Pre-resolve tree:/path: terms into an already-resolved {f:"ids"}
 // term BEFORE qMatch's per-card pass — a single (term, card) pair has no
 // graph to resolve against. Mirrors kanban-web's search.js resolveGraphTerms.
 function resolveGraphTerms(terms){
@@ -967,8 +964,8 @@ const idt=svgEl("text",{x:10,y:19,class:"mid"});idt.textContent="#"+n.id;g.appen
 const tl=svgEl("text",{x:10,y:37,class:"mtitle"});tl.textContent=n.ghost?"(not on board)":truncate(n.title,20);g.appendChild(tl);
 if(!n.ghost){const dot=svgEl("circle",{cx:MW-12,cy:12,r:4});dot.style.fill=n.arch?ARCHC:ccol(n.status);g.appendChild(dot)}
 if(!n.ghost&&n.blk!=null){
-// red PILL, not a border — borders stay priority/status territory (epic
-// #137), and the pill leaves the amber waiting stroke visible on a node
+// red PILL, not a border — borders stay priority/status territory, and
+// the pill leaves the amber waiting stroke visible on a node
 // that is both waiting and blocked.
 g.appendChild(svgEl("rect",{x:MW-46,y:MH-17,width:40,height:12,rx:6,class:"mblk"}));
 const bt=svgEl("text",{x:MW-26,y:MH-8,class:"mblkt","text-anchor":"middle"});bt.textContent="blocked";g.appendChild(bt)}
@@ -1021,12 +1018,12 @@ d.setAttribute("data-mapnode",String(n.id));
 d.appendChild(el("span","cid","#"+n.id));
 d.appendChild(document.createTextNode(truncate(n.title,30)));
 return d}
-// kanban.proj #222: mobile-first shortcut for the map's `epic:` search term —
+// Mobile-first shortcut for the map's `epic:` search term —
 // rides in the SAME pillrow as the status pills (renderMap only: render()/
 // renderGantt()/renderCalendar() call statusPills() unaugmented, so the chip
 // never shows outside Map view). Toggles: tap writes epic: into #q, tap
 // again removes it — same "write straight into the box, re-render" pattern
-// as the graphfocus tree:/path: buttons (Cards #74/#153), but a TOGGLE since
+// as the graphfocus tree:/path: buttons, but a TOGGLE since
 // this chip only ever manages the one term (graphfocus always REPLACES).
 function isEpicSearchActive(){
 const raw=String($("q")?$("q").value:"");
@@ -1090,8 +1087,8 @@ if(sch.startDay===sch.endDay)return "single";
 if(day===sch.startDay)return "range-start";
 if(day===sch.endDay)return "range-end";
 return "range-mid"}
-// --- gantt view (#112) ---------------------------------------------------------------
-// Rows group by status in COLS order (config statuses, card #31), unlisted
+// --- gantt view ----------------------------------------------------------------------
+// Rows group by status in COLS order (config statuses), unlisted
 // statuses appended alphabetically — same tolerance as kanban-web's ganttGroups.
 // Undated cards are NOT dropped (unlike the web gantt): they land in a dimmed
 // chip row below, mirroring the map's "No dependencies" treatment.
@@ -1176,15 +1173,15 @@ gv.appendChild(el("div","map-title","No dates ("+gd.undated.length+")"));
 const row=el("div","map-iso-row");
 gd.undated.forEach(c=>{const chip=isoChip({id:c.id,title:c.t});if(c.arch)chip.style.opacity=".55";row.appendChild(chip)});
 gv.appendChild(row)}}
-// --- calendar view (#113) --------------------------------------------------------------
+// --- calendar view ---------------------------------------------------------------------
 // Month grid, weeks starting Monday, 5-6 rows (same as kanban-web's monthGrid);
 // chips per chipPositionForDay + independent due chips; date-less cards simply
 // don't appear — consistent with the web app's date-aware views.
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WDSHORT=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 let calY,calM;{const n=new Date();calY=n.getFullYear();calM=n.getMonth()}
-// Sub-views (card #117, mirrors kanban-web's month/week/3day/day set from card
-// #58). The viewer is read-only, so sub-month views are stacked day rows with
+// Sub-views mirror kanban-web's month/week/3day/day set.
+// The viewer is read-only, so sub-month views are stacked day rows with
 // full-width chips instead of the web app's draggable hour grid.
 const CALSUBS=[["month","Month"],["week","Week"],["3day","3-day"],["day","Day"]];
 let calSub="month",calAnchor=todayLocal();
@@ -1256,7 +1253,7 @@ if(chips.length>4)ce.appendChild(el("div","cal-more","+"+(chips.length-4)));
 grid.appendChild(ce)});
 cv.appendChild(grid)}
 else if(calSub==="day"){
-// Card #128: one day, bucketed into collapsible hour blocks. A chip's hour
+// One day, bucketed into collapsible hour blocks. A chip's hour
 // is the time-of-day of the date that placed it here; date-only = All day.
 const day=subDays()[0];
 const chips=dayChips(day,scheds);
@@ -1275,7 +1272,7 @@ row.appendChild(head);
 if(open)blocks.get(k).forEach(x=>row.appendChild(x.el));
 cv.appendChild(row)})}
 else{
-// Card #127: week/3-day rows collapsed by default — header + count.
+// Week/3-day rows collapsed by default — header + count.
 subDays().forEach(day=>{
 const chips=dayChips(day,scheds);
 const open=!!calDayOpen[day];
@@ -1297,16 +1294,16 @@ if(o.op==="create")queue({op:"create",title:o.title,status:o.status,priority:o.p
 else if(o.op==="edit"){const e={op:"edit",id:o.id};if(o.title!==undefined)e.title=o.title;if(o.priority)e.priority=o.priority;if(o.assignee!==undefined)e.assignee=o.assignee;if(o.body!==undefined)e.body=o.body;if(o.fm!==undefined)e.fm=o.fm;queue(e)}
 else queue(o)})}
 const sc=$("scroll");
-// Scroll buttons target the modal's scroll area while a card pop-up is open
-// (cards #115/#116), the board otherwise. The ellipsis cycles THREE stack
-// modes (card #135): 1 medium (default: step arrows) -> 2 extended (the full
-// context menu, card #121) -> 0 off (ellipsis only, everything hidden) -> 1.
+// Scroll buttons target the modal's scroll area while a card pop-up is open,
+// the board otherwise. The ellipsis cycles THREE stack
+// modes: 1 medium (default: step arrows) -> 2 extended (the full
+// context menu) -> 0 off (ellipsis only, everything hidden) -> 1.
 let stackMode=1;
 const modalOpen=()=>{const m=$("modal");return !!(m&&m.style.display!=="none")};
 const scTgt=()=>modalOpen()?$("modalscroll"):sc;
 function syncStack(){
 const mo=modalOpen();
-// Card #142: an archived card's read-only sheet is NOT a card context —
+// An archived card's read-only sheet is NOT a card context —
 // no Archive/Delete on the stack, same footing as the notifications sheet.
 const mcc=(!creating&&!notifView&&sel!==null)?find(sel):null;
 const cardCtx=mo&&!!mcc&&!mcc.arch;
@@ -1355,7 +1352,7 @@ if(t.dataset&&t.dataset.coltoggle!==undefined){colOpen[t.dataset.coltoggle]=!col
 if(t.dataset&&t.dataset.caldaytoggle!==undefined){calDayOpen[t.dataset.caldaytoggle]=!calDayOpen[t.dataset.caldaytoggle];renderCalendar();return}
 if(t.dataset&&t.dataset.calhrtoggle!==undefined){calHrOpen[t.dataset.calhrtoggle]=!calHrOpen[t.dataset.calhrtoggle];renderCalendar();return}
 if(t.dataset&&t.dataset.act==="spill"){const k=t.dataset.st;statusVis[k]=!isVis(k);render();renderMap();renderGantt();renderCalendar();return}
-// kanban.proj #222: the map's "Epics" chip — same control-row-checked-first
+// The map's "Epics" chip — same control-row-checked-first
 // reasoning as the "spill" status pills above; toggles epic: in #q like
 // $("q")'s own input listener does, then re-renders every view (epic:
 // filters board/map/gantt/calendar alike, not just the map it's tapped from).

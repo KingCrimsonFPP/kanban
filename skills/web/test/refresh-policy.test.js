@@ -22,7 +22,7 @@ test('shouldSkipAutoRefresh treats multiple simultaneous conditions same as one'
   assert.strictEqual(shouldSkipAutoRefresh({ modalOpen: true, dragging: true, hidden: true }), true);
 });
 
-// Card #18: a focused column-sort control (the native <select> popup in
+// A focused column-sort control (the native <select> popup in
 // particular) gets silently ripped out from under the user when renderBoard()
 // wipes #board on a poll tick — the DOM removal closes an open dropdown with
 // no error and no indication why. Block the same way an open modal does.

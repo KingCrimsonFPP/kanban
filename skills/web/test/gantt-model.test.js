@@ -7,7 +7,7 @@ const {
   barShiftChanges, barResizeChanges, dueShiftChanges,
 } = require('../web/gantt-model');
 
-// --- constants (card #38) ----------------------------------------------------
+// --- constants ----------------------------------------------------
 
 test('GANTT_STATUS_ORDER is the four live columns in board order', () => {
   assert.deepStrictEqual(GANTT_STATUS_ORDER, ['backlog', 'todo', 'doing', 'done']);
@@ -19,9 +19,9 @@ test('GANTT_MAX_DAYS is 180 and GANTT_DAY_PX is a positive integer (drag math di
 });
 
 // --- barSpan: which days does a card's bar cover? -----------------------------
-// The bar is the WORKING RANGE (card #40): same shapes as the calendar's
+// The bar is the WORKING RANGE: same shapes as the calendar's
 // cardSchedule (which it reuses). Due is an independent diamond marker now —
-// a due-only card has NO bar (that replaces #38's due-only 1-day bar rule).
+// a due-only card has NO bar (the diamond owns due).
 
 test('barSpan: start + end gives the inclusive range; a due alongside changes nothing', () => {
   assert.deepStrictEqual(barSpan({ start_date: '2026-07-03', end_date: '2026-07-06' }),
@@ -30,12 +30,12 @@ test('barSpan: start + end gives the inclusive range; a due alongside changes no
     { startDay: '2026-07-03', endDay: '2026-07-06' });
 });
 
-test('barSpan: COMPAT — start + due with no end_date still bars start->due (#36 cards)', () => {
+test('barSpan: COMPAT — start + due with no end_date still bars start->due (pre-end_date cards)', () => {
   assert.deepStrictEqual(barSpan({ start_date: '2026-07-03', due_date: '2026-07-06' }),
     { startDay: '2026-07-03', endDay: '2026-07-06' });
 });
 
-test('barSpan: due-only has NO bar any more (card #40) — the diamond owns it', () => {
+test('barSpan: due-only has NO bar any more — the diamond owns it', () => {
   assert.strictEqual(barSpan({ due_date: '2026-07-09' }), null);
 });
 
@@ -79,7 +79,7 @@ test('ganttGroups drops undated cards entirely', () => {
   assert.deepStrictEqual(groups[0].bars.map((b) => b.card.id), [1]);
 });
 
-test('ganttGroups: a due-only card gets a row with NO bar span but a dueDay (card #40)', () => {
+test('ganttGroups: a due-only card gets a row with NO bar span but a dueDay', () => {
   const groups = ganttGroups([card(1, 'todo', { due_date: '2026-07-09T14:30' })]);
   const row = groups[0].bars[0];
   assert.strictEqual(row.startDay, null);
@@ -87,7 +87,7 @@ test('ganttGroups: a due-only card gets a row with NO bar span but a dueDay (car
   assert.strictEqual(row.dueDay, '2026-07-09');
 });
 
-test('ganttGroups: a ranged card with a due carries both the span and the dueDay (card #40)', () => {
+test('ganttGroups: a ranged card with a due carries both the span and the dueDay', () => {
   const groups = ganttGroups([card(1, 'todo', { start_date: '2026-07-03', end_date: '2026-07-06', due_date: '2026-07-20' })]);
   const row = groups[0].bars[0];
   assert.strictEqual(row.startDay, '2026-07-03');
@@ -95,7 +95,7 @@ test('ganttGroups: a ranged card with a due carries both the span and the dueDay
   assert.strictEqual(row.dueDay, '2026-07-20');
 });
 
-test('ganttGroups: no due means dueDay null (card #40)', () => {
+test('ganttGroups: no due means dueDay null', () => {
   const groups = ganttGroups([card(1, 'todo', { start_date: '2026-07-03', end_date: '2026-07-06' })]);
   assert.strictEqual(groups[0].bars[0].dueDay, null);
 });
@@ -138,7 +138,7 @@ test('ganttGroups of nothing dated is empty', () => {
   assert.deepStrictEqual(ganttGroups([card(1, 'todo', {})]), []);
 });
 
-test('ganttGroups follows a configured statuses list for group order; unlisted still append alphabetically (card #31)', () => {
+test('ganttGroups follows a configured statuses list for group order; unlisted still append alphabetically', () => {
   const groups = ganttGroups([
     card(1, 'done', { due_date: '2026-07-01' }),
     card(2, 'review', { due_date: '2026-07-02' }),
@@ -149,12 +149,12 @@ test('ganttGroups follows a configured statuses list for group order; unlisted s
 });
 
 // --- ganttArchiveGroup: dated ARCHIVED cards get ONE group, after the live ------
-// status groups (card #98 reopen — "we are missing archived status"). Every
+// status groups. Every
 // archived card lands in this bucket regardless of its own on-disk status
 // field (archive is a LOCATION, not a status — ADR 0002); the group key is
 // the literal string 'archive' so the render layer's EXISTING
 // statusColor/isBuiltinStatus/columnLabel lookups already mute+label it
-// (statusColor('archive') mutes to ARCHIVE_COLOR, card #57; columnLabel
+// (statusColor('archive') mutes to ARCHIVE_COLOR; columnLabel
 // ('archive') is already 'Archive', column-state.js) with no extra
 // branching needed downstream.
 
@@ -200,7 +200,7 @@ test('ganttArchiveGroup rows carry the same bar/due shape as ganttGroups (start/
   assert.strictEqual(row.dueDay, '2026-07-20');
 });
 
-test('ganttArchiveGroup: a due-only archived card gets a row with no bar span (card #40 shape, reused)', () => {
+test('ganttArchiveGroup: a due-only archived card gets a row with no bar span', () => {
   const group = ganttArchiveGroup([archivedCard(1, { due_date: '2026-07-09T14:30' })]);
   const row = group.bars[0];
   assert.strictEqual(row.startDay, null);
@@ -219,8 +219,8 @@ test('ganttArchiveGroup: a due-only archived card gets a row with no bar span (c
 // columnLabel, same muted color), one silently holding a live, draggable
 // card. appendArchiveGroup merges into an existing 'archive'-keyed group
 // instead of duplicating it, consistent with the mute-everywhere precedent
-// a raw 'archive' status already gets elsewhere (statusColor/statusBadge,
-// card #57): this card already READS as archived, so one merged row is the
+// a raw 'archive' status already gets elsewhere (statusColor/statusBadge):
+// this card already READS as archived, so one merged row is the
 // honest picture, not two adjacent copies of it.
 
 test('appendArchiveGroup appends the archive group when no live group already uses that key', () => {
@@ -267,7 +267,7 @@ test('appendArchiveGroup sorts the merged bars by id regardless of arrival order
 
 const span = (startDay, endDay) => ({ startDay, endDay });
 
-// --- rowWindowSpans: each row's full extent for the window (card #40) -----------
+// --- rowWindowSpans: each row's full extent for the window -----------
 // A row's window contribution covers its bar AND its due diamond, so a due
 // far outside the range — or a due-only row with no bar at all — still lands
 // inside the rendered window.
@@ -374,7 +374,7 @@ test('weekMarkLabel renders a short "Mon D" date', () => {
 });
 
 // --- barShiftChanges: drag the bar body = shift the WORKING RANGE ----------------
-// Card #40: writes go to the fields the range actually used (rangeFields) —
+// Writes go to the fields the range actually used (rangeFields) —
 // real range shifts start+end, compat range shifts start+due (the used pair
 // is KEPT, an end_date is never invented), one-field ranges shift their one
 // field. Due is an independent marker: a bar drag never touches it unless
@@ -430,7 +430,7 @@ test('barShiftChanges: reversed range shifts the used end field only, nonsensica
   assert.ok(!('start_date' in compat));
 });
 
-// --- dueShiftChanges: drag the due diamond = move due_date alone (card #40) -------
+// --- dueShiftChanges: drag the due diamond = move due_date alone -------
 
 test('dueShiftChanges moves due_date alone by the delta, time-of-day preserved', () => {
   assert.deepStrictEqual(dueShiftChanges({ due_date: '2026-07-09' }, 2), { due_date: '2026-07-11' });
@@ -449,7 +449,7 @@ test('dueShiftChanges: zero delta and absent/unparseable due are null (no PATCH)
 });
 
 // --- barResizeChanges: drag an edge = move that RANGE endpoint alone -------------
-// Card #40: the start handle writes start_date, the end handle writes
+// The start handle writes start_date, the end handle writes
 // end_date — EXCEPT compat ranges (start+due, no end), where the end handle
 // edits due_date, the field the range actually used. Clamped so the bar never
 // inverts: a resize stops at the other endpoint (a 1-day bar is the minimum),
@@ -523,7 +523,7 @@ test('barResizeChanges: end-only end edge moves the end date itself (the only ra
   assert.strictEqual(barResizeChanges({ end_date: '2026-07-09' }, 'end', -2), null);
 });
 
-test('barResizeChanges: start-only end edge dragged right CREATES a plain-date end_date (card #40 — was due_date under #38)', () => {
+test('barResizeChanges: start-only end edge dragged right CREATES a plain-date end_date', () => {
   assert.deepStrictEqual(barResizeChanges({ start_date: '2026-07-03T08:00' }, 'end', 4),
     { end_date: '2026-07-07' });
   assert.strictEqual(barResizeChanges({ start_date: '2026-07-03' }, 'end', -2), null);

@@ -60,7 +60,7 @@ test('parseNotifications skips malformed entries but keeps valid ones', () => {
   assert.strictEqual(list[0].id, 7);
 });
 
-test('parseNotifications defaults read to false, at/from to empty string, and level to info when omitted (card #133 back-compat)', () => {
+test('parseNotifications defaults read to false, at/from to empty string, and level to info when omitted (back-compat)', () => {
   const list = ns.parseNotifications('- id: 4\n  message: "bare minimum"\n');
   assert.deepStrictEqual(list[0], { id: 4, at: '', from: '', level: 'info', message: 'bare minimum', read: false });
 });
@@ -76,14 +76,14 @@ test('serializeNotifications quotes strings so colons and hashes survive the rou
   assert.deepStrictEqual(ns.parseNotifications(ns.serializeNotifications(entry)), entry);
 });
 
-test('level survives a serialize→parse round-trip for every legal value (card #133)', () => {
+test('level survives a serialize→parse round-trip for every legal value', () => {
   for (const level of ['debug', 'info', 'warning', 'error']) {
     const entry = [{ id: 6, at: '2026-07-12T10:00:00', from: 'afk-run:#131', level, message: 'leveled', read: false }];
     assert.deepStrictEqual(ns.parseNotifications(ns.serializeNotifications(entry)), entry);
   }
 });
 
-test('an unknown or absent level normalizes to info on parse AND on serialize (card #133)', () => {
+test('an unknown or absent level normalizes to info on parse AND on serialize', () => {
   assert.strictEqual(ns.parseNotifications('- id: 7\n  level: shouting\n  message: "x"\n')[0].level, 'info');
   assert.strictEqual(ns.parseNotifications('- id: 7\n  message: "x"\n')[0].level, 'info');
   assert.match(ns.serializeNotifications([{ id: 7, at: '', from: '', message: 'x', read: false }]), /^ {2}level: info$/m);
@@ -146,13 +146,13 @@ test('mutations on a board with no notifications.md do not throw and do not crea
   assert.ok(!fs.existsSync(path.join(dir, 'archived', 'notifications.md')), 'no phantom archive either');
 });
 
-// --- card #133: clear = archive — removed entries MOVE to archived/notifications.md
+// --- clear = archive — removed entries MOVE to archived/notifications.md
 
 function archivePath(dir) {
   return path.join(dir, 'archived', 'notifications.md');
 }
 
-test('removeNotification appends the removed entry verbatim to archived/notifications.md, creating dir+file (card #133)', () => {
+test('removeNotification appends the removed entry verbatim to archived/notifications.md, creating dir+file', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'), SAMPLE);
   ns.removeNotification(dir, 1);
@@ -162,7 +162,7 @@ test('removeNotification appends the removed entry verbatim to archived/notifica
   assert.strictEqual(ns.readNotifications(dir).length, 1);
 });
 
-test('clearNotifications moves every entry to the archive; a second clear APPENDS instead of overwriting (card #133)', () => {
+test('clearNotifications moves every entry to the archive; a second clear APPENDS instead of overwriting', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'), SAMPLE);
   ns.clearNotifications(dir);
@@ -176,7 +176,7 @@ test('clearNotifications moves every entry to the archive; a second clear APPEND
   assert.ok(archived.includes('level: warning\n  message: "second wave"'), 'second wave appended, level line intact');
 });
 
-test('archived entries survive with their level field and stay parseable (card #133)', () => {
+test('archived entries survive with their level field and stay parseable', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'),
     '- id: 9\n  at: 2026-07-12T09:00:00\n  from: afk\n  level: error\n  message: "boom; more: stack trace"\n  read: true\n');
@@ -186,7 +186,7 @@ test('archived entries survive with their level field and stay parseable (card #
   assert.deepStrictEqual(ns.readNotifications(dir), []);
 });
 
-test('malformed blocks a rewrite would drop are archived, not deleted — the markRead path included (card #133)', () => {
+test('malformed blocks a rewrite would drop are archived, not deleted — the markRead path included', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'),
     '- id: not-a-number\n  message: "broken id"\n' + SAMPLE);
@@ -197,7 +197,7 @@ test('malformed blocks a rewrite would drop are archived, not deleted — the ma
   assert.strictEqual(ns.readNotifications(dir).length, 2);
 });
 
-test('markRead flips stay in-place — no archive file appears when nothing is dropped (card #133)', () => {
+test('markRead flips stay in-place — no archive file appears when nothing is dropped', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'), SAMPLE);
   ns.markRead(dir, [1]);
@@ -205,7 +205,7 @@ test('markRead flips stay in-place — no archive file appears when nothing is d
   assert.strictEqual(ns.readNotifications(dir).find((n) => n.id === 1).read, true);
 });
 
-test('removeNotification of an unknown id archives nothing (card #133)', () => {
+test('removeNotification of an unknown id archives nothing', () => {
   const dir = tmpBoard();
   fs.writeFileSync(path.join(dir, 'notifications.md'), SAMPLE);
   ns.removeNotification(dir, 999);
