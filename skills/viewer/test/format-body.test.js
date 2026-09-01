@@ -145,3 +145,125 @@ test('the card-sheet render path calls bodyNode(c.body) instead of dumping raw t
 test('the .bodytxt code CSS rule is monospace and theme-consistent with the rest of the viewer', () => {
   assert.match(src, /\.bodytxt code\{[^}]*font-family:[^}]*monospace[^}]*\}/);
 });
+
+// --- responsive layout: two width tiers + a capability query -----------------
+// Tier 1 (560-899px) only bumps #scroll's max-width — the base (unreached
+// below 560px) rule keeps phone widths pixel-identical. Tier 2 (>=900px)
+// turns the board into a side-by-side column strip and centers modals.
+// hnav hides on a (hover:hover) and (pointer:fine) CAPABILITY query, not a
+// width breakpoint, so touch devices keep it regardless of screen size.
+
+function extractStyleBlock() {
+  const start = src.indexOf('<style>');
+  const end = src.indexOf('</style>');
+  assert.ok(start !== -1 && end !== -1, '<style> block not found');
+  return src.slice(start + '<style>'.length, end);
+}
+
+function extractMediaBlocks(css) {
+  const blocks = [];
+  let idx = 0;
+  while ((idx = css.indexOf('@media', idx)) !== -1) {
+    const braceStart = css.indexOf('{', idx);
+    let depth = 0, i = braceStart;
+    for (; i < css.length; i++) {
+      if (css[i] === '{') depth++;
+      else if (css[i] === '}') {
+        depth--;
+        if (depth === 0) { i++; break; }
+      }
+    }
+    blocks.push(css.slice(idx, i));
+    idx = i;
+  }
+  return blocks;
+}
+
+const css = extractStyleBlock();
+const mediaBlocks = extractMediaBlocks(css);
+const nonMediaCss = mediaBlocks.reduce((acc, b) => acc.split(b).join(''), css);
+
+test('the base (unconditional) #scroll rule keeps max-width:560px — phone widths below the first breakpoint stay pixel-identical', () => {
+  assert.match(nonMediaCss, /#scroll\{[^}]*max-width:560px[^}]*\}/);
+});
+
+test('tier 1 (min-width:560px): #scroll max-width grows to ~720px, nothing else changes', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:560px\)/.test(b));
+  assert.ok(block, 'no @media(min-width:560px) block found');
+  assert.match(block, /#scroll\{max-width:720px\}/);
+  // Single, narrowly-scoped rule — this tier touches #scroll only.
+  assert.strictEqual((block.match(/\{/g) || []).length, 2, 'tier 1 should only style #scroll');
+});
+
+test('tier 2 (min-width:900px): #scroll drops its width cap so the board can use the real viewport', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.ok(block, 'no @media(min-width:900px) block found');
+  assert.match(block, /#scroll\{[^}]*max-width:none[^}]*\}/);
+  assert.ok(!/#scroll\{[^}]*max-width:(?!none)\d/.test(block), '#scroll must not carry a pixel width cap at tier 2');
+});
+
+test('tier 2: board becomes a flex column strip, each column FILLS the freed width (flex:1 1 0) with a ~260px floor, and overflow-x:auto stays only as a fallback', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.ok(block, 'no @media(min-width:900px) block found');
+  assert.match(block, /#board\{[^}]*display:flex[^}]*overflow-x:auto[^}]*\}/);
+  assert.match(block, /\.boardcol\{[^}]*min-width:260px[^}]*flex:1 1 0[^}]*\}/);
+});
+
+test('tier 2: a collapsed section narrows into a strip instead of holding the full min-width', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /\.boardcol\.collapsed\{[^}]*\}/);
+});
+
+test('tier 2: modals center with a ~640px cap instead of sheeting up from the bottom', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /#modal\{[^}]*align-items:center[^}]*\}/);
+  assert.match(block, /#modalscroll\{[^}]*max-width:640px[^}]*\}/);
+});
+
+test('tier 2: the calendar view gets its own readable, centered cap — its 7-column grid would otherwise stretch edge to edge on an uncapped #scroll', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /#calview\{[^}]*max-width:900px[^}]*margin:0 auto[^}]*\}/);
+});
+
+test('tier 2: the pending-changes tray gets a readable cap — its rows push "remove" to the far edge (margin-left:auto) and its payload textarea is width:100%', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /\.pend\{[^}]*max-width:640px[^}]*\}/);
+});
+
+test('tier 2: the map and gantt SVG canvases are NOT capped — they size themselves from data inside their own overflow-x:auto scroller, so widening #scroll never stretches them', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.ok(!/#mapview\{|#ganttview\{|\.map-scroll\{|\.map-canvas\{/.test(block),
+    'map/gantt containers should be untouched at tier 2 — nothing to cap');
+});
+
+test('hnav hides on a (hover:hover) and (pointer:fine) capability query, not a width breakpoint', () => {
+  const block = mediaBlocks.find(b => /^@media\(hover:hover\)/.test(b));
+  assert.ok(block, 'no @media(hover:hover) block found');
+  assert.match(block, /and\s*\(pointer:fine\)/);
+  assert.match(block, /\.hnav\{display:none\}/);
+  assert.ok(!/min-width|max-width/.test(block), 'hnav must hide on pointer/hover capability, never on viewport width');
+});
+
+test('the scroll-button stack CSS (#scrollbtns and its buttons) is never nested inside any @media block, at any width', () => {
+  assert.match(nonMediaCss, /#scrollbtns\{/, '#scrollbtns should have unconditional CSS');
+  assert.match(nonMediaCss, /#scrollbtns button\{/, '#scrollbtns button should have unconditional CSS');
+  mediaBlocks.forEach(block => {
+    assert.ok(!block.includes('scrollbtns'), '#scrollbtns must not appear inside a @media block');
+  });
+  // Every individual button id in the stack (#sup/#sdn/#stop/#sbot/#snew/
+  // #sarch/#sdel/#mclose/#smore) is styled generically via "#scrollbtns
+  // button" and shown/hidden by JS (syncStack), not by per-id CSS — so the
+  // stronger, simpler invariant is just that none of them is ever
+  // referenced from inside a @media block either.
+  ['#sup', '#sdn', '#stop', '#sbot', '#snew', '#sarch', '#sdel', '#mclose', '#smore'].forEach(sel => {
+    mediaBlocks.forEach(block => {
+      assert.ok(!block.includes(sel), `${sel} must not appear inside a @media block`);
+    });
+  });
+});
+
+test("render() wraps each board section (header + cards) in a .boardcol container at every width, so tier 2's CSS can column-ize it without touching the DOM shape below 900px", () => {
+  const matches = src.match(/el\("div","boardcol"/g) || [];
+  assert.strictEqual(matches.length, 2, 'expected one .boardcol wrapper for status columns and one for the archive section');
+  assert.match(src, /el\("div","colcards"\)/);
+});

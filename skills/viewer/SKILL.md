@@ -142,6 +142,53 @@ tree"/"Dependency path" buttons described above.
    SKILL.md), then regenerate and redeliver a fresh editor with a new base
    stamp so the loop continues.
 
+## Width tiers
+
+The viewer is tap-first at every size — no layout tier changes the queue,
+payload, or action grammar, only how much of the screen the board uses:
+
+- **<560px (phone):** the baseline single centered column, unchanged.
+- **560-899px:** the column (`#scroll`) widens to ~720px; nothing else about
+  the layout changes.
+- **>=900px (desktop/tablet landscape):** `#scroll` drops its width cap
+  entirely (~24px side padding only, instead of the narrower centered
+  column lower tiers use) so the header, search, tabs, and board use the
+  real viewport. The board renders as a side-by-side column strip instead
+  of a stacked accordion — each visible status section (board order)
+  becomes a flex column that FILLS the freed width (`flex:1 1 0`,
+  min-width still ~260px), with its own independent vertical scroll,
+  mirroring kanban-web's `main#board`/`.column` mechanism
+  (`skills/web/web/app.css`); at the default five statuses that's ~1350px
+  of minimums, so 1400px+ viewports show no horizontal scrollbar, and the
+  strip keeps `overflow-x:auto` purely as a fallback for narrower desktop
+  widths or more columns than that. A tap-collapsed section narrows into a
+  slim strip rather than holding the full column width. The card detail
+  sheet, new-card form, and notifications pop-up center as a dialog capped
+  at ~640px instead of sheeting up from the bottom — same content, same
+  behavior. `render()` wraps every board section (header + its cards) in a
+  `.boardcol` container at every width so this tier's CSS can column-ize
+  the existing DOM without a different render path below 900px, where
+  `.boardcol` renders as a plain unstyled block, identical to the old flat
+  sibling layout.
+
+Of `#scroll`'s other descendants at this tier: the map and gantt views'
+SVG canvases size themselves from data inside their own
+`overflow-x:auto` scroller, so an uncapped `#scroll` never stretches
+them — no cap needed. The calendar's 7-column month grid and the
+pending-changes tray both read badly stretched edge to edge on an
+uncapped `#scroll` instead, so `#calview` (centered, ~900px cap) and
+`.pend` (~640px cap) get their own readable caps at this tier, independent
+of `#scroll`'s width.
+
+`hnav` (the horizontal-scroll step buttons on the Map view's dependency
+graph) hides on `(hover:hover) and (pointer:fine)` — a **capability** query,
+not a width breakpoint, so a touch device keeps the buttons regardless of
+screen size and a mouse/trackpad loses them regardless of screen size
+(scrollbars and shift-wheel cover it there). The scroll-button stack
+(`#scrollbtns`, see below) sits outside every width tier and every media
+query — it's the swipe-down insurance and context menu, unrelated to
+layout. Font/tap sizing is untouched by width tiers.
+
 ## Mobile viewer notes (learned the hard way)
 
 - The Claude mobile app dismisses the HTML viewer on swipe-down, so the editor
