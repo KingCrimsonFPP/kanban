@@ -244,7 +244,7 @@ TEMPLATE = """<!DOCTYPE html>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
 body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--page);color:var(--ink);font-size:15px;line-height:1.5;overflow:hidden}
-#scroll{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;touch-action:pan-y;padding:14px 14px 120px;max-width:560px;margin:0 auto}
+#scroll{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none;touch-action:pan-y;padding:0 14px 120px;max-width:560px;margin:0 auto}
 #scrollbtns{position:fixed;right:10px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:50}
 #scrollbtns button{width:46px;height:46px;border-radius:50%;font-size:19px;line-height:1;padding:0;background:var(--surface);border:1px solid var(--ring);color:var(--ink2);box-shadow:0 1px 4px rgba(0,0,0,.18)}
 #scrollbtns button svg{display:block;margin:auto}
@@ -266,9 +266,9 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
    by the sc "scroll" listener below once past a small threshold, not on
    every tick) compacts the padding and title once the page has scrolled,
    so the sticky header stays out of the way of board content. */
-.hdr{display:flex;align-items:baseline;gap:10px;padding:2px 0 8px;flex-wrap:wrap;position:sticky;top:0;z-index:20;background:var(--page)}
+.hdr{display:flex;align-items:baseline;gap:10px;padding:14px 0 8px;flex-wrap:wrap;position:sticky;top:0;z-index:20;background:var(--page)}
 .hdr b{font-size:16px;font-weight:600}
-.hdr.thin{padding:2px 0 3px}
+.hdr.thin{padding:5px 0 3px}
 .hdr.thin b{font-size:14px}
 .hdr .base{font-size:12px;color:var(--muted)}
 /* "N pending" is the only signal that queued changes are NOT yet on
@@ -448,7 +448,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
    every media query in this file, at every tier — it is the swipe-down
    insurance + context menu, unrelated to width. */
 @media(min-width:560px){#scroll{max-width:720px}}
-@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}.pend{max-width:640px}}
+@media(min-width:900px){#scroll{max-width:none;padding:0 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}.pend{max-width:640px}}
 /* Capability query, not width: touch devices (no hover, coarse
    pointer) keep the hnav step buttons exactly as today at every size;
    mouse/trackpad users get scrollbars + shift-wheel instead. The
