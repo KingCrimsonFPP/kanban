@@ -195,11 +195,18 @@ test('tier 1 (min-width:560px): #scroll max-width grows to ~720px, nothing else 
   assert.strictEqual((block.match(/\{/g) || []).length, 2, 'tier 1 should only style #scroll');
 });
 
-test('tier 2 (min-width:900px): board becomes a flex column strip with min-width ~260px', () => {
+test('tier 2 (min-width:900px): #scroll drops its width cap so the board can use the real viewport', () => {
   const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
   assert.ok(block, 'no @media(min-width:900px) block found');
-  assert.match(block, /#board\{[^}]*display:flex[^}]*\}/);
-  assert.match(block, /\.boardcol\{[^}]*min-width:260px[^}]*flex:[^}]*\}/);
+  assert.match(block, /#scroll\{[^}]*max-width:none[^}]*\}/);
+  assert.ok(!/#scroll\{[^}]*max-width:(?!none)\d/.test(block), '#scroll must not carry a pixel width cap at tier 2');
+});
+
+test('tier 2: board becomes a flex column strip, each column FILLS the freed width (flex:1 1 0) with a ~260px floor, and overflow-x:auto stays only as a fallback', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.ok(block, 'no @media(min-width:900px) block found');
+  assert.match(block, /#board\{[^}]*display:flex[^}]*overflow-x:auto[^}]*\}/);
+  assert.match(block, /\.boardcol\{[^}]*min-width:260px[^}]*flex:1 1 0[^}]*\}/);
 });
 
 test('tier 2: a collapsed section narrows into a strip instead of holding the full min-width', () => {
@@ -211,6 +218,22 @@ test('tier 2: modals center with a ~640px cap instead of sheeting up from the bo
   const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
   assert.match(block, /#modal\{[^}]*align-items:center[^}]*\}/);
   assert.match(block, /#modalscroll\{[^}]*max-width:640px[^}]*\}/);
+});
+
+test('tier 2: the calendar view gets its own readable, centered cap — its 7-column grid would otherwise stretch edge to edge on an uncapped #scroll', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /#calview\{[^}]*max-width:900px[^}]*margin:0 auto[^}]*\}/);
+});
+
+test('tier 2: the pending-changes tray gets a readable cap — its rows push "remove" to the far edge (margin-left:auto) and its payload textarea is width:100%', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.match(block, /\.pend\{[^}]*max-width:640px[^}]*\}/);
+});
+
+test('tier 2: the map and gantt SVG canvases are NOT capped — they size themselves from data inside their own overflow-x:auto scroller, so widening #scroll never stretches them', () => {
+  const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
+  assert.ok(!/#mapview\{|#ganttview\{|\.map-scroll\{|\.map-canvas\{/.test(block),
+    'map/gantt containers should be untouched at tier 2 — nothing to cap');
 });
 
 test('hnav hides on a (hover:hover) and (pointer:fine) capability query, not a width breakpoint', () => {

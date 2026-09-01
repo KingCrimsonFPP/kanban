@@ -400,16 +400,29 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .pill{cursor:pointer}
 /* Tier 1 (560-899px): the single column just grows — nothing else
    changes, so phone widths below 560px stay pixel-identical (unreached
-   base rule above still says max-width:560px). Tier 2 (>=900px): the board
-   goes side-by-side (each .boardcol a flex column, min-width ~260px,
-   collapsed ones a narrow strip) and modals center instead of sheeting up
-   from the bottom, mirroring the web app's main#board/.column mechanism
-   (skills/web/web/app.css ~lines 80-136) on top of this template's own DOM.
+   base rule above still says max-width:560px). Tier 2 (>=900px): #scroll
+   drops its width cap entirely (~24px side padding only) so the header,
+   search, tabs and board use the real viewport instead of sitting in a
+   narrow centered column. The board goes side-by-side and each .boardcol
+   FLEXES TO FILL the freed width (flex:1 1 0, min-width still ~260px) —
+   at the default five columns that's ~1350px of minimums, so 1400px+
+   viewports show no horizontal scrollbar; #board keeps overflow-x:auto
+   purely as a fallback for N columns x 260px exceeding the viewport.
+   Collapsed columns stay a narrow strip, and modals center instead of
+   sheeting up from the bottom, mirroring the web app's main#board/.column
+   mechanism (skills/web/web/app.css ~lines 80-136) on top of this
+   template's own DOM. Of #scroll's other descendants: the map/gantt SVGs
+   size themselves from data inside their own overflow-x:auto scroller
+   (nothing to stretch); the calendar's 7-column month grid and the
+   pending-changes tray (its "remove" buttons push-right via margin-left:
+   auto, its payload textarea is width:100%) both read badly stretched
+   edge to edge at this width, so #calview and .pend each get a readable
+   cap, independent of #scroll's now-uncapped width.
    The scroll-button stack (#scrollbtns and its children) stays OUTSIDE
    every media query in this file, at every tier — it is the swipe-down
    insurance + context menu, unrelated to width. */
 @media(min-width:560px){#scroll{max-width:720px}}
-@media(min-width:900px){#scroll{max-width:1200px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 260px}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}}
+@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}.pend{max-width:640px}}
 /* Capability query, not width: touch devices (no hover, coarse
    pointer) keep the hnav step buttons exactly as today at every size;
    mouse/trackpad users get scrollbars + shift-wheel instead. */
