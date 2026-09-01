@@ -254,10 +254,32 @@ button:active{transform:scale(.98)}
 input[type=text],input[type=search],select,textarea{background:var(--surface);border:1px solid var(--ring);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:15px;width:100%}
 #searchrow{margin:0 0 8px}
 #q{font-size:13px;padding:7px 10px}
-.hdr{display:flex;align-items:baseline;gap:10px;padding:2px 0 8px;flex-wrap:wrap}
+/* Sticky at EVERY width (not gated behind a media query — the rework
+   that replaced the floating tray applies here regardless of screen
+   size): #scroll is the scroll container (overflow-y:auto) and .hdr is
+   its direct child, so position:sticky;top:0 pins it to the scrollport's
+   top edge with no extra wrapper needed. A solid, non-transparent
+   background (page, matching the surrounding page background) keeps
+   board cards from showing through as they scroll underneath; z-index
+   sits below #modal's backdrop (40) and the ctx menu (45) so an open
+   card sheet or right-click menu still wins over it. .hdr.thin (toggled
+   by the sc "scroll" listener below once past a small threshold, not on
+   every tick) compacts the padding and title once the page has scrolled,
+   so the sticky header stays out of the way of board content. */
+.hdr{display:flex;align-items:baseline;gap:10px;padding:2px 0 8px;flex-wrap:wrap;position:sticky;top:0;z-index:20;background:var(--page)}
 .hdr b{font-size:16px;font-weight:600}
+.hdr.thin{padding:2px 0 3px}
+.hdr.thin b{font-size:14px}
 .hdr .base{font-size:12px;color:var(--muted)}
-.pill{margin-left:auto;font-size:12px;color:var(--accent);font-weight:600}
+/* "N pending" is the only signal that queued changes are NOT yet on
+   disk — a solid accent fill (same --accent the Copy-changes button
+   outlines itself in) with bold white text makes it impossible to miss
+   or mistake for a passive label, unlike the old plain colored-text
+   pill. :empty collapses padding/background back to nothing when no ops
+   are queued (render() sets textContent to "" in that case) so it never
+   shows as a stray colored dot. */
+.pill{margin-left:auto;font-size:12px;font-weight:700;color:#fff;background:var(--accent);border-radius:12px;padding:3px 10px}
+.pill:empty{padding:0;background:none}
 #bell{font-size:14px;padding:3px 9px;border-radius:14px;line-height:1.2}
 #bellcnt{font-size:10px;font-weight:700;color:#fff;background:var(--high);border-radius:8px;padding:0 5px;margin-left:4px;vertical-align:1px}
 .nrow{border:1px solid var(--grid);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:13px;overflow-wrap:break-word}
@@ -413,26 +435,20 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
    mechanism (skills/web/web/app.css ~lines 80-136) on top of this
    template's own DOM. Of #scroll's other descendants: the map/gantt SVGs
    size themselves from data inside their own overflow-x:auto scroller
-   (nothing to stretch); the calendar's 7-column month grid reads badly
-   stretched edge to edge at this width, so #calview gets a readable cap,
-   independent of #scroll's now-uncapped width. #pend (the pending-changes
-   tray — id-scoped, not .pend, since #pend is the only element that class
-   ever names) leaves the document flow entirely and floats bottom-left as
-   a fixed overlay, clear of #scrollbtns' bottom-RIGHT stack (right:10px,
-   no horizontal overlap at this tier's widths) and above ordinary board
-   content but BELOW #modal's backdrop (z-index:40) so an open card sheet
-   still wins; its own scroll (max-height + overflow-y:auto) keeps a long
-   op queue from ever growing past ~45% of the viewport, and render()'s
-   existing display:none/"block" gate (unchanged) still decides whether it
-   floats at all — it only appears while ops are queued (or a note is
-   showing). Phone stays exactly as before: this rule only exists inside
-   the >=900px block, so the tray is still just an ordinary flow block below
-   560px.
+   (nothing to stretch); the calendar's 7-column month grid and the
+   pending-changes tray (its "remove" buttons push-right via margin-left:
+   auto, its payload textarea is width:100%) both read badly stretched
+   edge to edge at this width, so #calview and .pend each get a readable
+   cap, independent of #scroll's now-uncapped width. (An earlier revision
+   floated #pend as a fixed bottom-left overlay at this tier — reverted:
+   it read as "always on top" and covered board content. The tray is back
+   in normal flow at every width; see the sticky .hdr rule below instead
+   for keeping the pending count in view while scrolling.)
    The scroll-button stack (#scrollbtns and its children) stays OUTSIDE
    every media query in this file, at every tier — it is the swipe-down
    insurance + context menu, unrelated to width. */
 @media(min-width:560px){#scroll{max-width:720px}}
-@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}#pend{position:fixed;left:24px;bottom:18px;top:auto;width:380px;max-width:calc(100vw - 48px);max-height:45vh;overflow-y:auto;margin:0;z-index:30}}
+@media(min-width:900px){#scroll{max-width:none;padding:14px 24px 120px}#board{display:flex;align-items:flex-start;gap:12px;overflow-x:auto}.boardcol{display:flex;flex-direction:column;min-width:260px;flex:1 1 0}.boardcol.collapsed{flex:0 0 150px;min-width:0}.boardcol .colh{flex:none}.colcards{flex:1;min-height:0;overflow-y:auto;max-height:calc(100vh - 220px)}#modal{align-items:center}#modalscroll{max-width:640px}#calview{max-width:900px;margin:0 auto}.pend{max-width:640px}}
 /* Capability query, not width: touch devices (no hover, coarse
    pointer) keep the hnav step buttons exactly as today at every size;
    mouse/trackpad users get scrollbars + shift-wheel instead. The
@@ -454,7 +470,7 @@ input[type=text],input[type=search],select,textarea{background:var(--surface);bo
 .ctxitem.armed{color:var(--high)}
 </style></head><body>
 <div id="scroll">
-<div class="hdr"><b>kanban</b><span class="base">editor · base: __BASE_LABEL__</span><span class="pill" id="pill"></span><button id="bell" aria-label="Notifications">&#128276;<span id="bellcnt" style="display:none"></span></button></div>
+<div class="hdr" id="hdr"><b>kanban</b><span class="base">editor · base: __BASE_LABEL__</span><span class="pill" id="pill"></span><button id="bell" aria-label="Notifications">&#128276;<span id="bellcnt" style="display:none"></span></button></div>
 <div id="searchrow"><input type="search" id="q" data-stop="1" placeholder="Search&#8230; (#id, title:, body:, status:, priority:, tags:, file:)"></div>
 <div class="viewtabs" id="viewtabs">
 <button type="button" data-view="board" class="active">Board</button>
@@ -1475,6 +1491,14 @@ qTerms=resolveGraphTerms(String($("q").value||"").trim().split(/\\s+/).filter(Bo
 render();renderMap();renderGantt();renderCalendar()});
 sc.addEventListener("touchmove",e=>e.stopPropagation(),{passive:true});
 sc.addEventListener("scroll",()=>{if(ctxMenuEl)closeCtxMenu()},{passive:true});
+// Thin sticky header: toggle .hdr.thin only when crossing the threshold,
+// not on every scroll tick — one classList write per state change, no
+// extra layout reads beyond the scrollTop the scroll event already carries.
+let hdrThin=false;
+sc.addEventListener("scroll",()=>{
+const thin=sc.scrollTop>8;
+if(thin!==hdrThin){hdrThin=thin;$("hdr").classList.toggle("thin",thin)}
+},{passive:true});
 document.body.addEventListener("change",e=>{
 const t=e.target;
 if(t.dataset&&t.dataset.act==="asg"){const card=t.closest("[data-card]");if(card){queue({op:"edit",id:card.dataset.card,assignee:t.value});pillEd=null;render()}}});

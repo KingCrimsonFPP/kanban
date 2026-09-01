@@ -177,17 +177,13 @@ SVG canvases size themselves from data inside their own
 them — no cap needed. The calendar's 7-column month grid reads badly
 stretched edge to edge on an uncapped `#scroll`, so `#calview` gets its
 own readable cap (centered, ~900px), independent of `#scroll`'s width.
-The pending-changes tray (`#pend`) leaves the document flow entirely at
-this tier and floats as a fixed bottom-left overlay (~380px wide, capped
-at 45vh tall with its own internal scroll) so it stays reachable on tall
-boards instead of sitting below the fold — it's still gated by the exact
-same "any ops queued, or a note to show" check `render()` always used, so
-it only appears while there's something to show, and board content stays
-scrollable underneath it. It floats clear of the scroll-button stack
-(bottom-right, no horizontal overlap at this width) and above ordinary
-board content but below an open card sheet's backdrop. Below 900px the
-tray is untouched — just an ordinary block at the bottom of the page, like
-before.
+The pending-changes tray (`.pend`) gets a readable ~640px cap at this
+tier, same as the calendar, but stays an ordinary block at the bottom of
+the page at every width — an earlier revision floated it as a fixed
+bottom-left overlay; that read as "always on top" over board content and
+was reverted. It's still gated by the exact same "any ops queued, or a
+note to show" check `render()` always used, so it only appears while
+there's something to show.
 
 `hnav` (the horizontal-scroll step buttons on the Map view's dependency
 graph) hides on `(hover:hover) and (pointer:fine)` — a **capability** query,
@@ -197,6 +193,19 @@ screen size and a mouse/trackpad loses them regardless of screen size
 (`#scrollbtns`, see below) sits outside every width tier and every media
 query — it's the swipe-down insurance and context menu, unrelated to
 layout. Font/tap sizing is untouched by width tiers.
+
+The header line (`.hdr`: project name, base label, "N pending" pill,
+🔔) is `position:sticky` at the top of `#scroll` at **every** width, not
+just >=900px — it's the one piece of chrome deliberately exempted from
+the width-tier split above. A scroll listener on `#scroll` toggles a
+`.hdr.thin` class once the page has scrolled past a small threshold,
+compacting the header's padding and title size so it stays out of the
+way of board content; only the header line sticks, the search box and
+view tabs scroll away normally. The "N pending" indicator (`#pill`) is a
+solid accent-filled pill with bold white text — not just colored text —
+so queued changes are never mistaken for already applied; it collapses
+to nothing when no ops are queued, and stays tappable, jumping to the
+tray at the bottom of the page.
 
 ## Mobile viewer notes (learned the hard way)
 
