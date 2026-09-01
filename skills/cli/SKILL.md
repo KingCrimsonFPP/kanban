@@ -32,10 +32,13 @@ defines what a correct write looks like.
 
 ## Locating the board
 
-Default to `./kanban/` relative to the current working directory. If the user
-names a board, resolve its path (a board is any directory of `*.card.md`
-files, conventionally `<project>/kanban/`). If no directory containing
-`*.card.md` files is found, say so and stop.
+`.kanban/` is the preferred board directory; `kanban/` remains supported as a
+fallback for existing boards. Default to the current working directory's
+`.kanban/`, falling back to `kanban/` when only that exists. If the user
+names a board, resolve its path directly (a board is any directory of
+`*.card.md` files, conventionally `<project>/.kanban/` or, on an older
+board, `<project>/kanban/`). If no directory containing `*.card.md` files is
+found, say so and stop.
 
 The helper scripts live with the `kanban` skill — locate them with glob
 `**/kanban/scripts/list_all_cards.sh` and use that directory as `<SCRIPTS_DIR>`.
@@ -142,7 +145,7 @@ one line and re-print the affected card or board section.
   hard reject: refuse the move and name which condition fired ("waiting on
   #34" / "blocked: <reason>"), the conversational twin of the web app's
   snap-back toast.
-- **Archive / Restore** — move the file into / out of `kanban/archived/`
+- **Archive / Restore** — move the file into / out of `<kanban-dir>/archived/`
   (location, not status; status untouched).
 - **Delete** — permanently remove the card file.
 - **Bulk** — commands take multiple ids: `archive 3,5,7`, `delete 3,5`,

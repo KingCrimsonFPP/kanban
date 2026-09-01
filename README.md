@@ -100,6 +100,9 @@ full parity table.
 
 ## The board data model
 
+- **Board directory** — `.kanban/` is the preferred board directory; `kanban/`
+  remains supported as a fallback for existing boards. Every surface discovers
+  `.kanban/` first, then falls back to `kanban/`.
 - **Cards** — one file per card: `<0000-id>.<kebab-case-slug>.card.md`. The
   4-digit-padded id prefix is cosmetic (sorting/visibility only); the
   frontmatter `id` field is the actual source of truth for identity.
@@ -110,9 +113,10 @@ full parity table.
   board scripts.
 - **Status vs. archive** — `status` is a card's column (`backlog`, `todo`,
   `doing`, `done` by default, or a custom list from `config.yaml`). Archive is
-  a *location*, not a status: moving a card into `kanban/archived/` takes it
-  off the active board without touching its `status` field (almost always
-  left as `done`). Restoring moves the file back.
+  a *location*, not a status: moving a card into the board directory's
+  `archived/` folder takes it off the active board without touching its
+  `status` field (almost always left as `done`). Restoring moves the file
+  back.
 - **Waiting vs. blocked** — these are two distinct concepts:
   - `waiting_for` is a **derived** dependency list. A card is waiting while
     any id it lists is not `done`; there's nothing to set or clear by hand —

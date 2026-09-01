@@ -98,8 +98,9 @@ function createServer(dir) {
         return sendJSON(res, 200, {
           projectName: cs.projectName(dir),
           // the header copy button copies the board dir's ABSOLUTE
-          // path — resolve()d because the CLI defaults dir to the relative
-          // 'kanban', and a relative path is useless pasted elsewhere.
+          // path — resolve()d because the CLI defaults dir to a relative
+          // '.kanban'/'kanban' (resolveDefaultBoardDir()), and a relative
+          // path is useless pasted elsewhere.
           boardDir: path.resolve(dir),
           active: active.filter((c) => !c.unparseable).map(cs.toJSON),
           archived: archived.filter((c) => !c.unparseable).map(cs.toJSON),
@@ -192,11 +193,22 @@ function start(dir, port, attempts = 20) {
   return srv;
 }
 
+// Board-directory discovery for a missing CLI arg: `.kanban/` is the
+// preferred convention, `kanban/` a supported legacy fallback — checked
+// relative to `baseDir` (default: cwd). Neither present: fall back to the
+// preferred name so the existsSync check below reports it, not the legacy one.
+function resolveDefaultBoardDir(baseDir) {
+  baseDir = baseDir || process.cwd();
+  if (fs.existsSync(path.join(baseDir, '.kanban'))) return '.kanban';
+  if (fs.existsSync(path.join(baseDir, 'kanban'))) return 'kanban';
+  return '.kanban';
+}
+
 if (require.main === module) {
-  const dir = process.argv[2] || 'kanban';
+  const dir = process.argv[2] || resolveDefaultBoardDir();
   if (!fs.existsSync(dir)) { console.error(`Board dir not found: ${dir}`); process.exit(1); }
   const port = Number(process.argv[3]) || 7777;
   start(dir, port);
 }
 
-module.exports = { createServer, start, originAllowed };
+module.exports = { createServer, start, originAllowed, resolveDefaultBoardDir };

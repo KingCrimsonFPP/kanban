@@ -17,8 +17,17 @@
 #   [review: <text>] — the `review:` sticker (ADR 0009), blocked's
 #     sibling — same predicate, applied to `review`. Does NOT gate `doing`.
 # Usage: bash view_board.sh [kanban-directory]
+# No directory given: discover it — `.kanban/` preferred, `kanban/` a
+# supported legacy fallback (checked relative to the cwd).
 
-KANBAN_DIR="${1:-kanban}"
+KANBAN_DIR="${1:-}"
+if [ -z "$KANBAN_DIR" ]; then
+    if [ -d ".kanban" ]; then
+        KANBAN_DIR=".kanban"
+    else
+        KANBAN_DIR="kanban"
+    fi
+fi
 
 if [ ! -d "$KANBAN_DIR" ]; then
     echo "Error: '$KANBAN_DIR' not found." >&2
@@ -169,4 +178,4 @@ done
 # app, not this script)
 echo ""
 echo "=== ARCHIVE ==="
-echo "(see kanban/archived/ — not scanned by this script)"
+echo "(see $KANBAN_DIR/archived/ — not scanned by this script)"

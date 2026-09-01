@@ -1,11 +1,15 @@
 ---
 name: kanban
-description: Manage a Markdown-based Kanban board using card files in a kanban/ directory (including kanban/archived/ for completed cards). Use when the user asks to create, move, view, list, or manage tasks or cards on a kanban board, or when tracking work items across statuses like backlog, todo, doing, done, or archive. Defines every board file contract (cards, config.yaml ids/assignees, notifications.md) and when the AI must notify the human.
+description: Manage a Markdown-based Kanban board using card files in a .kanban/ directory (kanban/ supported as a legacy fallback), including archived/ for completed cards. Use when the user asks to create, move, view, list, or manage tasks or cards on a kanban board, or when tracking work items across statuses like backlog, todo, doing, done, or archive. Defines every board file contract (cards, config.yaml ids/assignees, notifications.md) and when the AI must notify the human.
 ---
 
 # Kanban AI Skill
 
-Manage a Kanban board as Markdown files in the `kanban/` directory. Each file is a card. The board state is derived by reading all card files and grouping by `status`.
+Manage a Kanban board as Markdown files in the board directory. Each file is a card. The board state is derived by reading all card files and grouping by `status`.
+
+## Locating the board
+
+`.kanban/` is the preferred board directory; `kanban/` remains supported as a fallback for existing boards. Discovery order: `.kanban/` first, then `kanban/`. `<kanban-dir>` throughout this file refers to whichever one resolves.
 
 ## Narrative Record (Required)
 
@@ -33,7 +37,7 @@ When a card is moved to `done`, add enough narrative detail that a future reader
 
 Each card's frontmatter supports the following fields:
 
-- `id` — Unique numeric identifier. If the board has a `config.yaml` with a `nextId` counter, use `max(nextId, scan-max + 1)` and write the advanced counter back — this keeps ids unique across deletions and concurrent writers. Otherwise scan existing `*.card.md` files in `kanban/` (including `kanban/archived/`) and take max + 1, starting at `1` if empty. Reference cards by this number.
+- `id` — Unique numeric identifier. If the board has a `config.yaml` with a `nextId` counter, use `max(nextId, scan-max + 1)` and write the advanced counter back — this keeps ids unique across deletions and concurrent writers. Otherwise scan existing `*.card.md` files in `<kanban-dir>` (including `<kanban-dir>/archived/`) and take max + 1, starting at `1` if empty. Reference cards by this number.
 - `status` — Column. The board's official column list is `config.yaml`'s `statuses` (ordered = column order); absent, the built-in four apply: `backlog`, `todo`, `doing`, `done`. Free text is legal on disk — a value not in the list renders in the list's **first** column (the catch-all) with its raw value shown, and is **never rewritten**; promotion = the human adds the value to the list. `archive` is a location, not a status. Prefer listed values when creating cards.
 - `priority` — one of the board's official `priorities` list in `config.yaml` (built-in default: `High`, `Normal`, `Low` — ordered highest first). Free text is allowed but sorts after all official values. Defaults to `Normal` if omitted.
 - `waiting_for` — List of card IDs this card depends on (dependency edges). Example: `[3, 7]`. Replaces `blocked_by` — hard cutover, no reader honors the old name. **Waiting is derived at read time, never stored:** the card is *waiting* while any listed card is not `done`; when every dep lands, the waiting state disappears on its own. A listed id with no matching card (dangling) is **non-blocking** — it never makes the card waiting. A dependency is sequencing, not an impediment; don't call it "blocked". Omit if empty — an empty `[]` stays legal on read, but it's no-data boilerplate the `kanban-web` app strips on its next managed write, so don't write it.
@@ -51,7 +55,7 @@ Each card's frontmatter supports the following fields:
 
 ## Creating a Card
 
-Create a new card file in `kanban/` named `<0000-id>.<kebab-case-name>.card.md` — the card's `id` zero-padded to 4 digits, so filenames sort by card id (e.g. `0008.card-filename-id-prefix.card.md`). The frontmatter `id` field is the source of truth; the filename prefix is cosmetic (visibility + sorting) and scripts never parse identity from it. **Only `*.card.md` files are treated as cards** — any other `.md` (a generated `board.md`, a `README.md`, `CLAUDE.md`, `AGENTS.md`, etc.) is ignored by the board scripts, so meta files can live alongside cards safely.
+Create a new card file in `<kanban-dir>` named `<0000-id>.<kebab-case-name>.card.md` — the card's `id` zero-padded to 4 digits, so filenames sort by card id (e.g. `0008.card-filename-id-prefix.card.md`). The frontmatter `id` field is the source of truth; the filename prefix is cosmetic (visibility + sorting) and scripts never parse identity from it. **Only `*.card.md` files are treated as cards** — any other `.md` (a generated `board.md`, a `README.md`, `CLAUDE.md`, `AGENTS.md`, etc.) is ignored by the board scripts, so meta files can live alongside cards safely.
 
 Older boards may still contain unprefixed `<kebab-case-name>.card.md` files — readers treat both identically (everything globs `*.card.md`); `scripts/migrate_card_names.sh` renames a board to the prefixed format in place.
 
@@ -85,8 +89,8 @@ Landing in the literal status `todo` stamps `start_date`; landing in `done` stam
 
 **Entry gate to the literal status `doing`:** before moving a card to `doing`, verify it is neither **waiting** (some `waiting_for` id names a card not `done`; dangling ids don't count) nor **blocked** (`blocked` holds a valid reason — trimmed value with ≥ 1 alphanumeric character, or YAML `true`). If either holds, refuse and name which: "waiting on #34" / "blocked: <reason>". No eviction — the gate applies on entry only; a card already in `doing` that gets blocked stays there. And regardless of column, agents never grab a blocked card. **`review` (ADR 0009) does NOT gate `doing` entry** — the gate stays `waiting` + `blocked`, exactly as above; a card can be moved into (or stay in) `doing` while wearing a `review` sticker. Regardless of column, agents never grab a review-stickered card either — same "not yours to touch" stance as blocked, just for a different reason (finished, not stuck).
 
-Cards with `status: done` may be moved into `kanban/archived/` to keep the main board tidy. This is a file-location move only; the card should remain a normal card with `status: done` unless explicitly changed.
-If `kanban/archived/` does not exist, create it under the active cards folder (`kanban/`) before moving the card.
+Cards with `status: done` may be moved into `<kanban-dir>/archived/` to keep the main board tidy. This is a file-location move only; the card should remain a normal card with `status: done` unless explicitly changed.
+If `<kanban-dir>/archived/` does not exist, create it under the active board directory before moving the card.
 
 ## Board files that aren't cards
 
@@ -183,7 +187,7 @@ Helper scripts are bundled in the `scripts/` directory alongside this skill file
 Run the board view script:
 
 ```bash
-bash <SCRIPTS_DIR>/view_board.sh kanban/
+bash <SCRIPTS_DIR>/view_board.sh <kanban-dir>
 ```
 
 Outputs cards grouped by status column, with priority, waiting (unresolved `waiting_for` ids only), blocked (reason), and review (text) flags inline.
@@ -192,49 +196,49 @@ Outputs cards grouped by status column, with priority, waiting (unresolved `wait
 
 ### Search by Tag
 ```bash
-bash <SCRIPTS_DIR>/search_by_tag.sh kanban/ <tag>
+bash <SCRIPTS_DIR>/search_by_tag.sh <kanban-dir> <tag>
 ```
 Output: Cards with that tag (ID, status, title)
 
 ### Search Content
 ```bash
-bash <SCRIPTS_DIR>/search_content.sh kanban/ "<search term>"
+bash <SCRIPTS_DIR>/search_content.sh <kanban-dir> "<search term>"
 ```
 Output: Cards matching the search term with context lines
 
 ### Show Blocked Cards (manual sticker)
 ```bash
-bash <SCRIPTS_DIR>/show_blocked.sh kanban/
+bash <SCRIPTS_DIR>/show_blocked.sh <kanban-dir>
 ```
 Output: Cards whose `blocked` sticker passes the predicate, reason inline.
 
 ### Show Review Cards (manual/dispatcher sticker)
 ```bash
-bash <SCRIPTS_DIR>/show_review.sh kanban/
+bash <SCRIPTS_DIR>/show_review.sh <kanban-dir>
 ```
 Output: Cards whose `review` sticker passes the predicate (`blocked`'s sibling, ADR 0009), text inline. Does not affect the `doing` entry gate.
 
 ### Show Waiting Cards (unresolved dependencies)
 ```bash
-bash <SCRIPTS_DIR>/show_waiting.sh kanban/
+bash <SCRIPTS_DIR>/show_waiting.sh <kanban-dir>
 ```
 Output: Cards that are **waiting** — some `waiting_for` id not `done` — with the unresolved ids listed; deps all `done` = not shown.
 
 ### List All Tags
 ```bash
-bash <SCRIPTS_DIR>/list_tags.sh kanban/
+bash <SCRIPTS_DIR>/list_tags.sh <kanban-dir>
 ```
 Output: All tags sorted by usage count (most used first)
 
 ### List All Cards
 ```bash
-bash <SCRIPTS_DIR>/list_all_cards.sh kanban/
+bash <SCRIPTS_DIR>/list_all_cards.sh <kanban-dir>
 ```
 Output: All cards in pipe-delimited format (id|status|waiting_for|blocked|title), sorted by ID. Useful for parsing, debugging dependencies, or exporting board state.
 
 ### Eligible Cards (agent pickup)
 ```bash
-bash <SCRIPTS_DIR>/eligible_cards.sh kanban/ [assignee]
+bash <SCRIPTS_DIR>/eligible_cards.sh <kanban-dir> [assignee]
 ```
 Output: `todo` cards (literal status) that are doing-gate clear — not waiting (`show_waiting.sh` semantics: dangling `waiting_for` ids and all-`done` deps don't count), not blocked (`show_blocked.sh` predicate), and not review-stickered (`show_review.sh` predicate — ADR 0009: agents skip a card awaiting human approval, same as blocked, even though `review` doesn't gate `doing`) — as `id|priority|assignee|title`, sorted by ID. The optional `assignee` arg filters the result and is quote-normalized, so `@afk` and `"@afk"` both match the on-disk `assignee: "@afk"`; omitted returns every assignee. The one-call answer to "what can an agent pick up right now" — no re-deriving the gate from raw card files.
 

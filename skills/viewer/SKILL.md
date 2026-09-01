@@ -23,7 +23,11 @@ python3 <SCRIPTS_DIR>/build_editor.py <kanban-directory> [--out kanban-viewer.ht
     [--base-label "Jul 11, 3:08 pm CT"] [--base-iso 2026-07-11T20:08Z]
 ```
 
-- `kanban-directory` — path to the card files. In a Cowork/remote session, stage
+- `kanban-directory` — path to the card files, always passed explicitly (the
+  script takes no default). When the human hasn't already named it, locate it
+  the same way as the other surfaces: `.kanban/` is the preferred board
+  directory, `kanban/` a supported fallback for existing boards — discovery
+  order: `.kanban/` first, then `kanban/`. In a Cowork/remote session, stage
   the board first (all root `*.card.md` + `config.yaml` + `notifications.md`)
   and point the script at the staged copy.
 - `--base-label` / `--base-iso` — the snapshot moment shown in the header and

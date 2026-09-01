@@ -6,7 +6,7 @@ description: Stand up a local web app (Node server + browser SPA) to edit a Mark
 # Kanban Web (live editor)
 
 Stand up a localhost web server whose **source of truth and persistence layer is the
-`kanban/` folder itself**. It serves a vanilla-JS SPA that renders the board and writes
+board folder itself**. It serves a vanilla-JS SPA that renders the board and writes
 every drag-drop / create / edit / archive / delete straight back to the `*.card.md`
 files. Desktop/localhost only (ADR 0002); open it in any browser or VSCode's
 **Simple Browser**.
@@ -18,8 +18,12 @@ CONTEXT.md. This skill documents how *this app* renders and edits against those 
 
 ## Locating the board
 
-Default to `./kanban/` relative to the current working directory. If the user names a
-board, resolve its path (a board is any directory of `*.card.md` files, conventionally
+`.kanban/` is the preferred board directory; `kanban/` remains supported as a fallback
+for existing boards. Default to the current working directory's `.kanban/`, falling
+back to `kanban/` when only that exists (`server.js`'s CLI entry point applies this
+same discovery order when no directory argument is given — see Launching below). If
+the user names a board, resolve its path directly (a board is any directory of
+`*.card.md` files, conventionally `<project>/.kanban/` or, on an older board,
 `<project>/kanban/`). The scripts live with this skill — find them with glob
 `**/web/scripts/server.js` and use that `scripts/` dir.
 
@@ -31,6 +35,9 @@ Start the server **in the background** (it runs until stopped):
 node <SCRIPTS_DIR>/server.js <kanban-dir> [port]
 ```
 
+- Pass `<kanban-dir>` explicitly (the path resolved above) — omitting it makes the
+  server apply the same discovery itself, relative to *its own* working directory:
+  `.kanban/` first, then `kanban/`.
 - Default port `7777`; it auto-increments if busy and **prints the actual URL** on
   stdout (`Kanban app: http://localhost:<port> ...`). Read that line for the real port.
 - It writes `<kanban-dir>/.kanban-app.pid` (line 1 = pid, line 2 = port). This dotfile
@@ -308,7 +315,7 @@ to `127.0.0.1` only.
   drag-driven status changes, and bulk edits alike, since all go through the same PATCH
   endpoint — and is left untouched by archive/restore (those move the file, not its
   content). ADR 0008.
-- **Archive** — moves the card's file into `kanban/archived/` (a *location*, not a
+- **Archive** — moves the card's file into `<kanban-dir>/archived/` (a *location*, not a
   status; status is left as-is). Archived cards live in the Archive column, right of
   Done; clicking a tile opens the same detail popup as a live card (no Edit/Archive
   actions, since those don't apply to an already-archived card), and each tile keeps

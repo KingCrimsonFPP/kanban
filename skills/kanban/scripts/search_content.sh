@@ -7,7 +7,7 @@ SEARCH_TERM="$*"
 
 if [ -z "$SEARCH_TERM" ]; then
     echo "Usage: $0 [kanban_dir] <search_term>"
-    echo "Example: $0 kanban/ 'temporal signals'"
+    echo "Example: $0 .kanban/ 'temporal signals'"
     exit 1
 fi
 
