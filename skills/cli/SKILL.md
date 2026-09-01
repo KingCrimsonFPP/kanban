@@ -87,8 +87,10 @@ browse the archive, or a **command** — `move 5 to doing`, `archive 3,5,7`,
 
 On id `N`: locate the file (glob `<kanban-dir>/*.card.md` + `grep -l '^id: N$'`,
 falling back to `list_all_cards.sh` for the id→file map), Read it, show it — the
-markdown renders directly, with one exception (below). Check `archived/` too;
-an archived card shows with an `[archived]` marker. No match → "No card #N."
+markdown renders directly, with one exception (below). Check `archived/` too —
+**recursively**, since archived cards may sit inside `archived/<package>/`
+grouping folders (ADR 0010); an archived card shows with an `[archived]`
+marker, wherever in that tree it lives. No match → "No card #N."
 and back to step 2.
 
 **Exception — format local-datetime frontmatter values:** a raw value like
@@ -143,7 +145,11 @@ one line and re-print the affected card or board section.
   #34" / "blocked: <reason>"), the conversational twin of the web app's
   snap-back toast.
 - **Archive / Restore** — move the file into / out of `kanban/archived/`
-  (location, not status; status untouched).
+  (location, not status; status untouched). Archive writes to the `archived/`
+  root unless the user names a package, which files the card in
+  `kanban/archived/<package>/` (created on demand — one plain path component,
+  ADR 0010). Restore returns the card to `kanban/` from anywhere in that tree,
+  and leaves the emptied package folder behind.
 - **Delete** — permanently remove the card file.
 - **Bulk** — commands take multiple ids: `archive 3,5,7`, `delete 3,5`,
   `move 3,5 to todo`, and bulk edits: `assign 3,5 @afk` (empty assignee =
@@ -182,7 +188,8 @@ is defined in `/kanban`. On "Notifications":
 3. Offer: **Remove an entry** (by id, confirm), **Clear all** (confirm with
    count), **Back**. Both ARCHIVE, never delete: move the entries verbatim
    (append) to `<kanban-dir>/archived/notifications.md`, creating the
-   file/dir if absent.
+   file/dir if absent — always at the `archived/` root, never inside an
+   archive package folder.
 
 Skip malformed entries (missing numeric `id` or empty `message`) when printing;
 like the web app, move their raw blocks verbatim to `archived/notifications.md`
@@ -190,8 +197,10 @@ on the next rewrite — never delete them.
 
 ## Dependency view
 
-On "Dependencies": read all cards (live **and** archived — dependency edges are
-location-independent) and print a Mermaid `graph LR` in a fenced block: nodes
+On "Dependencies": read all cards (live **and** archived, the latter
+recursively — dependency edges are location-independent, and a packaged
+archived card resolves like any other) and print a Mermaid `graph LR` in a
+fenced block: nodes
 `#id title` styled by status (classDefs matching the board palette — the exact
 hexes in the web skill's `status-colors.js`: backlog cyan, todo blue, doing
 green, done purple, archived muted grey), edges from **dependency to the

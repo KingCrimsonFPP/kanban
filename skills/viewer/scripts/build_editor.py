@@ -201,15 +201,20 @@ def main():
     # Archived cards ride along read-only: flagged
     # arch, bodies re-capped at 1500 chars — tappable everywhere, opening a
     # read-only detail sheet, while the tighter cap keeps the file lean.
+    # archived/ is walked RECURSIVELY (ADR 0010): cards sit at its root or
+    # inside optional archived/<package>/ grouping folders. Only *.card.md is a
+    # card, so archived/notifications.md is skipped by the same filter as ever.
     arch_dir = os.path.join(a.kanban_dir, "archived")
     if os.path.isdir(arch_dir):
-        for f in sorted(os.listdir(arch_dir)):
-            path = os.path.join(arch_dir, f)
-            if f.endswith(".card.md") and os.path.isfile(path):
-                c = parse_card(path)
-                c["arch"] = True
-                c["body"] = c["body"][:1500]
-                cards.append(c)
+        for root, dirs, files in os.walk(arch_dir):
+            dirs.sort()
+            for f in sorted(files):
+                path = os.path.join(root, f)
+                if f.endswith(".card.md") and os.path.isfile(path):
+                    c = parse_card(path)
+                    c["arch"] = True
+                    c["body"] = c["body"][:1500]
+                    cards.append(c)
     # "</" must be escaped inside the inline <script> — ANY embedded value a
     # human can type (card text, config statuses, assignee handles) could
     # contain "</script>" (a real board card has) and would otherwise

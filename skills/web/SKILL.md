@@ -312,7 +312,20 @@ to `127.0.0.1` only.
   status; status is left as-is). Archived cards live in the Archive column, right of
   Done; clicking a tile opens the same detail popup as a live card (no Edit/Archive
   actions, since those don't apply to an already-archived card), and each tile keeps
-  **Restore** and **Delete** buttons.
+  **Restore** and **Delete** buttons. `archived/` is read **recursively** (ADR 0010), so
+  a card filed in an `archived/<package>/` folder shows in the Archive column, resolves
+  dependencies, and restores exactly like one at the `archived/` root — Restore always
+  returns it to the board root, never to a package.
+- **Archive packages** — the bulk menu's **Archive selected** opens an Archive popup
+  whose one field is the package: a combobox completing against the board's existing
+  `archived/<package>/` folder names (`archivePackages` on `/api/board`), suggest-never-
+  validate like every other combobox here, so a name matching nothing is a NEW package
+  and creates `kanban/archived/<name>/`. Left empty it archives to the `archived/` root,
+  byte-identically to the package-less paths — drag-to-Archive and the tile/detail
+  Archive button never ask, they always write to the root. The popup closes on Esc, its
+  X, or a backdrop click (all three cancel the archive — nothing has moved yet), and it
+  carries no fullscreen toggle: one field has nothing to expand. A package name must be
+  one plain path component; a nested path or a `.`/`..` hop is refused with a 400.
 - **Delete** — permanently removes the card file (after a confirm).
 
 - **Multi-select** — one interaction grammar, uniform across **all four views**
@@ -360,12 +373,15 @@ to `127.0.0.1` only.
   unsaved changes. Archiving skips the confirm when EVERY card in the action is already
   `done` — the tile's Archive button, drag-to-Archive (single or batch), and the bulk
   menu's Archive selected share one pure rule (`archiveNeedsConfirm`, selection.js); a
-  single non-done card in the batch keeps the confirm.
+  single non-done card in the batch keeps the confirm. Archive selected then asks WHERE
+  in the Archive popup (packages, above), whose Archive button is the act itself —
+  closing that popup cancels the whole batch.
   **Esc** closes whichever popup is open, on the very first press, regardless of
   fullscreen state — only the fullscreen toggle button changes fullscreen. The detail
   popup and the create/edit form (through the same unsaved-changes guard the X button
   uses) close directly on Esc, and so do the three bulk-edit popups (Assign/priority,
-  Edit tags, Schedule…) — speedbump-exempt, same as their backdrop-click. An open
+  Edit tags, Schedule…) and the Archive popup — speedbump-exempt, same as their
+  backdrop-click. An open
   combobox menu gets first crack at Esc: it closes the MENU only, one level at a time,
   before the popup-level handling ever sees the key.
   **Alt+Enter** toggles fullscreen on whichever fullscreen-capable popup is open

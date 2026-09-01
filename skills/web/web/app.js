@@ -1,5 +1,5 @@
 'use strict';
-const state = { active: [], archived: [], projectName: '', boardDir: '', notifications: [], priorities: [], tags: [], statuses: [], assignees: [] }; // assignees seeded empty — renderBoard's Assignee sort reads it before the first /api/board response lands. boardDir seeded empty — copyBoardPath toasts honestly on a pre-first-poll click.
+const state = { active: [], archived: [], projectName: '', boardDir: '', notifications: [], priorities: [], tags: [], statuses: [], assignees: [], archivePackages: [] }; // assignees seeded empty — renderBoard's Assignee sort reads it before the first /api/board response lands. boardDir seeded empty — copyBoardPath toasts honestly on a pre-first-poll click.
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1317,6 +1317,7 @@ function applyBoardData(data) {
   // for the same reason: the Priority sort/badges read state.priorities at
   // render time (masked pre-move only by priorityRank's built-in fallback).
   applyLists(data.priorities || [], data.tags || []);
+  state.archivePackages = data.archivePackages || []; // archive popup's combobox reads it live; defensive || for an old server without the field
   selectedIds = pruneSelection(selectedIds, [...state.active, ...state.archived].map((c) => c.id)); // drop ghosts before render (archived cards are in the domain too)
   renderBoard();
   applyNotifications(data.notifications || []); // the board poll carries them — no separate timer
@@ -2096,7 +2097,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // three bulk-edit popups (bulkSingle/Tags/Schedule) are ALSO fullscreen-
   // capable (see FULLSCREEN_MODALS) — closeAnyBulkPopup() closes
   // whichever one is open directly, matching the detail/edit popups above and
-  // its own backdrop-click, so Esc is never a true no-op there. The
+  // its own backdrop-click, so Esc is never a true no-op there. The Archive
+  // popup rides the same closeAnyBulkPopup list (one field, no fullscreen
+  // toggle — nothing to expand). The
   // combobox menu still gets first crack at Esc when open — attachCombobox's
   // own keydown listener stops propagation before this document-level
   // listener ever sees the key, so nothing here needs to special-case it.
@@ -3669,6 +3672,12 @@ function focusOn(kind) {
   renderBoard();
 }
 
+// Bulk archive asks WHERE before it moves anything (ADR 0010): the
+// confirm speedbump first (unchanged rule — skipped when every card being
+// archived is already done), then the Archive popup, whose package box
+// completes against the board's existing archived/<package>/ folders. Left
+// empty it archives to the archived/ root, exactly as before packages existed
+// — the drag-to-Archive and tile/detail Archive paths never ask at all.
 async function bulkArchive() {
   hideContextMenu();
   const skipped = selectedCards().filter((c) => c.archived).length; // already archived (mixed selections)
@@ -3678,15 +3687,36 @@ async function bulkArchive() {
   // one speedbump for the batch, not one per card — skipped entirely
   // when every card being archived is already done
   if (archiveNeedsConfirm(toArchive) && !confirm(`Archive ${ids.length} card(s)? (moves their files to archived/)`)) return;
+  openBulkArchive(ids.length);
+}
+
+function openBulkArchive(count) {
+  $('#bulk-archive-title').textContent = `Archive ${count} card(s)`;
+  $('#bulk-archive-input').value = '';
+  $('#bulk-archive').classList.remove('hidden');
+  $('#bulk-archive-input').focus();
+}
+
+// The popup's Archive button. Re-derives the batch from the live selection
+// (the poll may have moved cards under the popup) and sends the package with
+// every POST — a blank box sends none, so the request is byte-identical to
+// the package-less archive paths.
+async function applyBulkArchive() {
+  const pkg = $('#bulk-archive-input').value.trim();
+  $('#bulk-archive').classList.add('hidden');
+  const skipped = selectedCards().filter((c) => c.archived).length;
+  const ids = selectedCards().filter((c) => !c.archived).map((c) => c.id);
+  if (!ids.length) { if (skipped) toast('Everything selected is already archived.'); return; }
   const failed = [];
   for (const id of ids) {
-    try { await api('POST', `/api/cards/${id}/archive`); }
+    try { await api('POST', `/api/cards/${id}/archive`, pkg ? { package: pkg } : undefined); }
     catch (e) { failed.push(`#${id} (${e.message})`); }
   }
   selectedIds = new Set();
   await loadBoard();
+  const where = pkg ? ` into ${pkg}` : '';
   const skipNote = skipped ? `; skipped ${skipped} already archived` : '';
-  toast(failed.length ? `Archived ${ids.length - failed.length}${skipNote}; failed: ${failed.join(', ')}` : `Archived ${ids.length} card(s)${skipNote}.`);
+  toast(failed.length ? `Archived ${ids.length - failed.length}${where}${skipNote}; failed: ${failed.join(', ')}` : `Archived ${ids.length} card(s)${where}${skipNote}.`);
 }
 
 // Restore selected: the reversible direction — no confirm, same
@@ -3913,7 +3943,7 @@ async function applyBulkSchedule() {
 // same as its own backdrop-click — no confirm, since bulk edits are
 // speedbump-exempt (Apply is the speedbump, same reasoning as backdrop-close).
 function closeAnyBulkPopup() {
-  for (const sel of ['#bulk-single', '#bulk-tags', '#bulk-schedule']) {
+  for (const sel of ['#bulk-single', '#bulk-tags', '#bulk-schedule', '#bulk-archive']) {
     const el = $(sel);
     if (!el.classList.contains('hidden')) { el.classList.add('hidden'); return true; }
   }
@@ -4027,6 +4057,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#bulk-single-input').addEventListener('input', () => {
     $('#bulk-single-apply').disabled = bulkSingleMode === 'priority' && !$('#bulk-single-input').value.trim();
   });
+  $('#bulk-archive-apply').addEventListener('click', applyBulkArchive);
+  $('#bulk-archive-close').addEventListener('click', () => $('#bulk-archive').classList.add('hidden'));
   $('#bulk-tag-add').addEventListener('click', bulkAddTag);
   $('#bulk-tags-remove').addEventListener('click', bulkRemoveTags);
   $('#bulk-tags-close').addEventListener('click', () => $('#bulk-tags').classList.add('hidden'));
@@ -4035,11 +4067,18 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#bulk-single').addEventListener('click', (e) => { if (e.target.id === 'bulk-single') $('#bulk-single').classList.add('hidden'); });
   $('#bulk-tags').addEventListener('click', (e) => { if (e.target.id === 'bulk-tags') $('#bulk-tags').classList.add('hidden'); });
   $('#bulk-schedule').addEventListener('click', (e) => { if (e.target.id === 'bulk-schedule') $('#bulk-schedule').classList.add('hidden'); });
+  // Archive popup's backdrop click cancels the archive outright — the
+  // move hasn't happened yet, so closing is the safe direction here too.
+  $('#bulk-archive').addEventListener('click', (e) => { if (e.target.id === 'bulk-archive') $('#bulk-archive').classList.add('hidden'); });
   // Popup comboboxes: same suggest-never-validate lists as the edit form.
   attachCombobox($('#bulk-single-input'), () => (bulkSingleMode === 'assignee'
     ? state.assignees.map((a) => ({ value: a.handle, label: `${a.handle}${a.name ? ` — ${a.name}` : ''}${a.kind ? ` (${a.kind})` : ''}` }))
     : (state.priorities.length ? state.priorities : DEFAULT_PRIORITIES).map((v) => ({ value: v }))));
   attachCombobox($('#bulk-tag-input'), () => state.tags.map((v) => ({ value: v })));
+  // The package box completes against the archived/ folders that already
+  // exist — suggest-never-validate like every other combobox here, so a name
+  // that matches nothing is a NEW package folder, not an error.
+  attachCombobox($('#bulk-archive-input'), () => state.archivePackages.map((v) => ({ value: v })));
   // Any left-click outside the menu dismisses it (actions inside handle themselves).
   document.addEventListener('click', (e) => {
     if (!$('#context-menu').classList.contains('hidden') && !e.target.closest('#context-menu')) hideContextMenu();
@@ -4053,7 +4092,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // popup are exempt as well.
   document.addEventListener('click', (e) => {
     if (!selectedIds.size || e.shiftKey || e.ctrlKey || e.metaKey) return;
-    if (e.target.closest('#context-menu, #bulk-single, #bulk-tags, #bulk-schedule, .date-picker-pop, #map-toggle-btn, #calendar-toggle-btn, #gantt-toggle-btn, .cal-nav, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle')) return; // curate-the-view controls: month paging (.cal-nav), the map pills, the section collapse toggles, the gantt pills, and the calendar pills must not wipe a building selection
+    if (e.target.closest('#context-menu, #bulk-single, #bulk-tags, #bulk-schedule, #bulk-archive, .date-picker-pop, #map-toggle-btn, #calendar-toggle-btn, #gantt-toggle-btn, .cal-nav, .map-filter-toggle, .map-section-toggle, .gantt-filter-toggle, .calendar-filter-toggle')) return; // curate-the-view controls: month paging (.cal-nav), the map pills, the section collapse toggles, the gantt pills, and the calendar pills must not wipe a building selection
     selectedIds = new Set();
     selectionAnchor = null; // a dead selection must not leave an invisible range anchor behind
     renderBoard();

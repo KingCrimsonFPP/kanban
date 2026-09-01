@@ -515,6 +515,125 @@ test('archive/restore never overwrite a file with the same basename', () => {
   assert.ok(cs.findCardFile(dir, dup.id), 'archived card untouched by restore');
 });
 
+// --- archive packages: archived/ is scanned RECURSIVELY, and
+// archived/<package>/ folders are optional grouping (ADR 0010). Everything
+// below is the store's half of that contract — the recursive glob, the
+// package-aware archive, and restore/delete/detail reaching into a package.
+
+test('listArchived walks archived/ recursively — a card inside a package folder is archived like any other', () => {
+  const dir = tmpBoard();
+  const pkg = path.join(dir, 'archived', '2026-q2');
+  fs.mkdirSync(pkg, { recursive: true });
+  fs.writeFileSync(path.join(pkg, '0009.packaged.card.md'),
+    `---\nid: 9\nstatus: done\npriority: Normal\n---\n\n# Packaged\n\nbody\n`);
+  const archived = cs.listArchived(dir);
+  assert.deepStrictEqual(archived.map((c) => c.id), [9]);
+  assert.strictEqual(archived[0].archived, true);
+  assert.strictEqual(cs.nextId(dir), 10); // id allocation sees into packages too
+  assert.ok(cs.findCardFile(dir, 9), 'findCardFile reaches into the package folder');
+  assert.strictEqual(cs.cardDetail(dir, 9).archived, true); // the archived flag is a location test at ANY depth
+});
+
+test('the recursive walk still only collects *.card.md — archived/notifications.md is not a card', () => {
+  const dir = tmpBoard();
+  const archived = path.join(dir, 'archived', 'shipped');
+  fs.mkdirSync(archived, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'archived', 'notifications.md'), '- id: 1\n  message: kept\n');
+  fs.writeFileSync(path.join(archived, 'README.md'), '# not a card\n');
+  assert.deepStrictEqual(cs.listArchived(dir), []);
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'archived', 'notifications.md'), 'utf8'), '- id: 1\n  message: kept\n');
+});
+
+test('archiveCard with a package moves the file into archived/<package>/, creating the folder', () => {
+  const dir = tmpBoard();
+  const c = cs.archiveCard(dir, 1, '2026-q2');
+  assert.strictEqual(c.archived, true);
+  assert.strictEqual(c.status, 'done'); // packaging is a location move, same as a plain archive
+  assert.ok(!fs.existsSync(path.join(dir, '1.card.md')));
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', '1.card.md')), 'not at the archived/ root');
+  assert.ok(fs.existsSync(path.join(dir, 'archived', '2026-q2', '1.card.md')));
+  assert.strictEqual(cs.listArchived(dir).length, 1);
+});
+
+test('archiveCard with a blank/absent package keeps writing to the archived/ root', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1); // absent
+  cs.archiveCard(dir, 2, '   '); // whitespace-only is no package
+  assert.ok(fs.existsSync(path.join(dir, 'archived', '1.card.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'archived', 'two.card.md')));
+  assert.deepStrictEqual(cs.listArchivePackages(dir), []);
+});
+
+test('a package-less re-archive never demotes a packaged card back to the archived/ root', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1, 'shipped');
+  const again = cs.archiveCard(dir, 1); // stale tab / double-click, no package named
+  assert.strictEqual(again.archived, true);
+  assert.ok(fs.existsSync(path.join(dir, 'archived', 'shipped', '1.card.md')), 'stays filed in its package');
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', '1.card.md')));
+  assert.strictEqual(cs.listArchived(dir).length, 1);
+});
+
+test('archiveCard into the package a card already sits in is a no-op — no -2 duplicate', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1, 'shipped');
+  const before = fs.readFileSync(path.join(dir, 'archived', 'shipped', '1.card.md'), 'utf8');
+  cs.archiveCard(dir, 1, 'shipped');
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', 'shipped', '1-2.card.md')));
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'archived', 'shipped', '1.card.md'), 'utf8'), before);
+});
+
+test('naming a package re-files an already-archived card into it', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1); // lands at the archived/ root
+  cs.archiveCard(dir, 1, '2026-q2');
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', '1.card.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'archived', '2026-q2', '1.card.md')));
+  assert.strictEqual(cs.listArchived(dir).length, 1);
+});
+
+test('restoreCard pulls a packaged card back to the board root, leaving the package folder behind', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1, '2026-q2');
+  const c = cs.restoreCard(dir, 1);
+  assert.strictEqual(c.archived, false);
+  assert.ok(fs.existsSync(path.join(dir, '1.card.md')));
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', '2026-q2', '1.card.md')));
+  assert.ok(fs.existsSync(path.join(dir, 'archived', '2026-q2')), 'the emptied package folder stays');
+  assert.deepStrictEqual(cs.listArchived(dir), []);
+});
+
+test('deleteCard removes a card from inside a package folder', () => {
+  const dir = tmpBoard();
+  cs.archiveCard(dir, 1, '2026-q2');
+  cs.deleteCard(dir, 1);
+  assert.strictEqual(cs.findCardFile(dir, 1), null);
+  assert.ok(!fs.existsSync(path.join(dir, 'archived', '2026-q2', '1.card.md')));
+});
+
+test('listArchivePackages names the archived/ subfolders, sorted — an empty one included', () => {
+  const dir = tmpBoard();
+  assert.deepStrictEqual(cs.listArchivePackages(dir), []); // no archived/ at all
+  cs.archiveCard(dir, 1, 'shipped');
+  cs.archiveCard(dir, 2, '2026-q2');
+  fs.mkdirSync(path.join(dir, 'archived', 'empty-package'));
+  assert.deepStrictEqual(cs.listArchivePackages(dir), ['2026-q2', 'empty-package', 'shipped']);
+});
+
+test('a package name must be ONE plain path component — traversal and nesting are refused, nothing moves', () => {
+  const dir = tmpBoard();
+  for (const bad of ['..', '.', '../evil', 'a/b', 'a\\b', '/abs']) {
+    assert.throws(() => cs.archiveCard(dir, 1, bad), (e) => e.name === 'PackageError', `accepted ${bad}`);
+  }
+  assert.ok(fs.existsSync(path.join(dir, '1.card.md')), 'the card never moved');
+});
+
+test('archivePackageDir resolves a blank package to archived/ and a named one to archived/<name>/', () => {
+  assert.strictEqual(cs.archivePackageDir('board', ''), path.join('board', 'archived'));
+  assert.strictEqual(cs.archivePackageDir('board', null), path.join('board', 'archived'));
+  assert.strictEqual(cs.archivePackageDir('board', ' 2026-q2 '), path.join('board', 'archived', '2026-q2')); // trimmed, otherwise verbatim — no slugging
+});
+
 test('parseFrontmatter tolerates CRLF and serializeCard emits no carriage returns', () => {
   const crlf = '---\r\nid: 1\r\nstatus: todo\r\n---\r\nbody\r\n';
   const { order, values, body } = cs.parseFrontmatter(crlf);
