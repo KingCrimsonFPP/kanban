@@ -407,6 +407,21 @@ to `127.0.0.1` only.
   `/kanban`, hand edits, or another tool; the header Refresh button forces a re-read
   immediately. View mode, query, filters, selection, and collapse/sort state all survive
   the poll.
+- **Deep links** — loading the app with `?card=<id>&view=<board|map|gantt|calendar>` in
+  the URL switches to the named view, opens that card's detail popup, and scrolls its
+  representation into view (found by `data-id` in whichever view container is now
+  active, same lookup the shared card-el grammar's click handler uses) — a bookmarkable
+  or shared link straight to one card. An unrecognized `view` value (or none) leaves the
+  persisted/default view untouched; an id that doesn't resolve to any active or archived
+  card (missing, non-numeric, or just unknown) shows a toast instead and the app loads
+  normally, no view switch and no popup. This is a one-time override, consumed exactly
+  once right after the very first load — it composes with, but never fights, the 5s poll
+  or the `localStorage`-persisted view mode (view.mode, above): the deep link's view
+  isn't written back to storage, so a later plain reload with no querystring resumes
+  wherever the view toggle last left it, and the poll's own re-renders never re-read the
+  URL. Pure querystring parsing lives in `deep-link.js` (dual-environment export, same
+  pattern as `refresh-policy.js`/`search-hotkey.js`); switching the view, opening the
+  popup, and scrolling are app.js's job.
 - **Copy board path** — a small ⧉ button inside the header title copies the board
   directory's **absolute path** (the `GET /api/board` payload carries it as `boardDir`,
   `path.resolve`d server-side — a relative path is useless pasted elsewhere). Same
