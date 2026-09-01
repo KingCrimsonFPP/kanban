@@ -37,7 +37,7 @@ When a card is moved to `done`, add enough narrative detail that a future reader
 
 Each card's frontmatter supports the following fields:
 
-- `id` — Unique numeric identifier. If the board has a `config.yaml` with a `nextId` counter, use `max(nextId, scan-max + 1)` and write the advanced counter back — this keeps ids unique across deletions and concurrent writers. Otherwise scan existing `*.card.md` files in `<kanban-dir>` (including `<kanban-dir>/archived/`) and take max + 1, starting at `1` if empty. Reference cards by this number.
+- `id` — Unique numeric identifier. If the board has a `config.yaml` with a `nextId` counter, use `max(nextId, scan-max + 1)` and write the advanced counter back — this keeps ids unique across deletions and concurrent writers. Otherwise scan existing `*.card.md` files in `<kanban-dir>` (including `<kanban-dir>/archived/`, recursively — package folders count) and take max + 1, starting at `1` if empty. Reference cards by this number.
 - `status` — Column. The board's official column list is `config.yaml`'s `statuses` (ordered = column order); absent, the built-in four apply: `backlog`, `todo`, `doing`, `done`. Free text is legal on disk — a value not in the list renders in the list's **first** column (the catch-all) with its raw value shown, and is **never rewritten**; promotion = the human adds the value to the list. `archive` is a location, not a status. Prefer listed values when creating cards.
 - `priority` — one of the board's official `priorities` list in `config.yaml` (built-in default: `High`, `Normal`, `Low` — ordered highest first). Free text is allowed but sorts after all official values. Defaults to `Normal` if omitted.
 - `waiting_for` — List of card IDs this card depends on (dependency edges). Example: `[3, 7]`. Replaces `blocked_by` — hard cutover, no reader honors the old name. **Waiting is derived at read time, never stored:** the card is *waiting* while any listed card is not `done`; when every dep lands, the waiting state disappears on its own. A listed id with no matching card (dangling) is **non-blocking** — it never makes the card waiting. A dependency is sequencing, not an impediment; don't call it "blocked". Omit if empty — an empty `[]` stays legal on read, but it's no-data boilerplate the `kanban-web` app strips on its next managed write, so don't write it.
@@ -91,6 +91,8 @@ Landing in the literal status `todo` stamps `start_date`; landing in `done` stam
 
 Cards with `status: done` may be moved into `<kanban-dir>/archived/` to keep the main board tidy. This is a file-location move only; the card should remain a normal card with `status: done` unless explicitly changed.
 If `<kanban-dir>/archived/` does not exist, create it under the active board directory before moving the card.
+
+**`kanban/archived/` is scanned recursively** (ADR 0010): an archived card is any `*.card.md` anywhere under it. Cards may sit at the `archived/` root or inside an optional **package** folder, `kanban/archived/<package>/` — free-form grouping for a batch of finished work, created on demand. A package name is kept verbatim (no slugging — an existing folder must match byte-for-byte) and must be one plain path component: never a nested path, never a `.`/`..` hop. Packages are grouping only — they mean nothing to status, ids, or dependencies, and every reader (board views, id allocation, dependency resolution, restore, delete) finds a card wherever in the tree it sits. Restoring returns the card to `kanban/`, never to a package; the emptied package folder is left in place. Archiving without a package writes to the `archived/` root, and never move a card that is already filed in a package back out to the root unless asked.
 
 ## Board files that aren't cards
 
@@ -168,7 +170,7 @@ Append an entry to `<kanban-dir>/notifications.md` (create if absent) and the hu
 
 **Discipline (this is a rule, not a suggestion):** every AI mutation of the board — create, move, edit, archive, delete, payload-apply — must be reconstructable from the tray. Write either **one entry per action** or **ONE grouped entry per coherent batch/turn** that enumerates what changed. Interactive sessions are not exempt — moves the user watched you make get an entry too (grouped is fine). Tie-breaker: **unsure → notify.** A spurious notification costs one click; a silent mutation costs a re-derivation.
 
-**Clear = archive:** clearing/removing entries from the tray MOVES them verbatim (append) to `<kanban-dir>/archived/notifications.md`, creating the file/dir if absent. Deletion never happens. No rotation or cap yet.
+**Clear = archive:** clearing/removing entries from the tray MOVES them verbatim (append) to `<kanban-dir>/archived/notifications.md`, creating the file/dir if absent. Deletion never happens. No rotation or cap yet. That file lives at the `archived/` **root** — it is not a card, so archive packages (above) never hold or move it.
 
 Generated leftovers from retired skills (`board.md`, `dashboard.html`) may also sit in the folder — stale artifacts, not cards; ignore them.
 

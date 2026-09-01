@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Rename a board's card files to the <0000-id>.<slug>.card.md convention, in place.
-# Covers <dir> and <dir>/archived. Dry-run by default; pass --apply to rename.
+# Covers <dir> and <dir>/archived, the latter recursively (ADR 0010:
+# archived/<package>/ folders) — a packaged card is renamed in its own folder.
+# Dry-run by default; pass --apply to rename.
 # Usage: bash migrate_card_names.sh <kanban-directory> [--apply]
 
 KANBAN_DIR="${1:-.}"
@@ -18,54 +20,56 @@ field() {
 renames=0
 errors=0
 
-for dir in "$KANBAN_DIR" "$KANBAN_DIR/archived"; do
-    [ -d "$dir" ] || continue
-    for f in "$dir"/*.card.md; do
-        [ -f "$f" ] || continue
-        bname=$(basename "$f")
+shopt -s nullglob globstar
+all_cards=("$KANBAN_DIR"/*.card.md "$KANBAN_DIR"/archived/**/*.card.md)
+shopt -u nullglob globstar
 
-        # already in <0000-id>. form
-        case "$bname" in
-            [0-9][0-9][0-9][0-9].*) continue ;;
-        esac
+for f in "${all_cards[@]}"; do
+    [ -f "$f" ] || continue
+    dir=$(dirname "$f")
+    bname=$(basename "$f")
 
-        id=$(field "$f" id | tr -d '[:space:]')
-        if ! [[ "$id" =~ ^[0-9]+$ ]]; then
-            echo "SKIP (no numeric id): $f" >&2
-            errors=$((errors + 1))
-            continue
-        fi
-        if [ "$id" -gt 9999 ]; then
-            echo "SKIP (id > 9999 exceeds 4-digit prefix): $f" >&2
-            errors=$((errors + 1))
-            continue
-        fi
+    # already in <0000-id>. form
+    case "$bname" in
+        [0-9][0-9][0-9][0-9].*) continue ;;
+    esac
 
-        # strip any pre-existing unpadded/differently-padded numeric id prefix:
-        # only when everything before the FIRST dot is digits. Must NOT match a
-        # digit-leading slug (e.g. "9x-weird-title.card.md"), only an actual
-        # "<digits>." id prefix.
-        slugpart="$bname"
-        digits="${slugpart%%.*}"
-        case "$digits" in
-            ''|*[!0-9]*) ;;
-            *) slugpart="${slugpart#*.}" ;;
-        esac
+    id=$(field "$f" id | tr -d '[:space:]')
+    if ! [[ "$id" =~ ^[0-9]+$ ]]; then
+        echo "SKIP (no numeric id): $f" >&2
+        errors=$((errors + 1))
+        continue
+    fi
+    if [ "$id" -gt 9999 ]; then
+        echo "SKIP (id > 9999 exceeds 4-digit prefix): $f" >&2
+        errors=$((errors + 1))
+        continue
+    fi
 
-        target="$dir/$(printf '%04d' "$id").$slugpart"
-        if [ -e "$target" ]; then
-            echo "SKIP (target exists): $f -> $target" >&2
-            errors=$((errors + 1))
-            continue
-        fi
+    # strip any pre-existing unpadded/differently-padded numeric id prefix:
+    # only when everything before the FIRST dot is digits. Must NOT match a
+    # digit-leading slug (e.g. "9x-weird-title.card.md"), only an actual
+    # "<digits>." id prefix.
+    slugpart="$bname"
+    digits="${slugpart%%.*}"
+    case "$digits" in
+        ''|*[!0-9]*) ;;
+        *) slugpart="${slugpart#*.}" ;;
+    esac
 
-        if [ "$MODE" = "--apply" ]; then
-            mv "$f" "$target" && echo "RENAMED: $bname -> $(basename "$target")"
-        else
-            echo "would rename: $bname -> $(basename "$target")"
-        fi
-        renames=$((renames + 1))
-    done
+    target="$dir/$(printf '%04d' "$id").$slugpart"
+    if [ -e "$target" ]; then
+        echo "SKIP (target exists): $f -> $target" >&2
+        errors=$((errors + 1))
+        continue
+    fi
+
+    if [ "$MODE" = "--apply" ]; then
+        mv "$f" "$target" && echo "RENAMED: $bname -> $(basename "$target")"
+    else
+        echo "would rename: $bname -> $(basename "$target")"
+    fi
+    renames=$((renames + 1))
 done
 
 if [ "$MODE" != "--apply" ]; then

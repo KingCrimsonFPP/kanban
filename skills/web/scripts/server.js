@@ -109,10 +109,11 @@ function createServer(dir) {
           priorities: config.priorities,
           tags: config.tags,
           statuses: config.statuses, // ordered column list; [] = built-in four
+          archivePackages: cs.listArchivePackages(dir), // archived/<package>/ folder names the archive popup completes against (ADR 0010)
         });
       }
       if (req.method === 'GET' && p === '/') return serveStatic(res, path.join(WEB, 'app.html'));
-      if (req.method === 'GET' && (p === '/app.css' || p === '/app.js' || p === '/refresh-policy.js' || p === '/column-state.js' || p === '/column-sort.js' || p === '/search.js' || p === '/waiting-blocked.js' || p === '/dependency-graph.js' || p === '/modal-fullscreen.js' || p === '/assignee-badge.js' || p === '/priority-badge.js' || p === '/card-title.js' || p === '/combobox.js' || p === '/bulk-edit.js' || p === '/notifications.js' || p === '/form-guard.js' || p === '/selection.js' || p === '/calendar-model.js' || p === '/gantt-model.js' || p === '/date-picker.js' || p === '/status-colors.js' || p === '/save-hotkey.js' || p === '/search-hotkey.js' || p === '/assignee-colors.js')) {
+      if (req.method === 'GET' && (p === '/app.css' || p === '/app.js' || p === '/refresh-policy.js' || p === '/column-state.js' || p === '/column-sort.js' || p === '/search.js' || p === '/waiting-blocked.js' || p === '/dependency-graph.js' || p === '/modal-fullscreen.js' || p === '/assignee-badge.js' || p === '/priority-badge.js' || p === '/card-title.js' || p === '/combobox.js' || p === '/bulk-edit.js' || p === '/notifications.js' || p === '/form-guard.js' || p === '/selection.js' || p === '/calendar-model.js' || p === '/gantt-model.js' || p === '/date-picker.js' || p === '/status-colors.js' || p === '/save-hotkey.js' || p === '/search-hotkey.js' || p === '/assignee-colors.js' || p === '/deep-link.js')) {
         return serveStatic(res, path.join(WEB, path.basename(p)));
       }
 
@@ -162,7 +163,20 @@ function createServer(dir) {
             throw e;
           }
         }
-        if (req.method === 'POST' && m[2] === '/archive') return sendJSON(res, 200, cs.toJSON(cs.archiveCard(dir, id)));
+        // Optional `package` body field files the card into
+        // archived/<package>/ instead of the archived/ root (ADR 0010); a
+        // bodyless POST still archives to the root, so every pre-package
+        // caller is untouched. A name that isn't one plain path component is
+        // the caller's mistake, not a server fault — 400, never 500.
+        if (req.method === 'POST' && m[2] === '/archive') {
+          const body = await readBody(req);
+          try {
+            return sendJSON(res, 200, cs.toJSON(cs.archiveCard(dir, id, body.package)));
+          } catch (e) {
+            if (e.name === 'PackageError') return sendJSON(res, 400, { error: e.message });
+            throw e;
+          }
+        }
         if (req.method === 'POST' && m[2] === '/restore') return sendJSON(res, 200, cs.toJSON(cs.restoreCard(dir, id)));
         if (req.method === 'DELETE' && !m[2]) { cs.deleteCard(dir, id); return sendJSON(res, 200, { ok: true }); }
       }

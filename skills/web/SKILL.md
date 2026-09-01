@@ -308,6 +308,16 @@ to `127.0.0.1` only.
   always CSSOM) — synced on open and on every keystroke/combobox pick, the same
   "reflect the live typed value" pattern as the blocked input's red border. The viewer
   carries the same rule in its own reimplementation — see that skill's write-up.
+- **Markdown body** — the detail popup renders the card body through `mdToHtml()`, a
+  minimal dependency-free renderer (headings, bold/italic, inline code, fenced code
+  blocks, links with a scheme allowlist, hr, `- [x]` task lists) that runs `escapeHtml()`
+  on the raw body FIRST, before any tag synthesis — the only path from card text to
+  `innerHTML`. Bulleted lists are indent-depth-aware: a sub-bullet indented under a
+  parent nests into a real `<ul>` inside that parent's `<li>` rather than flattening to
+  a sibling, any depth, tracked by comparing each line's indent width against the open
+  levels. A wrapped line that isn't itself a `-` bullet (no blank line before it) is a
+  lazy continuation of the last list item's text, appended in place, rather than closing
+  the list and stranding a bare paragraph.
 - **Last modified** — the detail popup shows a "Last modified" line: the card's
   `updated` frontmatter timestamp when present, else the file's on-disk mtime labeled
   `(file mtime)` as a fallback for cards written before the field existed. `updated` is
@@ -319,7 +329,20 @@ to `127.0.0.1` only.
   status; status is left as-is). Archived cards live in the Archive column, right of
   Done; clicking a tile opens the same detail popup as a live card (no Edit/Archive
   actions, since those don't apply to an already-archived card), and each tile keeps
-  **Restore** and **Delete** buttons.
+  **Restore** and **Delete** buttons. `archived/` is read **recursively** (ADR 0010), so
+  a card filed in an `archived/<package>/` folder shows in the Archive column, resolves
+  dependencies, and restores exactly like one at the `archived/` root — Restore always
+  returns it to the board root, never to a package.
+- **Archive packages** — the bulk menu's **Archive selected** opens an Archive popup
+  whose one field is the package: a combobox completing against the board's existing
+  `archived/<package>/` folder names (`archivePackages` on `/api/board`), suggest-never-
+  validate like every other combobox here, so a name matching nothing is a NEW package
+  and creates `kanban/archived/<name>/`. Left empty it archives to the `archived/` root,
+  byte-identically to the package-less paths — drag-to-Archive and the tile/detail
+  Archive button never ask, they always write to the root. The popup closes on Esc, its
+  X, or a backdrop click (all three cancel the archive — nothing has moved yet), and it
+  carries no fullscreen toggle: one field has nothing to expand. A package name must be
+  one plain path component; a nested path or a `.`/`..` hop is refused with a 400.
 - **Delete** — permanently removes the card file (after a confirm).
 
 - **Multi-select** — one interaction grammar, uniform across **all four views**
@@ -367,12 +390,15 @@ to `127.0.0.1` only.
   unsaved changes. Archiving skips the confirm when EVERY card in the action is already
   `done` — the tile's Archive button, drag-to-Archive (single or batch), and the bulk
   menu's Archive selected share one pure rule (`archiveNeedsConfirm`, selection.js); a
-  single non-done card in the batch keeps the confirm.
+  single non-done card in the batch keeps the confirm. Archive selected then asks WHERE
+  in the Archive popup (packages, above), whose Archive button is the act itself —
+  closing that popup cancels the whole batch.
   **Esc** closes whichever popup is open, on the very first press, regardless of
   fullscreen state — only the fullscreen toggle button changes fullscreen. The detail
   popup and the create/edit form (through the same unsaved-changes guard the X button
   uses) close directly on Esc, and so do the three bulk-edit popups (Assign/priority,
-  Edit tags, Schedule…) — speedbump-exempt, same as their backdrop-click. An open
+  Edit tags, Schedule…) and the Archive popup — speedbump-exempt, same as their
+  backdrop-click. An open
   combobox menu gets first crack at Esc: it closes the MENU only, one level at a time,
   before the popup-level handling ever sees the key.
   **Alt+Enter** toggles fullscreen on whichever fullscreen-capable popup is open
@@ -414,6 +440,21 @@ to `127.0.0.1` only.
   `/kanban`, hand edits, or another tool; the header Refresh button forces a re-read
   immediately. View mode, query, filters, selection, and collapse/sort state all survive
   the poll.
+- **Deep links** — loading the app with `?card=<id>&view=<board|map|gantt|calendar>` in
+  the URL switches to the named view, opens that card's detail popup, and scrolls its
+  representation into view (found by `data-id` in whichever view container is now
+  active, same lookup the shared card-el grammar's click handler uses) — a bookmarkable
+  or shared link straight to one card. An unrecognized `view` value (or none) leaves the
+  persisted/default view untouched; an id that doesn't resolve to any active or archived
+  card (missing, non-numeric, or just unknown) shows a toast instead and the app loads
+  normally, no view switch and no popup. This is a one-time override, consumed exactly
+  once right after the very first load — it composes with, but never fights, the 5s poll
+  or the `localStorage`-persisted view mode (view.mode, above): the deep link's view
+  isn't written back to storage, so a later plain reload with no querystring resumes
+  wherever the view toggle last left it, and the poll's own re-renders never re-read the
+  URL. Pure querystring parsing lives in `deep-link.js` (dual-environment export, same
+  pattern as `refresh-policy.js`/`search-hotkey.js`); switching the view, opening the
+  popup, and scrolling are app.js's job.
 - **Copy board path** — a small ⧉ button inside the header title copies the board
   directory's **absolute path** (the `GET /api/board` payload carries it as `boardDir`,
   `path.resolve`d server-side — a relative path is useless pasted elsewhere). Same

@@ -24,8 +24,12 @@ A card's place in the workflow. The four built-ins — `backlog`, `todo`, `doing
 _Avoid_: stage, state, lane, swimlane.
 
 **Archive**:
-A *location*, not a status — the board directory's `archived/` folder. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back. The web app's Archive *column* has full UI parity (drag in/out, selection) — presentation only; on disk archive is still the folder, never a status value.
+A *location*, not a status — the board directory's `archived/` folder, read **recursively**. Archiving a card moves its file there, out of the active board, leaving its `status` untouched (almost always `done`). Restoring moves the file back. The web app's Archive *column* has full UI parity (drag in/out, selection) — presentation only; on disk archive is still the folder, never a status value.
 _Avoid_: using "archive" as a status/column value; close, trash.
+
+**Package** (archive package):
+An optional `kanban/archived/<package>/` folder grouping a batch of archived cards — a second axis of the archive *location*, never a status, a tag, or a board of its own. The name is free text kept verbatim, one plain path component. A card inside one is archived exactly like one at the `archived/` root: same views, same id allocation, same dependency resolution, and Restore returns it to `kanban/`, not to the package. `archived/notifications.md` is never packaged.
+_Avoid_: folder-as-status, sub-board, bucket, category.
 
 **Delete**:
 Permanent removal of a card's file. Distinct from Archive, which is recoverable. Delete is the only destructive, non-recoverable operation.

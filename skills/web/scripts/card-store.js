@@ -193,17 +193,82 @@ function cardFiles(dir) {
   return fs.readdirSync(dir).filter((f) => f.endsWith('.card.md')).map((f) => path.join(dir, f));
 }
 
+function archivedDir(dir) {
+  return path.join(dir, 'archived');
+}
+
+// ADR 0010: archived/ is scanned RECURSIVELY. Archived cards sit at the
+// archived/ root or inside optional archived/<package>/ grouping folders, so
+// every archived reader walks the tree instead of listing one directory. Only
+// *.card.md is a card, so archived/notifications.md (a plain file at the
+// archived/ root, never inside a package) is invisible to this walk.
+function cardFilesDeep(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const out = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...cardFilesDeep(full));
+    else if (entry.name.endsWith('.card.md')) out.push(full);
+  }
+  return out;
+}
+
+// Is this file anywhere under archived/ — root or any package folder? The
+// archived flag is a LOCATION test (ADR 0002), and since ADR 0010 that
+// location has depth, so a dirname equality check no longer answers it.
+function isArchivedFile(dir, file) {
+  const rel = path.relative(path.resolve(archivedDir(dir)), path.resolve(file));
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+// The immediate subfolders of archived/ — the board's existing package
+// names, in name order. What the app's archive popup autocompletes against;
+// a package with no cards left in it still lists (an empty folder is still a
+// place to file the next card).
+function listArchivePackages(dir) {
+  const root = archivedDir(dir);
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
+// A package refused for what it is, not for what happened — its own
+// error type, same shape as the two gate errors above, so the server can
+// answer 400 instead of 500.
+class PackageError extends Error {
+  constructor(name) {
+    super(`invalid archive package: ${name}`);
+    this.name = 'PackageError';
+    this.package = name;
+  }
+}
+
+// Where an archive lands: archived/ for a blank/absent package, otherwise
+// archived/<package>/. The name is kept VERBATIM (an existing folder must
+// match byte-for-byte, so no slugify pass here) but must be one plain path
+// component — a separator, a `.`/`..` hop, or anything path.basename
+// disagrees with is refused rather than resolved, so no caller can walk out
+// of archived/.
+function archivePackageDir(dir, pkg) {
+  const name = String(pkg == null ? '' : pkg).trim();
+  if (!name) return archivedDir(dir);
+  if (name === '.' || name === '..' || /[\\/]/.test(name) || name !== path.basename(name)) throw new PackageError(name);
+  return path.join(archivedDir(dir), name);
+}
+
 function listActive(dir) {
   return cardFiles(dir).map((f) => readCardFile(f, false));
 }
 
 function listArchived(dir) {
-  return cardFiles(path.join(dir, 'archived')).map((f) => readCardFile(f, true));
+  return cardFilesDeep(archivedDir(dir)).map((f) => readCardFile(f, true));
 }
 
 function findCardFile(dir, id) {
   const want = Number(id);
-  for (const f of [...cardFiles(dir), ...cardFiles(path.join(dir, 'archived'))]) {
+  for (const f of [...cardFiles(dir), ...cardFilesDeep(archivedDir(dir))]) {
     if (readCardFile(f).id === want) return f;
   }
   return null;
@@ -502,7 +567,7 @@ function createCard(dir, input) {
 function cardDetail(dir, id) {
   const file = findCardFile(dir, id);
   if (!file) throw new Error(`no card #${id}`);
-  const archived = path.dirname(file) === path.join(dir, 'archived');
+  const archived = isArchivedFile(dir, file); // anywhere under archived/, package folders included (ADR 0010)
   const card = readCardFile(file, archived);
   const frontmatter = card._order.map((k) => `${k}:${card._values[k]}`).join('\n');
   return {
@@ -522,23 +587,34 @@ function toJSON(card) {
   return { id, status, priority, waiting_for, blocked, review, prompt, tags, assignee, start_date, end_date, due_date, epic, parent, updated, title, body, archived, file: path.basename(file) };
 }
 
-function archiveCard(dir, id) {
+// `pkg` (optional) names an archived/<package>/ grouping folder, created on
+// demand; blank/absent files the card at the archived/ root, the pre-ADR-0010
+// behavior every other archive path still uses.
+function archiveCard(dir, id, pkg) {
   const file = findCardFile(dir, id);
   if (!file) throw new Error(`no card #${id}`);
-  const archivedDir = path.join(dir, 'archived');
+  const destDir = archivePackageDir(dir, pkg); // refuses a non-component package name before any move
   // Idempotency guard: without this, re-archiving an already-archived card (a stale
   // detail popup, a second tab, a double-click) has `uniqueFilePath` collide with the
   // file's own current path and silently rename it AGAIN (e.g. `foo.card.md` ->
   // `foo-2.card.md`), duplicating the -N suffix on every repeat call with no error
   // surfaced to the caller. No-op instead: already-archived is a valid terminal state.
-  if (path.dirname(file) === archivedDir) return readCardFile(file, true);
-  fs.mkdirSync(archivedDir, { recursive: true });
+  // With ADR 0010 the guard reads the whole tree: a card already sitting in the
+  // requested folder is the same no-op, and a plain (package-less) re-archive of a
+  // card already filed in a package is a no-op too — it must never demote it back to
+  // the archived/ root. Naming a package DOES re-file an already-archived card.
+  if (path.dirname(file) === destDir) return readCardFile(file, true);
+  if (!String(pkg == null ? '' : pkg).trim() && isArchivedFile(dir, file)) return readCardFile(file, true);
+  fs.mkdirSync(destDir, { recursive: true });
   const base = path.basename(file).replace(/\.card\.md$/, '');
-  const dest = uniqueFilePath(archivedDir, base); // never clobber a same-basename archived card
+  const dest = uniqueFilePath(destDir, base); // never clobber a same-basename archived card
   fs.renameSync(file, dest);
   return readCardFile(dest, true);
 }
 
+// Restore lands the card back on the board's root regardless of how deep in
+// archived/ it was filed — a package is a grouping folder, never a second
+// board (ADR 0010). The emptied package folder is left behind.
 function restoreCard(dir, id) {
   const file = findCardFile(dir, id);
   if (!file) throw new Error(`no card #${id}`);
@@ -558,6 +634,7 @@ module.exports = {
   parseFrontmatter, serializeCard, splitTitleBody, joinTitleBody,
   parseList, formatList, slugify, capSlug, projectName,
   readCardFile, listActive, listArchived, findCardFile, nextId,
+  listArchivePackages, archivePackageDir, isArchivedFile,
   createCard, updateCard, archiveCard, restoreCard, deleteCard,
-  WaitingError, BlockedError, toJSON, cardDetail,
+  WaitingError, BlockedError, PackageError, toJSON, cardDetail,
 };

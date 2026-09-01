@@ -409,6 +409,7 @@ main#board { display: flex; gap: 12px; align-items: stretch; overflow-x: auto; h
 .detail-body p { margin: 8px 0; }
 .detail-body ul, .detail-body ol { margin: 8px 0 8px 22px; }
 .detail-body li { margin: 3px 0; }
+.detail-body li > ul, .detail-body li > ol { margin: 3px 0 3px 20px; }
 .detail-body li.task { list-style: none; margin-left: -18px; }
 .detail-body code { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, Consolas, monospace; font-size: 0.88em; color: #79c0ff; }
 .detail-body pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; overflow-x: auto; margin: 10px 0; }

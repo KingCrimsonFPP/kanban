@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
+const vm = require('node:vm');
 const { createServer, start, originAllowed, resolveDefaultBoardDir } = require('../scripts/server');
 
 function tmpBoard() {
@@ -469,9 +470,10 @@ test('popup header control icons still ride order:-1 (the mechanism the shared p
     assert.match(css, /\.modal-header-actions\s*\{[^}]*order:\s*-1/);
     assert.match(css, /\.detail-actions\s*\{[^}]*order:\s*-1/);
     // every popup's header controls ride one of the two moved classes —
-    // edit form + the three bulk popups vs. detail popup + notifications
+    // edit form + the three bulk popups + the archive popup vs. detail popup
+    // + notifications
     const html = await (await fetch(`${base}/`)).text();
-    assert.strictEqual((html.match(/class="modal-header-actions"/g) || []).length, 4);
+    assert.strictEqual((html.match(/class="modal-header-actions"/g) || []).length, 5);
     assert.strictEqual((html.match(/class="detail-actions"/g) || []).length, 2);
   });
 });
@@ -500,13 +502,13 @@ test('every popup header is its OWN two rows — icons alone on row 1, title/con
     // only while every match above stayed green.
     assert.ok(!/\.modal\.fullscreen[^{]*(popup-header|modal-header|detail-header|-actions)/.test(css),
       'a .modal.fullscreen-scoped header/popup-header/actions rule would silently undo the two-row layout in fullscreen only');
-    // one shared class, not per-popup one-offs: all six header containers —
-    // the edit/create form, the three bulk popups (single/tags/schedule),
-    // the detail popup, and notifications — carry .popup-header. The
-    // right-click context menu has no header controls and carries neither
-    // this class nor an action group ("stays as-is").
+    // one shared class, not per-popup one-offs: all seven header containers —
+    // the edit/create form, the three bulk popups (single/tags/schedule), the
+    // archive popup, the detail popup, and notifications — carry
+    // .popup-header. The right-click context menu has no header controls and
+    // carries neither this class nor an action group ("stays as-is").
     const html = await (await fetch(`${base}/`)).text();
-    assert.strictEqual((html.match(/class="[^"]*\bpopup-header\b[^"]*"/g) || []).length, 6);
+    assert.strictEqual((html.match(/class="[^"]*\bpopup-header\b[^"]*"/g) || []).length, 7);
     assert.doesNotMatch(html, /<div id="context-menu"[^>]*class="[^"]*popup-header/);
     // position only: DOM stays title/content-before-actions everywhere (the
     // order:-1 CSS flip is what visually leads with the icons) — the same
@@ -1012,6 +1014,72 @@ test('POST archive twice on the same id is idempotent — no duplicate-suffixed 
     const board = await req(base, 'GET', '/api/board');
     assert.strictEqual(board.json.archived.length, 1);
   });
+});
+
+// --- archive packages (ADR 0010): the endpoint's optional
+// `package` body field, and the board payload the popup completes against.
+
+test('POST archive with a package files the card in archived/<package>/ and the board still lists it', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const r = await req(base, 'POST', '/api/cards/1/archive', { package: '2026-q2' });
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.json.archived, true);
+    assert.ok(fs.existsSync(path.join(dir, 'archived', '2026-q2', '1.card.md')));
+    assert.ok(!fs.existsSync(path.join(dir, 'archived', '1.card.md')));
+    const board = await req(base, 'GET', '/api/board');
+    assert.deepStrictEqual(board.json.archived.map((c) => c.id), [1], 'the recursive walk finds the packaged card');
+    assert.deepStrictEqual(board.json.archivePackages, ['2026-q2']);
+    // restore reaches into the package, same as before packages existed
+    assert.strictEqual((await req(base, 'POST', '/api/cards/1/restore')).status, 200);
+    assert.ok(fs.existsSync(path.join(dir, '1.card.md')));
+  });
+});
+
+test('POST archive with no body still archives to the archived/ root — every pre-package caller untouched', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    assert.strictEqual((await req(base, 'POST', '/api/cards/1/archive')).status, 200);
+    assert.ok(fs.existsSync(path.join(dir, 'archived', '1.card.md')));
+    const board = await req(base, 'GET', '/api/board');
+    assert.deepStrictEqual(board.json.archivePackages, []);
+  });
+});
+
+test('POST archive with a package that is not one plain path component is a 400, and nothing moves', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    for (const bad of ['..', '../evil', 'a/b']) {
+      const r = await req(base, 'POST', '/api/cards/1/archive', { package: bad });
+      assert.strictEqual(r.status, 400, `accepted ${bad}`);
+      assert.match(r.json.error, /invalid archive package/);
+    }
+    assert.ok(fs.existsSync(path.join(dir, '1.card.md')), 'the card never moved');
+  });
+});
+
+test('GET /api/board carries archivePackages — the archive popup completes against existing folders', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    await req(base, 'POST', '/api/cards/1/archive', { package: 'shipped' });
+    await req(base, 'POST', '/api/cards/2/archive', { package: '2026-q2' });
+    const board = await req(base, 'GET', '/api/board');
+    assert.deepStrictEqual(board.json.archivePackages, ['2026-q2', 'shipped']); // sorted
+    assert.strictEqual(board.json.active.length, 0);
+    assert.strictEqual(board.json.archived.length, 2);
+  });
+});
+
+test('the archive popup sends the package and an empty box sends none (bulk Archive selected)', () => {
+  const js = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.js'), 'utf8');
+  const fn = js.match(/async function applyBulkArchive\([\s\S]*?\n\}/);
+  assert.ok(fn, 'applyBulkArchive found in app.js');
+  assert.match(fn[0], /api\('POST', `\/api\/cards\/\$\{id\}\/archive`, pkg \? \{ package: pkg \} : undefined\)/,
+    'a blank package box must send no body at all — byte-identical to every package-less archive path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'web', 'app.html'), 'utf8');
+  assert.match(html, /id="bulk-archive-input"/);
+  assert.match(js, /attachCombobox\(\$\('#bulk-archive-input'\), \(\) => state\.archivePackages/,
+    'the package box is a hand-rolled combobox over the board payload s existing folder names');
 });
 
 test('POST /api/cards with a malformed body fails gracefully; server stays up', async () => {
@@ -2850,6 +2918,101 @@ test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synt
       'the raw body is escaped up front — a `<script>` in a card body can never survive as a live tag, even inside inline code/emphasis');
     assert.ok(mdToHtml.includes("/^(https?:|mailto:|#|\\/)/i.test(url.trim())"),
       'markdown links fall back to "#" for any scheme outside the allowlist (e.g. javascript:)');
+  });
+});
+
+test('XSS sweep: mdToHtml adds no new raw-innerHTML path — escapeHtml(md) is the literal first statement, over the WHOLE raw body, before nested-list/continuation-line handling ever sees it', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.match(mdToHtml, /^function mdToHtml\(md\) \{\r?\n\s*const lines = escapeHtml\(md\)\.split\('\\n'\);/,
+      'escapeHtml(md) runs over the entire raw body before the line-by-line split — nested bullets and continuation lines are already-escaped text by the time list handling touches them, so neither needs (or has) its own escaping call');
+    assert.ok(!mdToHtml.includes('innerHTML'),
+      'mdToHtml only ever returns a string — the one innerHTML write lives at its call site, outside this function');
+  });
+});
+
+test('mdToHtml nests sub-bullets by indent depth against a stack of open <ul> levels, instead of flattening every "- " line to a sibling', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('const indent = m[1].length;'),
+      "each bullet line's leading indent is captured and measured");
+    assert.ok(mdToHtml.includes('while (listStack.length && indent < listStack[listStack.length - 1].indent)'),
+      'a shallower indent unwinds every deeper level it dropped below, not just the innermost one');
+    assert.ok(mdToHtml.includes('listStack.push({ indent });') && mdToHtml.includes("html += '<ul>';"),
+      'a deeper indent opens a NEW nested <ul> — not a sibling <li> flattened into the parent list');
+    assert.ok(!mdToHtml.includes("if (!listOpen) { html += '<ul>'; listOpen = true; }"),
+      'the old single flat <ul>, opened once and reused at every indent, is gone');
+  });
+});
+
+test('mdToHtml: a same-depth sibling closes the previous <li>; a deeper item nests inside it without closing it first', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.match(mdToHtml,
+      /if \(listStack\.length && indent === listStack\[listStack\.length - 1\]\.indent\) \{\r?\n\s*closeLi\(\);/,
+      'a same-depth sibling closes the previous <li> at that level before opening its own');
+    assert.ok(mdToHtml.includes('} else if (!listStack.length || indent > listStack[listStack.length - 1].indent) {'),
+      "a deeper indent takes the nested-<ul> branch instead, leaving the parent's <li> open around it");
+  });
+});
+
+test('mdToHtml fully unwinds every open nesting level, closing each ancestor\'s <li>, when a heading/hr/code-fence/blank line follows a nested list', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('while (listStack.length) {') && mdToHtml.includes("if (listStack.length) html += '</li>';"),
+      "closeList() pops every stack level, closing each ancestor's <li> as the nested <ul> it held closes");
+    assert.ok(mdToHtml.includes("if (line.trim() === '') { flushPara(); closeList(); continue; }"),
+      'a blank line still closes the list fully — continuation only ever applies to a non-blank wrapped line');
+  });
+});
+
+test('mdToHtml: a wrapped non-"-" line joins the last open <li> instead of closing the list and stranding a <p>', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('if (listStack.length) {') && mdToHtml.includes("html += ' ' + inline(line.trim());"),
+      'while any list is open (any depth), a non-bullet non-blank line extends the currently open <li> in place');
+    assert.ok(mdToHtml.includes('para.push(inline(line));'),
+      'outside any list the same line still falls through to a normal paragraph — plain-text bodies are unchanged');
+  });
+});
+
+test('mdToHtml behavioral: nested bullets, continuation lines, and an XSS payload through both render to the exact expected HTML (executes the real function — not a source-text pattern match)', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const appJs = await (await fetch(`${base}/app.js`)).text();
+    const badgeJs = await (await fetch(`${base}/assignee-badge.js`)).text();
+    const escapeHtmlSrc = badgeJs.match(/function escapeHtml\([\s\S]*?\n\}/)[0];
+    const mdToHtmlSrc = appJs.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    const sandbox = {};
+    vm.createContext(sandbox);
+    vm.runInContext(`${escapeHtmlSrc}\n${mdToHtmlSrc}`, sandbox);
+    const mdToHtml = sandbox.mdToHtml;
+
+    assert.strictEqual(mdToHtml('- a\n  - b\n- c'),
+      '<ul><li>a<ul><li>b</li></ul></li><li>c</li></ul>',
+      'a sub-bullet nests inside its parent <li>; the next same-depth sibling closes the nested <ul> first');
+    assert.strictEqual(mdToHtml('- a\n  - b\n    - c\n- d'),
+      '<ul><li>a<ul><li>b<ul><li>c</li></ul></li></ul></li><li>d</li></ul>',
+      'three levels deep unwinds every open <li>/<ul> cleanly back to the root on the next top-level item');
+    assert.strictEqual(mdToHtml('- a\n  more of a\n- b'),
+      '<ul><li>a more of a</li><li>b</li></ul>',
+      'a wrapped continuation line joins the open <li> in place instead of stranding a <p>');
+    assert.strictEqual(mdToHtml('- a\n  - b\n    more of b\n- c'),
+      '<ul><li>a<ul><li>b more of b</li></ul></li><li>c</li></ul>',
+      'a continuation line under a nested item joins the innermost open <li>, not an outer ancestor');
+    assert.strictEqual(mdToHtml('- <img src=x onerror=alert(1)>\n  more <script>evil</script>'),
+      '<ul><li>&lt;img src=x onerror=alert(1)&gt; more &lt;script&gt;evil&lt;/script&gt;</li></ul>',
+      'nesting/continuation never opens a second unescaped path — the payload stays escaped end to end');
   });
 });
 

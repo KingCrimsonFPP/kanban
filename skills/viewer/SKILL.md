@@ -66,7 +66,11 @@ Every view carries a status-pill row: statuses default on,
 **Archive defaults off** — toggling the Archive pill reveals archived cards
 (embedded display-only, bodies stripped, never tappable; archive is a
 location, not a status) as a muted trailing board section, a muted gantt
-group, dimmed map nodes, and gray calendar chips. The "N pending" header
+group, dimmed map nodes, and gray calendar chips. The build walks `archived/`
+**recursively** (ADR 0010), so a card filed in an `archived/<package>/`
+grouping folder embeds like any other archived card; the editor's own
+`archive` op still writes to the `archived/` root, packages being
+kanban-web's and kanban-cli's to choose. The "N pending" header
 indicator is tappable and jumps to the tray.
 
 A card wears a gold "review" badge (card tile head, or a "review: `<text>`"
