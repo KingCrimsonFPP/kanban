@@ -2815,6 +2815,71 @@ test('XSS sweep: the detail popup escapes the card body BEFORE markdown tag synt
   });
 });
 
+test('XSS sweep: mdToHtml adds no new raw-innerHTML path — escapeHtml(md) is the literal first statement, over the WHOLE raw body, before nested-list/continuation-line handling ever sees it', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.match(mdToHtml, /^function mdToHtml\(md\) \{\r?\n\s*const lines = escapeHtml\(md\)\.split\('\\n'\);/,
+      'escapeHtml(md) runs over the entire raw body before the line-by-line split — nested bullets and continuation lines are already-escaped text by the time list handling touches them, so neither needs (or has) its own escaping call');
+    assert.ok(!mdToHtml.includes('innerHTML'),
+      'mdToHtml only ever returns a string — the one innerHTML write lives at its call site, outside this function');
+  });
+});
+
+test('mdToHtml nests sub-bullets by indent depth against a stack of open <ul> levels, instead of flattening every "- " line to a sibling', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('const indent = m[1].length;'),
+      "each bullet line's leading indent is captured and measured");
+    assert.ok(mdToHtml.includes('while (listStack.length && indent < listStack[listStack.length - 1].indent)'),
+      'a shallower indent unwinds every deeper level it dropped below, not just the innermost one');
+    assert.ok(mdToHtml.includes('listStack.push({ indent });') && mdToHtml.includes("html += '<ul>';"),
+      'a deeper indent opens a NEW nested <ul> — not a sibling <li> flattened into the parent list');
+    assert.ok(!mdToHtml.includes("if (!listOpen) { html += '<ul>'; listOpen = true; }"),
+      'the old single flat <ul>, opened once and reused at every indent, is gone');
+  });
+});
+
+test('mdToHtml: a same-depth sibling closes the previous <li>; a deeper item nests inside it without closing it first', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.match(mdToHtml,
+      /if \(listStack\.length && indent === listStack\[listStack\.length - 1\]\.indent\) \{\r?\n\s*closeLi\(\);/,
+      'a same-depth sibling closes the previous <li> at that level before opening its own');
+    assert.ok(mdToHtml.includes('} else if (!listStack.length || indent > listStack[listStack.length - 1].indent) {'),
+      "a deeper indent takes the nested-<ul> branch instead, leaving the parent's <li> open around it");
+  });
+});
+
+test('mdToHtml fully unwinds every open nesting level, closing each ancestor\'s <li>, when a heading/hr/code-fence/blank line follows a nested list', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('while (listStack.length) {') && mdToHtml.includes("if (listStack.length) html += '</li>';"),
+      "closeList() pops every stack level, closing each ancestor's <li> as the nested <ul> it held closes");
+    assert.ok(mdToHtml.includes("if (line.trim() === '') { flushPara(); closeList(); continue; }"),
+      'a blank line still closes the list fully — continuation only ever applies to a non-blank wrapped line');
+  });
+});
+
+test('mdToHtml: a wrapped non-"-" line joins the last open <li> instead of closing the list and stranding a <p>', async () => {
+  const dir = tmpBoard();
+  await withServer(dir, async (base) => {
+    const js = await (await fetch(`${base}/app.js`)).text();
+    const mdToHtml = js.match(/function mdToHtml\([\s\S]*?\n\}/)[0];
+    assert.ok(mdToHtml.includes('if (listStack.length) {') && mdToHtml.includes("html += ' ' + inline(line.trim());"),
+      'while any list is open (any depth), a non-bullet non-blank line extends the currently open <li> in place');
+    assert.ok(mdToHtml.includes('para.push(inline(line));'),
+      'outside any list the same line still falls through to a normal paragraph — plain-text bodies are unchanged');
+  });
+});
+
 test('XSS sweep: the detail popup\'s frontmatter table and "Last modified" line escape every value (security audit)', async () => {
   const dir = tmpBoard();
   await withServer(dir, async (base) => {

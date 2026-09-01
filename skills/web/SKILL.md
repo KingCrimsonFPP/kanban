@@ -301,6 +301,16 @@ to `127.0.0.1` only.
   always CSSOM) — synced on open and on every keystroke/combobox pick, the same
   "reflect the live typed value" pattern as the blocked input's red border. The viewer
   carries the same rule in its own reimplementation — see that skill's write-up.
+- **Markdown body** — the detail popup renders the card body through `mdToHtml()`, a
+  minimal dependency-free renderer (headings, bold/italic, inline code, fenced code
+  blocks, links with a scheme allowlist, hr, `- [x]` task lists) that runs `escapeHtml()`
+  on the raw body FIRST, before any tag synthesis — the only path from card text to
+  `innerHTML`. Bulleted lists are indent-depth-aware: a sub-bullet indented under a
+  parent nests into a real `<ul>` inside that parent's `<li>` rather than flattening to
+  a sibling, any depth, tracked by comparing each line's indent width against the open
+  levels. A wrapped line that isn't itself a `-` bullet (no blank line before it) is a
+  lazy continuation of the last list item's text, appended in place, rather than closing
+  the list and stranding a bare paragraph.
 - **Last modified** — the detail popup shows a "Last modified" line: the card's
   `updated` frontmatter timestamp when present, else the file's on-disk mtime labeled
   `(file mtime)` as a fallback for cards written before the field existed. `updated` is
