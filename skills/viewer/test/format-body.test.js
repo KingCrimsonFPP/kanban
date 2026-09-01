@@ -209,6 +209,16 @@ test('tier 2: board becomes a flex column strip, each column FILLS the freed wid
   assert.match(block, /\.boardcol\{[^}]*min-width:260px[^}]*flex:1 1 0[^}]*\}/);
 });
 
+test('status-pill row lives in its own #boardpills container, never as a flex item inside the #board strip', () => {
+  assert.ok(src.includes('<div id="boardpills"></div>'), 'boardpills container missing from markup');
+  assert.match(src, /\$\("boardpills"\)\.replaceChildren\(statusPills\(\)\)/);
+  assert.ok(!/board\.appendChild\(statusPills\(\)\)/.test(src), 'pills must not be appended into #board');
+});
+
+test('wide screens default live sections open (Archive stays collapsed), evaluated once at load', () => {
+  assert.match(src, /if\(matchMedia\("\(min-width:900px\)"\)\.matches\)COLS\.forEach\(c=>colOpen\[c\]=true\)/);
+});
+
 test('tier 2: a collapsed section narrows into a strip instead of holding the full min-width', () => {
   const block = mediaBlocks.find(b => /^@media\(min-width:900px\)/.test(b));
   assert.match(block, /\.boardcol\.collapsed\{[^}]*\}/);
